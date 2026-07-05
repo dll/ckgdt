@@ -92,15 +92,15 @@ class MobileExpertAgent extends BaseAgent {
         classicCases: [
           AgentCase(
               title: '技术栈对比',
-              userInput: 'Flutter 和 React Native 哪个更适合新项目？',
+              userInput: '不同技术方案哪个更适合新项目？',
               agentReply:
-                  '## Flutter vs React Native 对比\n\n| 维度 | Flutter | React Native |\n|------|---------|---------------|\n| 语言 | Dart | JavaScript/TS |\n| 渲染 | 自绘引擎 | 原生组件桥接 |\n| 性能 | 接近原生 | 略低（JS桥接） |\n| 生态 | 快速增长 | 成熟丰富 |\n| 热重载 | ✅ 优秀 | ✅ 良好 |\n\n**建议**：新项目优先 Flutter（性能好、UI 一致性强）'),
+                  '## 技术方案对比\n\n| 维度 | 方案A | 方案B |\n|------|--------|--------|\n| 语言 | 主流语言 | 脚本语言 |\n| 渲染 | 自绘引擎 | 原生组件桥接 |\n| 性能 | 接近原生 | 略低（桥接） |\n| 生态 | 快速增长 | 成熟丰富 |\n| 热重载 | ✅ 优秀 | ✅ 良好 |\n\n**建议**：根据项目需求和团队背景选择合适方案（性能好、UI 一致性强）'),
         ],
       );
 
   @override
   List<String> get quickCommands =>
-      ['Flutter vs RN', 'Android入门', '技术栈对比', 'HarmonyOS特点'];
+      ['技术方案对比', '开发入门', '技术栈对比', '平台特点'];
 
   @override
   Future<AgentMessage> handleMessage(

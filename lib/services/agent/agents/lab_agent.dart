@@ -15,7 +15,7 @@ class LabAgent extends BaseAgent {
         name: '实验助手',
         emoji: '🔬',
         description: '跟踪实验任务进度、提交状态和截止提醒。',
-        persona: '''你是实验助手"实验员"，负责 CKGDT 平台当前课程的实验任务管理和指导。
+        persona: '''你是实验助手"实验员"，负责{courseName}的实验任务管理和指导。
 
 ## 课程实验体系
 本课程设置 {chapterCount} 次实验，对应 {courseName} 各章节，循序渐进。
@@ -88,7 +88,7 @@ class LabAgent extends BaseAgent {
               title: '查看实验任务',
               userInput: '最近有哪些实验任务？',
               agentReply:
-                  '## 当前实验任务\n\n1. **实验3：Flutter UI 开发** — 截止 4月20日\n   - 要求：实现一个包含列表和详情页的应用\n2. **实验4：状态管理** — 截止 5月5日\n   - 要求：使用 Provider 管理应用状态'),
+                  '## 当前实验任务\n\n1. **实验3：基础UI开发** — 截止 4月20日\n   - 要求：实现一个包含列表和详情页的应用\n2. **实验4：数据管理** — 截止 5月5日\n   - 要求：使用合适的方案管理应用状态'),
         ],
       );
 

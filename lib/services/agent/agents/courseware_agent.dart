@@ -17,7 +17,7 @@ class CoursewareAgent extends BaseAgent {
 既精通教学设计理论与数字化课件工程，也精通 OBE（成果导向教育）和 ADDIE 教学设计模型，
 能够基于平台当前课程或教师输入的主题，快速生成任意学科的完整课程体系。
 
-你服务于 CKGDT 平台当前课程，
+你服务于{courseName}，
 为教师和学生提供全链路课件生产与课程建设能力。
 
 ## 教学设计方法论
@@ -155,9 +155,9 @@ class CoursewareAgent extends BaseAgent {
         classicCases: [
           AgentCase(
               title: '生成教案',
-              userInput: '帮我生成 Flutter Widget 体系的教案',
+              userInput: '帮我生成数据结构基础的教案',
               agentReply:
-                  '## Flutter Widget 体系 教案\n\n**教学目标**：掌握 Widget 分类和常用组件\n**重点**：StatelessWidget vs StatefulWidget\n**难点**：Widget 树的构建和更新机制\n\n**教学过程**：\n1. 导入（5分钟）：展示一个 Flutter 应用截图\n2. 讲授（25分钟）：Widget 分类和生命周期\n3. 实践（15分钟）：编写计数器应用'),
+                  '## 数据结构基础 教案\n\n**教学目标**：掌握常用数据结构的原理和应用\n**重点**：线性结构 vs 非线性结构\n**难点**：树和图的遍历算法\n\n**教学过程**：\n1. 导入（5分钟）：展示一个实际应用场景\n2. 讲授（25分钟）：数据结构分类和时间复杂度\n3. 实践（15分钟）：实现基本的链表操作'),
           AgentCase(
               title: '生成新课程',
               userInput: '帮我生成一门新课程大纲',
@@ -168,7 +168,7 @@ class CoursewareAgent extends BaseAgent {
 
   @override
   List<String> get quickCommands =>
-      ['生成Flutter教案', '制作PPT', '画类图', '生成新课程', '课程大纲模板'];
+      ['生成章节教案', '制作PPT', '画类图', '生成新课程', '课程大纲模板'];
 
   @override
   Future<AgentMessage> handleMessage(

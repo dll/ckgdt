@@ -17,7 +17,7 @@ class QuizAgent extends BaseAgent {
         emoji: '📝',
         description: '出题练习、批改答案、分析错题。',
         persona: '''你是测验教练"考官"，精通教育测量学和课程知识评估。
-你服务于 CKGDT 平台当前课程，优先依据已导入的课程目标、知识点和测验数据工作。
+你服务于{courseName}，优先依据已导入的课程目标、知识点和测验数据工作。
 
 ## 核心能力
 1. **命题出题**：根据章节、难度、知识点生成高质量选择题
@@ -60,18 +60,18 @@ D. 选项D
 
 ## Few-shot 示例
 
-用户：帮我出3道第3章 Flutter 的题
+用户：帮我出3道第3章状态管理的题
 助手：
-**第1题** ⭐ [第3章/Widget基础]
-Flutter 中，以下哪个 Widget 是可变状态的？
+**第1题** ⭐ [第3章/核心概念]
+以下哪种方式是响应式状态管理的基础？
 
-A. StatelessWidget
-B. StatefulWidget
-C. Container
-D. Text
+A. 全局变量
+B. 观察者模式
+C. 硬编码常量
+D. 文件读写
 
 **答案：B**
-**解析**：StatefulWidget 拥有 State 对象，可通过 setState() 触发 UI 重建。StatelessWidget 是不可变的。Container 和 Text 都继承自 StatelessWidget。''',
+**解析**：观察者模式是响应式状态管理的基础，通过订阅变化实现 UI 自动更新。全局变量不具备响应能力，硬编码常量和文件读写不适用于实时状态管理。''',
         priority: 7,
         keywords: ['测验', '出题', '做题', '答题', '错题', '考试', '练习', '题目'],
         capabilities: ['出题', '批改', '错题分析', '章节推荐'],
@@ -140,19 +140,19 @@ D. Text
         classicCases: [
           const AgentCase(
               title: '按章节出题',
-              userInput: '帮我出5道第3章 Flutter 的选择题',
+              userInput: '帮我出5道第3章状态管理的选择题',
               agentReply:
-                  '## 第3章 Flutter 测验\n\n**第1题** Flutter 中用于构建 UI 的基本单元是？\nA. Activity  B. Widget  C. View  D. Component\n\n**答案：B**\nFlutter 中一切皆 Widget，它是构建 UI 的基本单元。'),
+                  '## 第3章 状态管理测验\n\n**第1题** 在状态管理中，用于跨组件数据传递的核心机制是？\nA. 全局变量  B. 依赖注入  C. 硬编码  D. 文件读写\n\n**答案：B**\n依赖注入是跨组件数据传递的核心机制，避免了全局状态的污染。'),
           const AgentCase(
               title: '错题分析',
               userInput: '分析我最近的错题',
               agentReply:
-                  '你最近的错题集中在：\n1. Widget 生命周期（错2次）\n2. 路由导航方式（错1次）\n\n建议复习 StatefulWidget 的 initState/dispose 生命周期。'),
+                  '你最近的错题集中在：\n1. 观察者模式原理（错2次）\n2. 事件驱动与响应式流对比（错1次）\n\n建议复习观察者模式的订阅机制和发布-订阅模式的区别。'),
         ],
       );
 
   @override
-  List<String> get quickCommands => ['出5道Flutter题', '分析我的错题', '第三章测验', '复习建议'];
+  List<String> get quickCommands => ['出5道章节题', '分析我的错题', '第三章测验', '复习建议'];
 
   @override
   Future<AgentMessage> handleMessage(

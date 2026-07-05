@@ -55,8 +55,8 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
     if (mounted) setState(() => _loading = false);
   }
 
-  static const _intro =
-      '通过本课程的学习，掌握移动应用开发的多元技术体系（原生/混合/小程序/多端），理解不同开发模式的适用场景，熟悉主流跨平台开发框架及 AI 编程工具的使用，具备跨平台应用系统分析、设计和开发能力，能够运用 RESTful API 实现移动端与后端的数据交互，培养学生科学思维、创新意识和良好的职业道德，为从事移动开发工作及毕业设计奠定基础。';
+  String get _intro =>
+      '通过本课程的学习，掌握${_courseName.isEmpty ? '本课程' : _courseName}的核心知识与技能，理解课程体系的结构与应用，熟悉相关理论、方法与工具的使用，具备分析、设计和实践能力，能够运用所学知识解决实际问题，培养科学思维、创新意识和良好的职业道德，为从事相关工作及毕业设计奠定基础。';
 
   @override
   Widget build(BuildContext context) {

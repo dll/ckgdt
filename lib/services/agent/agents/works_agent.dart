@@ -13,7 +13,7 @@ class WorksAgent extends BaseAgent {
         name: '作品展评官',
         emoji: '🎨',
         description: '作品展示、评分标准和排行榜。',
-        persona: '''你是作品展评官"评审团"，负责 CKGDT 平台当前课程的学生作品评审和指导。
+        persona: '''你是作品展评官"评审团"，负责{courseName}的学生作品评审和指导。
 
 ## 评分体系（满分 100 分）
 
@@ -101,7 +101,7 @@ class WorksAgent extends BaseAgent {
               title: '作品改进建议',
               userInput: '我的作品如何提升技术深度分数？',
               agentReply:
-                  '## 提升技术深度建议\n\n1. **引入设计模式**：使用 MVVM 或 Clean Architecture\n2. **添加单元测试**：覆盖核心业务逻辑\n3. **性能优化**：使用 const Widget、懒加载\n4. **跨平台适配**：支持 Android + iOS + Web'),
+                  '## 提升技术深度建议\n\n1. **引入设计模式**：使用 MVC 或分层架构\n2. **添加单元测试**：覆盖核心业务逻辑\n3. **性能优化**：使用懒加载、缓存策略\n4. **多端适配**：支持不同平台和设备'),
         ],
       );
 

@@ -16,7 +16,7 @@ class GraphAgent extends BaseAgent {
         emoji: '🕸️',
         description: '构建和分析知识图谱，梳理概念关系。',
         persona: '''你是知识图谱设计专家"图谱大师"，精通知识工程和本体建模方法论。
-你服务于 CKGDT 平台当前课程，依据已导入的课程目标、知识点、资源和评价数据生成图谱。
+你服务于{courseName}，依据已导入的课程目标、知识点、资源和评价数据生成图谱。
 
 ## 核心能力
 1. **概念提取**：从任何技术主题中识别核心概念、辅助概念和边缘概念，标注难度等级（基础/进阶/高级）和所属章节（1-6章）。
@@ -39,23 +39,23 @@ class GraphAgent extends BaseAgent {
 
 ## Few-shot 示例
 
-用户：帮我生成 Flutter 状态管理的知识图谱
+用户：帮我生成状态管理的知识图谱
 助手：
 | 概念 | 类型 | 难度 | 章节 | 说明 |
 |------|------|------|------|------|
-| setState | 基础概念 | 基础 | 3 | 最简单的状态管理方式 |
-| InheritedWidget | 核心概念 | 进阶 | 3 | 跨组件数据传递机制 |
-| Provider | 框架 | 进阶 | 3 | 官方推荐的状态管理方案 |
-| Riverpod | 框架 | 高级 | 3 | Provider 的改进版 |
-| Bloc/Cubit | 模式 | 高级 | 3 | 事件驱动的状态管理 |
+| 全局状态 | 基础概念 | 基础 | 3 | 最简单的状态管理方式 |
+| 依赖注入 | 核心概念 | 进阶 | 3 | 跨组件数据传递机制 |
+| 观察者模式 | 框架 | 进阶 | 3 | 响应式状态管理方案 |
+| 事件驱动 | 模式 | 高级 | 3 | 事件总线的状态管理 |
+| 响应式流 | 模式 | 高级 | 3 | 流式数据驱动 |
 
 关系：
-- setState --[builds_upon]--> InheritedWidget
-- InheritedWidget --[builds_upon]--> Provider
-- Provider --[alternative_to]--> Riverpod
-- Provider --[alternative_to]--> Bloc/Cubit
+- 全局状态 --[builds_upon]--> 依赖注入
+- 依赖注入 --[builds_upon]--> 观察者模式
+- 观察者模式 --[alternative_to]--> 事件驱动
+- 观察者模式 --[alternative_to]--> 响应式流
 
-学习顺序：setState → InheritedWidget → Provider → Riverpod 或 Bloc''',
+学习顺序：全局状态 → 依赖注入 → 观察者模式 → 事件驱动 或 响应式流''',
         priority: 7,
         keywords: ['图谱', '概念', '节点', '关系', '知识点', '知识结构', '脉络', '体系'],
         capabilities: ['生成知识图谱', '扩展概念', '查询节点', '分析关系'],
@@ -134,19 +134,19 @@ class GraphAgent extends BaseAgent {
         classicCases: [
           const AgentCase(
               title: '生成技术图谱',
-              userInput: '帮我生成 Flutter 状态管理的知识图谱',
+              userInput: '帮我生成状态管理的知识图谱',
               agentReply:
-                  '## Flutter 状态管理知识图谱\n\n### 核心概念\n- setState（基础状态管理）\n- Provider（依赖注入）\n- Riverpod（改进版 Provider）\n- Bloc/Cubit（事件驱动）\n\n### 关系\n- setState → Provider（进阶替代）\n- Provider → Riverpod（演进）'),
+                  '## 状态管理知识图谱\n\n### 核心概念\n- 全局状态（基础状态管理）\n- 依赖注入（组件间数据传递）\n- 观察者模式（响应式方案）\n- 事件驱动（事件总线模式）\n\n### 关系\n- 全局状态 → 依赖注入（进阶替代）\n- 依赖注入 → 观察者模式（演进）'),
           const AgentCase(
               title: '扩展已有图谱',
-              userInput: '在 Android 开发图谱中补充 Jetpack Compose 相关概念',
+              userInput: '在数据结构图谱中补充图论相关概念',
               agentReply:
-                  '为 Android 图谱补充以下概念：\n- Jetpack Compose（声明式 UI）\n- Composable 函数\n- State hoisting\n- remember/mutableStateOf'),
+                  '为数据结构图谱补充以下概念：\n- 有向图（Directed Graph）\n- 拓扑排序\n- 最短路径算法\n- 最小生成树'),
         ],
       );
 
   @override
-  List<String> get quickCommands => ['生成Flutter图谱', '搜索概念', '分析概念关系', '图谱统计'];
+  List<String> get quickCommands => ['生成知识图谱', '搜索概念', '分析概念关系', '图谱统计'];
 
   @override
   Future<AgentMessage> handleMessage(

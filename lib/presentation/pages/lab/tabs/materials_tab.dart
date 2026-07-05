@@ -260,65 +260,57 @@ class _MaterialsTabState extends State<_MaterialsTab> {
     }
   }
 
-  /// 当 AssetManifest 匹配失败时，尝试直接加载已知的 asset 文件
+  /// 当 AssetManifest 匹配失败时，尝试从课程配置加载已知的 asset 文件
   Future<List<_MaterialFile>> _tryLoadKnownAssets(String dir) async {
-    // 硬编码的已知文件列表（与 data/实验/ 目录一致）
-    const knownFiles = <String, List<String>>{
-      'data/实验/实验教程/': [
-        '实验一 开发环境搭建_new.md',
-        '实验二 原生应用开发_new.md',
-        '实验三 跨平台应用开发_new.md',
-        '实验四 微信小程序开发_new.md',
-        '实验五 鸿蒙多端应用开发_new.md',
-        '实验六 跨平台综合项目实战_new.md',
-      ],
-      'data/实验/移动技术栈/': [
-        'ArkUI开发鸿蒙多端应用技术栈手册.md',
-        'Cordova开发混合应用技术栈手册.md',
-        'Flutter开发跨平台应用技术栈手册.md',
-        'Java开发Android应用技术栈手册.md',
-        'Kotlin开发Android应用技术栈手册.md',
-        'MAUI开发跨平台应用技术栈手册.md',
-        'Swift开发iOS应用技术栈手册.md',
-        'Uniapp开发跨平台应用技术栈手册.md',
-        '嵌入式C-C++开发技术栈手册.md',
-      ],
-      'data/实验/实验指导/': [
-        '移动应用开发实验指导书_new.md',
-        'MVVM模型图_StarUML.puml',
-        '交互顺序图_StarUML.puml',
-        '组件模型图_StarUML.puml',
-        '部署模型图_StarUML.puml',
-      ],
-      'data/实验/报告模板/': [
-        '实验一 开发环境搭建报告模板.md',
-        '实验二 原生应用开发报告模板.md',
-        '实验三 跨平台应用开发报告模板.md',
-        '实验四 微信小程序开发报告模板.md',
-        '实验五 鸿蒙多端应用开发报告模板.md',
-        '实验六 跨平台综合项目实战报告模板.md',
-      ],
-    };
-
-    final fileNames = knownFiles[dir];
-    if (fileNames == null) return [];
-
+    // 从课程配置动态加载文件列表（不再硬编码）
     final courseName = await CourseContextService().activeCourseName();
+    final courseId = await CourseContextService().activeCourseId();
     final result = <_MaterialFile>[];
-    for (final fn in fileNames) {
-      final assetPath = '$dir$fn';
-      // 验证 asset 确实存在
-      try {
-        await rootBundle.loadString(assetPath);
-        final displayName = _displayNameForKnownAsset(fn, courseName);
-        result.add(_MaterialFile(
-          assetPath: assetPath,
-          fileName: fn,
-          displayName: displayName,
-        ));
-      } catch (e, st) {
-        swallowDebug(e, tag: 'materials_tab._tryLoadKnownAssets', stack: st);
+
+    // 尝试从 materials_manifest.json 加载
+    try {
+      final manifestPath = 'data/$courseId/配置/materials_manifest.json';
+      final content = await rootBundle.loadString(manifestPath);
+      final json = jsonDecode(content) as Map<String, dynamic>;
+      final dirFiles = json[dir] as List<dynamic>?;
+      if (dirFiles != null) {
+        for (final fn in dirFiles) {
+          final fileName = fn as String;
+          final assetPath = '$dir$fileName';
+          try {
+            await rootBundle.loadString(assetPath);
+            result.add(_MaterialFile(
+              assetPath: assetPath,
+              fileName: fileName,
+              displayName: _displayNameForKnownAsset(fileName, courseName),
+            ));
+          } catch (e, st) {
+            swallowDebug(e, tag: 'materials_tab._tryLoadKnownAssets', stack: st);
+          }
+        }
+        return result;
       }
+    } catch (_) {
+      // manifest 不存在，继续尝试 AssetManifest
+    }
+
+    // 兜底：从 AssetManifest.json 扫描目录下所有文件
+    try {
+      final assetManifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+      final allAssets = assetManifest.listAssets();
+      final dirAssets = allAssets.where((a) => a.startsWith(dir));
+      for (final assetPath in dirAssets) {
+        final fileName = assetPath.substring(dir.length);
+        if (fileName.isNotEmpty && !fileName.contains('/')) {
+          result.add(_MaterialFile(
+            assetPath: assetPath,
+            fileName: fileName,
+            displayName: _displayNameForKnownAsset(fileName, courseName),
+          ));
+        }
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'materials_tab._tryLoadKnownAssets.manifest', stack: st);
     }
     return result;
   }

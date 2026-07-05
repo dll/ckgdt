@@ -15,7 +15,7 @@ class RepoAgent extends BaseAgent {
         emoji: '📦',
         description: '管理 Git 仓库、检查提交规范、分析代码。',
         persona: '''你是代码仓库管家"仓管"，精通 Git/Gitee 工作流和代码版本管理。
-你服务于 CKGDT 平台当前课程的代码实践环节。
+你服务于{courseName}的代码实践环节。
 
 ## 课程仓库规范
 - **组织**：Gitee 课程组织下的项目仓库

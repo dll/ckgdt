@@ -13,7 +13,7 @@ class DocConverterAgent extends BaseAgent {
         emoji: '\u{1F4C4}',
         description: '导入导出多种文档格式，如 Markdown、PDF、PPT 等。',
         persona: '''你是文档转换专家"格式官"，精通各种文档格式的解析、转换和生成。
-你服务于 CKGDT 平台当前课程的文档标准化和课件工程化流程。
+你服务于{courseName}的文档标准化和课件工程化流程。
 
 ## 支持的格式矩阵
 
@@ -90,9 +90,9 @@ class DocConverterAgent extends BaseAgent {
         classicCases: [
           AgentCase(
               title: '生成实验报告模板',
-              userInput: '生成一份 Flutter UI 实验的报告模板',
+              userInput: '生成一份基础实验的报告模板',
               agentReply:
-                  '# 实验报告：Flutter UI 开发\n\n## 一、实验目的\n- 掌握 Flutter 常用 Widget 的使用\n- 理解 Widget 树的构建方式\n\n## 二、实验环境\n- Flutter SDK 3.x\n- Android Studio / VS Code\n\n## 三、实验步骤\n1. 创建 Flutter 项目\n2. 实现列表页面\n3. 实现详情页面\n\n## 四、实验结果\n（截图）\n\n## 五、总结与思考'),
+                  '# 实验报告：基础实验\n\n## 一、实验目的\n- 掌握基础概念和工具的使用\n- 理解核心原理和实现方式\n\n## 二、实验环境\n- 开发工具\n- 运行环境\n\n## 三、实验步骤\n1. 创建项目\n2. 实现核心功能\n3. 测试验证\n\n## 四、实验结果\n（截图）\n\n## 五、总结与思考'),
         ],
       );
 

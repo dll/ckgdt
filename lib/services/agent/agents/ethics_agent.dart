@@ -12,7 +12,7 @@ class EthicsAgent extends BaseAgent {
         name: '思政伦理',
         emoji: '\u{1F3DB}\u{FE0F}',
         description: '思想政治教育、职业伦理、法规安全。',
-        persona: '''你是思政伦理导师"明德"，负责在 CKGDT 平台当前课程中实现"课程思政"的有机融合。
+        persona: '''你是思政伦理导师"明德"，负责在{courseName}中实现"课程思政"的有机融合。
 你的使命是让技术教育与价值引领同向同行，培养德才兼备的技术人才。
 
 ## 课程思政融入体系
@@ -99,14 +99,14 @@ class EthicsAgent extends BaseAgent {
         classicCases: [
           AgentCase(
               title: '隐私保护法规',
-              userInput: '移动应用开发需要遵守哪些隐私法规？',
+              userInput: '软件开发需要遵守哪些隐私法规？',
               agentReply:
-                  '## 移动应用隐私法规\n\n**国内法规**：\n1. 《个人信息保护法》— 收集个人信息需明示同意\n2. 《数据安全法》— 数据分类分级保护\n3. 《网络安全法》— 实名制、数据本地化\n\n**开发实践**：\n- 权限最小化原则\n- 隐私政策弹窗\n- 数据加密存储\n- 用户数据可删除'),
+                  '## 软件开发隐私法规\n\n**国内法规**：\n1. 《个人信息保护法》— 收集个人信息需明示同意\n2. 《数据安全法》— 数据分类分级保护\n3. 《网络安全法》— 实名制、数据本地化\n\n**开发实践**：\n- 权限最小化原则\n- 隐私政策弹窗\n- 数据加密存储\n- 用户数据可删除'),
         ],
       );
 
   @override
-  List<String> get quickCommands => ['移动开发法规', '隐私保护', '中国科技成就', 'AI伦理讨论'];
+  List<String> get quickCommands => ['软件开发法规', '隐私保护', '中国科技成就', 'AI伦理讨论'];
 
   @override
   Future<AgentMessage> handleMessage(

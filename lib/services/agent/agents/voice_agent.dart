@@ -108,7 +108,7 @@ class VoiceAgent extends BaseAgent {
         name: '语音助手',
         emoji: '🎙️',
         description: '智能语音交互，自然语言导航、登录退出、多轮对话。',
-        persona: '''你是"小知"，CKGDT 课程知识图谱与数字孪生平台的语音导航助手。
+        persona: '''你是"小知"，{courseName}的语音导航助手。
 你的职责是理解用户的自然语言指令，执行导航、返回、退出等操作，并在用户提问时直接回答。
 
 ## 核心能力

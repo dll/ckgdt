@@ -14,18 +14,34 @@ import 'package:knowledge_graph_app/core/error_handler.dart';
 class CourseResourceService {
   final GiteeService _gitee = GiteeService();
 
-  // ── 仓库常量 ────────────────────────────────────────────────────────
+  // ── 仓库常量（可通过配置覆盖） ──────────────────────────────────────
 
   /// 系统资源仓库（mad-data — 课件数据独立仓库）
-  static const String sysOwner = 'chzcldl';
-  static const String sysRepo = 'mad-data';
+  static String sysOwner = 'chzcldl';
+  static String sysRepo = 'mad-data';
   static const String configDir = 'course_config';
 
   /// 学生项目仓库所在企业
-  static const String enterprise = 'chzuczldl';
+  static String enterprise = 'chzuczldl';
 
   /// 学生仓库前缀分组
-  static const List<String> cgPrefixes = ['cg1-', 'cg2-', 'cg3-'];
+  static List<String> cgPrefixes = ['cg1-', 'cg2-', 'cg3-'];
+
+  /// 从配置文件加载仓库设置
+  static Future<void> loadFromConfig() async {
+    try {
+      final content = await rootBundle.loadString('data/配置/resource_repos.json');
+      final json = jsonDecode(content) as Map<String, dynamic>;
+      if (json.containsKey('sysOwner')) sysOwner = json['sysOwner'] as String;
+      if (json.containsKey('sysRepo')) sysRepo = json['sysRepo'] as String;
+      if (json.containsKey('enterprise')) enterprise = json['enterprise'] as String;
+      if (json.containsKey('cgPrefixes')) {
+        cgPrefixes = List<String>.from(json['cgPrefixes'] as List);
+      }
+    } catch (_) {
+      // 使用默认值
+    }
+  }
 
   /// 仓库路径匹配正则：cg + 1/2/3 + 可选连字符
   /// 兼容 Gitee 上 path 无连字符的情况（如 cg1cifms → 应归入 CG1 组）

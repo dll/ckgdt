@@ -588,25 +588,25 @@ class GradingAgent extends BaseAgent {
         ],
         classicCases: [
           const AgentCase(
-            title: '批改 Flutter 实验报告',
+            title: '批改实验报告',
             userInput:
-                '请批改以下实验报告：\n实验名称：Flutter基础UI开发\n实验总结：完成了基本的ListView和GridView布局，实现了页面间导航。遇到了StatefulWidget状态更新的问题，通过setState解决。',
+                '请批改以下实验报告：\n实验名称：基础数据处理\n实验总结：完成了数据采集和清洗，实现了可视化图表。遇到了数据格式不一致的问题，通过标准化处理解决。',
             agentReply:
-                '{"score": 82, "summary": "较好地完成了基础UI实验，对状态管理有初步理解", "dimensions": {"completion": {"score": 26, "max": 30, "comment": "完成了ListView/GridView和导航"}, "code_quality": {"score": 20, "max": 25, "comment": "代码结构清晰"}, "report_quality": {"score": 17, "max": 20, "comment": "描述基本清晰"}, "problem_analysis": {"score": 12, "max": 15, "comment": "对setState有理解"}, "innovation": {"score": 7, "max": 10, "comment": "基本完成"}}, "feedback": "你的实验完成度不错，成功实现了ListView、GridView和页面导航三个核心组件。对setState的使用说明表明你理解了Flutter的状态管理基础。建议在报告中补充更多代码截图和效果演示，同时可以尝试探索Provider等更高级的状态管理方案。"}',
+                '{"score": 82, "summary": "较好地完成了基础数据处理实验，对数据管理有初步理解", "dimensions": {"completion": {"score": 26, "max": 30, "comment": "完成了数据采集、清洗和可视化"}, "code_quality": {"score": 20, "max": 25, "comment": "代码结构清晰"}, "report_quality": {"score": 17, "max": 20, "comment": "描述基本清晰"}, "problem_analysis": {"score": 12, "max": 15, "comment": "对数据处理有理解"}, "innovation": {"score": 7, "max": 10, "comment": "基本完成"}}, "feedback": "你的实验完成度不错，成功实现了数据采集、清洗和可视化三个核心环节。对数据格式标准化的使用说明表明你理解了数据管理的基础。建议在报告中补充更多处理流程图和效果演示，同时可以尝试探索更高级的数据分析方案。"}',
           ),
           const AgentCase(
-            title: '批改移动应用考核报告',
+            title: '批改项目考核报告',
             userInput:
-                '请批改以下考核报告：\n报告类型：项目中期报告\n学生：张三\n内容：完成了Android端登录注册和首页功能，使用MVVM架构，接入了MySQL数据库。',
+                '请批改以下考核报告：\n报告类型：项目中期报告\n学生：张三\n内容：完成了后端接口设计和数据库构建，使用MVC架构，接入了第三方服务。',
             agentReply:
-                '{"total_score": 75, "summary": "完成了基础Android开发，但缺少跨平台整合和深度技术探索", "scores": {"functionality": {"score": 18, "max": 25, "comment": "实现了登录和首页核心功能"}, "tech_depth": {"score": 14, "max": 20, "comment": "MVVM架构选型合理"}, "integration": {"score": 12, "max": 25, "comment": "仅完成Android端，缺少跨平台"}, "quality": {"score": 10, "max": 15, "comment": "基本可用"}, "documentation": {"score": 11, "max": 15, "comment": "报告描述简略"}}, "feedback": "你已经完成了Android端的基础功能开发，MVVM架构选型合理。建议尽快启动Flutter或小程序端的开发，增强跨框架整合度。报告中应补充架构图、数据库设计和接口文档。"}',
+                '{"total_score": 75, "summary": "完成了基础后端开发，但缺少跨模块整合和深度技术探索", "scores": {"functionality": {"score": 18, "max": 25, "comment": "实现了接口和数据库核心功能"}, "tech_depth": {"score": 14, "max": 20, "comment": "MVC架构选型合理"}, "integration": {"score": 12, "max": 25, "comment": "仅完成后端，缺少前端整合"}, "quality": {"score": 10, "max": 15, "comment": "基本可用"}, "documentation": {"score": 11, "max": 15, "comment": "报告描述简略"}}, "feedback": "你已经完成后端的基础功能开发，MVC架构选型合理。建议尽快启动前端模块的开发，增强前后端整合度。报告中应补充架构图、数据库设计和接口文档。"}',
           ),
           const AgentCase(
-            title: '批改 Flutter 天气 App 学生作品',
+            title: '批改数据分析学生作品',
             userInput:
-                '请批改以下作品：\n标题：天气预报App\n技术栈：Flutter\n描述：使用Flutter开发的跨平台天气应用，集成高德天气API，支持城市搜索、7日预报、实时天气动画。',
+                '请批改以下作品：\n标题：数据可视化看板\n技术栈：Web前端\n描述：使用前端技术开发的数据可视化看板，集成多种图表，支持数据筛选、多维度分析。',
             agentReply:
-                '{"total_score": 86, "relevance": "related", "summary": "优秀的Flutter跨平台天气应用，功能完整且UI精美", "scores": {"functionality": {"score": 22, "max": 25, "comment": "核心功能完整，7日预报和动画是亮点"}, "tech_depth": {"score": 17, "max": 20, "comment": "Flutter架构合理，API集成规范"}, "integration": {"score": 17, "max": 20, "comment": "Flutter天然跨平台，但缺少原生端对比"}, "quality": {"score": 17, "max": 20, "comment": "天气动画提升了用户体验"}, "documentation": {"score": 13, "max": 15, "comment": "演示视频清晰完整"}}, "feedback": "这是一个完成度很高的Flutter天气应用。天气动画效果和7日预报功能是突出亮点。建议增加小程序或HarmonyOS版本的适配以提升跨框架整合评分。"}',
+                '{"total_score": 86, "relevance": "related", "summary": "优秀的数据可视化应用，功能完整且界面美观", "scores": {"functionality": {"score": 22, "max": 25, "comment": "核心功能完整，多维度分析是亮点"}, "tech_depth": {"score": 17, "max": 20, "comment": "前端架构合理，API集成规范"}, "integration": {"score": 17, "max": 20, "comment": "前后端整合良好，但缺少移动端适配"}, "quality": {"score": 17, "max": 20, "comment": "可视化效果提升了用户体验"}, "documentation": {"score": 13, "max": 15, "comment": "演示视频清晰完整"}}, "feedback": "这是一个完成度很高的数据可视化看板。图表效果和多维度分析功能是突出亮点。建议增加移动端适配或小程序版本以提升跨平台整合评分。"}',
           ),
         ],
       );

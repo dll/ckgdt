@@ -73,10 +73,10 @@ const _skills = <_SkillDef>[
       '输出结构化 JSON 可导入系统',
     ],
     examples: [
-      'Flutter 跨平台开发技术体系',
-      'Android 四大组件',
-      '微信小程序开发流程',
-      'RESTful API 设计'
+      '数据结构与算法基础',
+      '软件工程核心概念',
+      '数据库设计原理',
+      '计算机网络基础'
     ],
     systemPrompt: '你是知识图谱设计专家。请根据用户给出的主题，生成一份知识图谱方案。'
         '输出格式为 Markdown，包含：\n'
@@ -87,22 +87,22 @@ const _skills = <_SkillDef>[
         '请用中文回答，结构清晰。',
     usageSteps: [
       '进入 AI 技能中心，选择"图谱技能"',
-      '在"使用"页面输入知识主题（如"Flutter 状态管理"）',
+      '在"使用"页面输入知识主题（如"数据结构与算法"）',
       'AI 自动分析主题，生成概念节点和关系结构',
       '查看生成结果，可复制或保存为 Markdown 文件',
       '将图谱方案导入系统知识图谱模块使用',
     ],
     classicCases: [
       _SkillCase(
-          title: 'Flutter 跨平台技术体系',
-          userInput: 'Flutter 跨平台开发技术体系',
+          title: '数据结构与算法体系',
+          userInput: '数据结构与算法基础',
           resultSummary:
-              '生成 12 个核心概念节点（Widget/State/BuildContext 等），建立包含、依赖、关联三类关系 18 条，标注初/中/高级难度。'),
+              '生成 12 个核心概念节点（数组/链表/树/图等），建立包含、依赖、关联三类关系 18 条，标注初/中/高级难度。'),
       _SkillCase(
-          title: 'Android 四大组件',
-          userInput: 'Android 四大组件知识图谱',
+          title: '软件工程核心概念',
+          userInput: '软件工程核心概念图谱',
           resultSummary:
-              '生成 Activity/Service/BroadcastReceiver/ContentProvider 四大核心节点及其子概念共 15 个，含生命周期、Intent 通信等关系。'),
+              '生成需求分析/设计/编码/测试/维护五大核心节点及其子概念共 15 个，含生命周期模型、开发流程等关系。'),
     ],
   ),
   _SkillDef(
@@ -121,10 +121,10 @@ const _skills = <_SkillDef>[
       '支持不同基础水平的差异化路径',
     ],
     examples: [
-      '零基础学 Flutter 到独立开发 App',
-      'Android 开发者转型鸿蒙开发',
-      '前端工程师学习移动端开发',
-      '大学生 4 周掌握 Dart 语言'
+      '零基础掌握核心专业知识',
+      '跨领域知识拓展学习',
+      '基础到进阶的能力提升',
+      '大学生 4 周掌握核心技能'
     ],
     systemPrompt: '你是学习规划专家。请根据用户的学习目标，设计一份详细的学习路径。'
         '输出格式为 Markdown，包含：\n'
@@ -135,22 +135,22 @@ const _skills = <_SkillDef>[
         '请用中文回答，适合大学生水平。',
     usageSteps: [
       '进入 AI 技能中心，选择"路径技能"',
-      '输入学习目标和当前水平（如"零基础学 Flutter"）',
+      '输入学习目标和当前水平（如"零基础掌握核心知识"）',
       'AI 分析知识依赖，设计阶梯式学习路径',
       '查看各阶段目标、时长和推荐资源',
       '保存路径方案，按计划执行学习',
     ],
     classicCases: [
       _SkillCase(
-          title: '零基础学 Flutter',
-          userInput: '零基础学 Flutter 到独立开发 App',
+          title: '零基础掌握核心知识',
+          userInput: '零基础掌握核心专业知识',
           resultSummary:
-              '规划 12 周学习路径，分 4 阶段：Dart 基础(2周)→Flutter 入门(3周)→进阶组件(4周)→实战项目(3周)，每阶段含具体学习目标和练习项目。'),
+              '规划 12 周学习路径，分 4 阶段：基础入门(2周)→核心知识(3周)→进阶提升(4周)→综合应用(3周)，每阶段含具体学习目标和练习项目。'),
       _SkillCase(
-          title: 'Android 转鸿蒙',
-          userInput: 'Android 开发者转型鸿蒙开发',
+          title: '跨领域知识拓展',
+          userInput: '跨领域知识拓展学习',
           resultSummary:
-              '规划 8 周转型路径，重点对比 Android/HarmonyOS 差异，涵盖 ArkTS 语言、ArkUI 框架、分布式能力等核心模块。'),
+              '规划 8 周拓展路径，重点对比跨领域知识差异，涵盖核心理论、实践方法、综合应用等模块。'),
     ],
   ),
   _SkillDef(
@@ -169,10 +169,10 @@ const _skills = <_SkillDef>[
       '思维导图式的知识结构梳理',
     ],
     examples: [
-      'Flutter Widget 生命周期',
-      'Dart 异步编程 Future/Stream',
-      'Android Activity 启动模式',
-      '状态管理 Provider vs Riverpod'
+      '核心概念的生命周期',
+      '异步编程基础概念',
+      '组件启动与管理模式',
+      '同类技术方案对比分析'
     ],
     systemPrompt: '你是课程教学助手。请根据用户给出的知识点，生成一份结构化学习笔记。'
         '输出格式为 Markdown，包含：\n'
@@ -181,25 +181,25 @@ const _skills = <_SkillDef>[
         '3. 关键对比表格（如适用）\n'
         '4. 常见易错点（3-5个）\n'
         '5. 练习思考题（2-3题）\n'
-        '请用中文回答，代码使用 Dart/Flutter。',
+        '请用中文回答，代码示例使用课程涉及的编程语言。',
     usageSteps: [
       '进入 AI 技能中心，选择"学习技能"',
-      '输入要学习的知识点（如"Flutter Widget 生命周期"）',
+      '输入要学习的知识点（如"核心概念的生命周期"）',
       'AI 生成结构化学习笔记，含概念解释和代码示例',
       '查看对比表格、易错点和练习题',
       '保存笔记用于课前预习或考前复习',
     ],
     classicCases: [
       _SkillCase(
-          title: 'Widget 生命周期',
-          userInput: 'Flutter Widget 生命周期',
+          title: '核心概念生命周期',
+          userInput: '核心概念的生命周期',
           resultSummary:
-              '生成 StatelessWidget/StatefulWidget 生命周期对比笔记，含 initState→build→dispose 流程图解、6 个代码示例、5 个易错点。'),
+              '生成不同模式生命周期对比笔记，含创建→执行→销毁流程图解、6 个代码示例、5 个易错点。'),
       _SkillCase(
-          title: 'Dart 异步编程',
-          userInput: 'Dart 异步编程 Future/Stream',
+          title: '异步编程基础',
+          userInput: '异步编程基础概念',
           resultSummary:
-              '生成 Future/Stream/async-await 对比笔记，含 then 链式调用、StreamBuilder 使用、错误处理等 8 个代码示例。'),
+              '生成同步/异步/并发对比笔记，含回调链式调用、事件驱动使用、错误处理等 8 个代码示例。'),
     ],
   ),
   _SkillDef(
@@ -218,10 +218,10 @@ const _skills = <_SkillDef>[
       '可直接导入系统题库使用',
     ],
     examples: [
-      '第1章 移动开发技术体系',
-      '第3章 Flutter 混合开发',
-      'Dart 面向对象编程',
-      '第5章 HarmonyOS 开发'
+      '第1章 课程基础知识',
+      '第3章 核心技术与方法',
+      '面向对象编程基础',
+      '第5章 综合应用与实践'
     ],
     systemPrompt: '你是课程出题专家。请根据用户给出的主题，生成选择题。'
         '输出格式为 Markdown，每题包含：\n'
@@ -232,21 +232,21 @@ const _skills = <_SkillDef>[
         '请生成 5 道题，难度从易到难排列，用中文出题。',
     usageSteps: [
       '进入 AI 技能中心，选择"测验技能"',
-      '输入出题范围（如"第3章 Flutter 混合开发"）',
+      '输入出题范围（如"第3章 核心技术与方法"）',
       'AI 自动生成 5 道四选一选择题',
       '每题附正确答案和解析说明',
       '可保存题目，后续导入系统题库',
     ],
     classicCases: [
       _SkillCase(
-          title: 'Flutter 混合开发',
-          userInput: '第3章 Flutter 混合开发',
+          title: '核心技术与方法',
+          userInput: '第3章 核心技术与方法',
           resultSummary:
-              '生成 5 道选择题，覆盖 Hot Reload 原理、Widget 树构建、状态管理选择、路由导航、平台通道等知识点，难度从易到难。'),
+              '生成 5 道选择题，覆盖核心原理、基础架构、方案选择、流程规范、实践应用等知识点，难度从易到难。'),
       _SkillCase(
-          title: 'Dart 面向对象',
-          userInput: 'Dart 面向对象编程',
-          resultSummary: '生成 5 道选择题，涵盖类继承、Mixin、抽象类、工厂构造函数、泛型等核心概念，每题含详细解析。'),
+          title: '面向对象编程',
+          userInput: '面向对象编程基础',
+          resultSummary: '生成 5 道选择题，涵盖继承、多态、抽象类、接口、泛型等核心概念，每题含详细解析。'),
     ],
   ),
   _SkillDef(
@@ -265,10 +265,10 @@ const _skills = <_SkillDef>[
       '重构优先级排序和具体建议',
     ],
     examples: [
-      'Flutter 知识图谱 App（sqflite + CustomPainter）',
-      'Android 天气预报 App（Retrofit + Room）',
-      'React Native 电商 App',
-      '微信小程序校园服务平台'
+      '课程项目（含数据库和自定义组件）',
+      '信息管理应用（含网络和本地存储）',
+      '跨平台 Web 应用项目',
+      '轻量级应用项目'
     ],
     systemPrompt: '你是代码审查和架构评估专家。请根据用户描述的项目信息，生成一份代码仓库分析报告。'
         '输出格式为 Markdown，包含：\n'
@@ -288,10 +288,10 @@ const _skills = <_SkillDef>[
     ],
     classicCases: [
       _SkillCase(
-          title: 'Flutter 知识图谱 App',
-          userInput: 'Flutter 知识图谱 App（sqflite + CustomPainter）',
+          title: '课程项目分析',
+          userInput: '课程项目（含数据库和自定义组件）',
           resultSummary:
-              '生成架构评估报告：5 层分层合理，CustomPainter 性能优化建议 3 条，数据库索引优化 2 条，Top 5 改进建议。'),
+              '生成架构评估报告：5 层分层合理，自定义组件性能优化建议 3 条，数据库索引优化 2 条，Top 5 改进建议。'),
     ],
   ),
   _SkillDef(
@@ -331,7 +331,7 @@ const _skills = <_SkillDef>[
           title: '期末项目考核',
           userInput: '课程期末项目考核方案设计',
           resultSummary:
-              '设计 6 维考核方案：功能完整性(25%)、代码质量(20%)、UI 设计(15%)、技术难度(15%)、文档规范(15%)、答辩表现(10%)，每维度含 4 级评分标准。'),
+              '设计 6 维考核方案：功能完整性(25%)、方案设计(20%)、技术实现(15%)、创新性(15%)、文档规范(15%)、答辩表现(10%)，每维度含 4 级评分标准。'),
     ],
   ),
   _SkillDef(
@@ -350,10 +350,10 @@ const _skills = <_SkillDef>[
       '扩展挑战任务（选做加分）',
     ],
     examples: [
-      'Flutter 计数器 App 入门实验',
-      'SQLite 数据库 CRUD 实验',
-      '自定义 Widget 绘制实验',
-      'RESTful API 对接实验'
+      '基础功能实现入门实验',
+      '数据存储与查询实验',
+      '自定义组件开发实验',
+      '接口对接与数据交互实验'
     ],
     systemPrompt: '你是课程实验设计专家。请根据用户给出的主题，设计一个实验任务。'
         '输出格式为 Markdown，包含：\n'
@@ -363,7 +363,7 @@ const _skills = <_SkillDef>[
         '4. 实验步骤（5-8步，每步含说明和关键代码片段）\n'
         '5. 验收标准（必做项 + 选做加分项）\n'
         '6. 常见问题 FAQ（3-5个）\n'
-        '请用中文回答，代码使用 Dart/Flutter。',
+        '请用中文回答，代码示例使用课程涉及的编程语言。',
     usageSteps: [
       '进入 AI 技能中心，选择"实验技能"',
       '输入实验主题（如"SQLite 数据库 CRUD 实验"）',
@@ -373,10 +373,10 @@ const _skills = <_SkillDef>[
     ],
     classicCases: [
       _SkillCase(
-          title: 'SQLite CRUD 实验',
-          userInput: 'SQLite 数据库 CRUD 实验',
+          title: '数据存储与查询实验',
+          userInput: '数据存储与查询实验',
           resultSummary:
-              '设计 4 学时实验：含 sqflite 配置、表创建、增删改查 4 步操作指导，每步含关键代码片段，验收标准 5 项 + 加分项 2 项。'),
+              '设计 4 学时实验：含环境配置、表创建、增删改查 4 步操作指导，每步含关键代码片段，验收标准 5 项 + 加分项 2 项。'),
     ],
   ),
   _SkillDef(
@@ -395,7 +395,7 @@ const _skills = <_SkillDef>[
       '开发里程碑和时间规划',
     ],
     examples: ['校园二手交易 App', '智能学习助手应用', '运动健康管理 App', '旅游攻略分享平台'],
-    systemPrompt: '你是移动应用项目开发指导专家。请根据用户给出的项目主题，生成一份项目开发指南。'
+    systemPrompt: '你是课程项目开发指导专家。请根据用户给出的项目主题，生成一份项目开发指南。'
         '输出格式为 Markdown，包含：\n'
         '1. 项目概述（一句话描述 + 目标用户 + 核心价值）\n'
         '2. 功能需求（核心功能 + 扩展功能，用表格列出）\n'
@@ -417,7 +417,7 @@ const _skills = <_SkillDef>[
           title: '校园二手交易 App',
           userInput: '校园二手交易 App',
           resultSummary:
-              '生成完整开发指南：6 个核心功能模块、Flutter + Firebase 技术选型、5 张数据库表设计、4 周开发里程碑、答辩展示建议。'),
+              '生成完整开发指南：6 个核心功能模块、前端+后端技术选型、5 张数据库表设计、4 周开发里程碑、答辩展示建议。'),
     ],
   ),
   _SkillDef(

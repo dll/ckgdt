@@ -311,8 +311,13 @@ class _TaskManageTabState extends State<_TaskManageTab> {
     }
   }
 
-  void _showAddTaskDialog({Map<String, dynamic>? existingTask}) {
+  void _showAddTaskDialog({Map<String, dynamic>? existingTask}) async {
     final isEditing = existingTask != null;
+    // 动态加载课程章节列表
+    final chapterTitles = await CourseContextService().chapterTitles();
+    final chapterOptions = chapterTitles.isNotEmpty
+        ? chapterTitles
+        : ['第1章', '第2章', '第3章', '第4章', '第5章', '第6章'];
     final titleCtrl = TextEditingController(
         text: isEditing ? (existingTask['title'] as String? ?? '') : '');
     final descCtrl = TextEditingController(
@@ -322,7 +327,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
     final delCtrl = TextEditingController(
         text: isEditing ? (existingTask['deliverables'] as String? ?? '') : '');
     String selectedChapter =
-        isEditing ? (existingTask['chapter'] as String? ?? '实验一') : '实验一';
+        isEditing ? (existingTask['chapter'] as String? ?? '') : '';
     String selectedDifficulty =
         isEditing ? (existingTask['difficulty'] as String? ?? '中等') : '中等';
     final maxScoreCtrl = TextEditingController(
@@ -374,7 +379,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 12),
                     ),
-                    items: ['实验一', '实验二', '实验三', '实验四', '实验五', '实验六']
+                    items: chapterOptions
                         .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                         .toList(),
                     onChanged: (v) =>

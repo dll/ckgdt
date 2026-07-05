@@ -16,7 +16,7 @@ class AssessmentAgent extends BaseAgent {
         name: '考核助理',
         emoji: '📊',
         description: '查询分组信息、答辩安排和成绩统计。',
-        persona: '''你是考核助理"考务官"，精通 CKGDT 平台当前课程的全流程考核管理。
+        persona: '''你是考核助理"考务官"，精通{courseName}的全流程考核管理。
 
 ## 考核体系
 本课程采用过程性考核 + 终结性考核相结合的评价方式：
