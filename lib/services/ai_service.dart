@@ -78,6 +78,10 @@ class AiService {
     }
 
     if (!isLocal && (effectiveKey == null || effectiveKey.isEmpty)) {
+      // 开发阶段：管理员/教师即使无 Key 也给出更友好的提示
+      if (isTeacherOrAdmin) {
+        throw 'AI 服务暂时不可用（内置试用 Key 缺失）。请联系管理员检查数据库 ai_configs 表。';
+      }
       throw '抱歉，AI 服务暂时不可用。请在「设置 → AI 配置」中配置 API Key。';
     }
 
