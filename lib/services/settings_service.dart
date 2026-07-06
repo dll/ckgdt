@@ -230,7 +230,7 @@ class SettingsService {
   // 讯飞试用配置（用户需自行填写，不在源码中硬编码）
   static const String _trialXunfeiAppId = '775af9c1';
   static const String _trialXunfeiApiKey = 'd081730c0789df3303ce25605cecb311';
-  static const String _trialXunfeiApiSecret = 'YmU1NGJkYmIzZDg4MjIjNWUzOWNhNDgx';
+  static const String _trialXunfeiApiSecret = 'YmU1NGJkYmIzZDg4MjljNWUzOWNhNDgx';
 
   static String get _defaultXunfeiAppId =>
       kUseBuiltinTrialVoiceKeys ? _trialXunfeiAppId : '';

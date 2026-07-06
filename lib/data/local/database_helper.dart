@@ -246,6 +246,9 @@ class DatabaseHelper {
     await _importTeacherRoster(db);
     await _importStudentRoster(db);
 
+    // ── 第五步：确保讯飞凭据为最新值 ──
+    await _updateXunfeiCredentials(db);
+
     return db;
   }
 
@@ -3389,8 +3392,32 @@ class DatabaseHelper {
     // 内置试用凭据（所有用户开箱可用）
     await db.execute('''
       INSERT OR IGNORE INTO xunfei_configs(id, app_id, api_key, api_secret)
-      VALUES(1, '775af9c1', 'd081730c0789df3303ce25605cecb311', 'YmU1NGJkYmIzZDg4MjIjNWUzOWNhNDgx')
+      VALUES(1, '775af9c1', 'd081730c0789df3303ce25605cecb311', 'YmU1NGJkYmIzZDg4MjljNWUzOWNhNDgx')
     ''');
+  }
+
+  /// 确保讯飞凭据为最新值（INSERT OR IGNORE 不会更新已有记录）
+  Future<void> _updateXunfeiCredentials(Database db) async {
+    const newSecret = 'YmU1NGJkYmIzZDg4MjljNWUzOWNhNDgx';
+    try {
+      final row = await db.query('xunfei_configs', where: 'id = 1');
+      if (row.isEmpty) return;
+      final current = row.first['api_secret'] as String? ?? '';
+      if (current != newSecret) {
+        await db.update(
+          'xunfei_configs',
+          {
+            'app_id': '775af9c1',
+            'api_key': 'd081730c0789df3303ce25605cecb311',
+            'api_secret': newSecret,
+          },
+          where: 'id = 1',
+        );
+        InitLogger.log('db', 'xunfei credentials updated to latest');
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'db', stack: st);
+    }
   }
 
   Future<void> close() async {

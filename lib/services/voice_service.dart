@@ -177,7 +177,8 @@ class VoiceService {
             onError: (e) {
               if (session != _sessionId) return;
               InitLogger.log('voice', 'WS onError: $e');
-              onError?.call('WebSocket 错误: $e');
+              final msg = _friendlyWsError(e);
+              onError?.call(msg);
               unawaited(forceStop());
             },
             onDone: () {
@@ -516,4 +517,22 @@ class VoiceService {
   /// AudioRecorder 句柄已释放再跳转，避免与 HomePage 构建并发触发
   /// record 包原生层崩溃（表现为整个应用闪退）。
   Future<void> forceStop() => _serialize(() => _cleanupNow('forceStop'));
+
+  /// 将 WebSocket / 平台异常转为用户友好的中文提示
+  static String _friendlyWsError(Object e) {
+    final raw = e.toString();
+    if (raw.contains('401') || raw.contains('HMAC signature')) {
+      return '语音服务认证失败，请检查讯飞凭据配置';
+    }
+    if (raw.contains('Failed host lookup') || raw.contains('SocketException')) {
+      return '网络不可用，请检查网络连接后重试';
+    }
+    if (raw.contains('was not upgraded to websocket')) {
+      return '语音服务连接失败，可能存在网络代理限制';
+    }
+    if (raw.contains('Timeout') || raw.contains('timed out')) {
+      return '语音服务响应超时，请稍后重试';
+    }
+    return '语音识别出错，请稍后重试';
+  }
 }
