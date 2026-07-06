@@ -160,7 +160,23 @@ class AgentRegistry {
       return reply;
     } catch (e, st) {
       InitLogger.error('voice', 'Agent dispatch error: $e', st);
-      final errorReply = agent.buildReply('抱歉，处理出错了：$e');
+      String errorText;
+      AgentAction? errorAction;
+      final raw = e.toString();
+      if (raw.startsWith('AI_AUTH_401:')) {
+        final parts = raw.substring('AI_AUTH_401:'.length).split('|');
+        final provider = parts.isNotEmpty ? parts[0] : 'AI';
+        final model = parts.length > 1 ? parts[1] : '';
+        errorText = '$provider（$model）认证失败（401）。\n当前 API Key 已过期或无效，请前往设置更换。';
+        errorAction = const AgentAction(
+          type: 'navigate_sub_page',
+          params: {'keyword': 'ai配置'},
+          description: '前往 AI 配置',
+        );
+      } else {
+        errorText = '抱歉，处理出错了：$e';
+      }
+      final errorReply = agent.buildReply(errorText, action: errorAction);
       _session.messages.add(errorReply);
       onMessage?.call(errorReply);
       return errorReply;

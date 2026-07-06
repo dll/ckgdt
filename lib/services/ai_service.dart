@@ -59,13 +59,15 @@ class AiService {
 
     // 检查用户角色：管理员/教师自动使用内置 Key，不受试用限制
     final currentUser = AuthService().currentUser;
-    final isTeacherOrAdmin = currentUser?.role == 'teacher' || currentUser?.role == 'admin';
+    final isTeacherOrAdmin =
+        currentUser?.role == 'teacher' || currentUser?.role == 'admin';
 
     // 免费试用额度检查（仅对学生生效）
     if (!isTeacherOrAdmin) {
       final trialDao = AiTrialDao();
       final trialSettings = await trialDao.getSettings();
-      final trialEnabled = trialSettings != null && trialSettings['trial_enabled'] == 1;
+      final trialEnabled =
+          trialSettings != null && trialSettings['trial_enabled'] == 1;
       if (trialEnabled) {
         final remaining = await trialDao.getRemaining();
         final remainingCalls = remaining['remainingCalls'] as int;
@@ -114,7 +116,14 @@ class AiService {
             Duration(seconds: config.timeout < 120 ? 120 : config.timeout));
 
     if (response.statusCode != 200) {
-      throw 'AI 请求失败 (${response.statusCode})，请检查网络连接和 API 配置。';
+      final body = response.body;
+      if (response.statusCode == 401) {
+        throw 'AI_AUTH_401:${config.providerLabel}|${config.model}';
+      }
+      if (response.statusCode == 429) {
+        throw '请求过于频繁（429）。请稍后再试。';
+      }
+      throw 'AI 请求失败 (${response.statusCode})：$body';
     }
 
     final json = jsonDecode(utf8.decode(response.bodyBytes));
@@ -237,6 +246,9 @@ class AiService {
         .timeout(Duration(seconds: visionConfig.timeout));
 
     if (response.statusCode != 200) {
+      if (response.statusCode == 401) {
+        throw 'AI_AUTH_401:${visionConfig.providerLabel}|${visionConfig.model}';
+      }
       throw '视觉 AI 请求失败 (${response.statusCode}): ${response.body}';
     }
 

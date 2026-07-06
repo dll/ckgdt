@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../data/local/ai_history_dao.dart';
@@ -839,8 +839,7 @@ $dialogText
                                     color: Colors.blue.withOpacity(0.05),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                        color:
-                                            Colors.blue.withOpacity(0.2)),
+                                        color: Colors.blue.withOpacity(0.2)),
                                   ),
                                   child: Column(
                                     crossAxisAlignment:
@@ -865,8 +864,7 @@ $dialogText
                                     color: Colors.green.withOpacity(0.05),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                        color: Colors.green
-                                            .withOpacity(0.2)),
+                                        color: Colors.green.withOpacity(0.2)),
                                   ),
                                   child: Column(
                                     crossAxisAlignment:
@@ -929,8 +927,8 @@ $dialogText
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.primary
-                                    .withOpacity(0.08),
+                                color:
+                                    theme.colorScheme.primary.withOpacity(0.08),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(kw,
@@ -1483,6 +1481,25 @@ $dialogText
                     compact: true,
                   ),
           ),
+          // 操作按钮（当消息带有 action 时显示）
+          if (!isUser && msg.action != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: ActionChip(
+                avatar: Icon(
+                  msg.action!.type == 'navigate_sub_page'
+                      ? Icons.settings
+                      : Icons.open_in_new,
+                  size: 16,
+                ),
+                label: Text(
+                  msg.action!.description ?? '前往设置',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                onPressed: () => _handleAction(msg.action!),
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
         ],
       ),
     );

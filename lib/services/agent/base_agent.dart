@@ -203,6 +203,8 @@ abstract class BaseAgent {
           systemPrompt: effectivePrompt, temperature: temperature);
       return result;
     } catch (e) {
+      // 401 认证错误透传到上层处理
+      if (e.toString().startsWith('AI_AUTH_401:')) rethrow;
       error = e.toString();
       debugPrint('${config.name}: AI 调用失败: $e');
       return AiChatResult(
@@ -242,6 +244,8 @@ abstract class BaseAgent {
       return await aiService.chat(messages,
           systemPrompt: systemPrompt ?? await loadEffectivePersona());
     } catch (e) {
+      // 401 认证错误透传到上层处理
+      if (e.toString().startsWith('AI_AUTH_401:')) rethrow;
       debugPrint('${config.name}: AI 调用失败: $e');
       return '抱歉，AI 服务暂时不可用。请检查网络连接和 AI 配置。\n\n错误: $e';
     }
