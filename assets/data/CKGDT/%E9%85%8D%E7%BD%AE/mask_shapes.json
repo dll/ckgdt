@@ -1,0 +1,26 @@
+{
+  "version": "1.0.0",
+  "description": "CKGDT 课程知识图谱蒙版形状配置",
+  "categories": {
+    "教育技术": {
+      "icon": "school",
+      "shapes": ["harmonyOS", "flutter", "python", "java"]
+    },
+    "平台功能": {
+      "icon": "dashboard",
+      "shapes": ["brain", "avatar", "docker", "gitHub"]
+    },
+    "开发工具": {
+      "icon": "build",
+      "shapes": ["vsCode", "dart", "typeScript", "linux"]
+    },
+    "移动生态": {
+      "icon": "devices",
+      "shapes": ["android", "apple", "kotlin", "swift"]
+    },
+    "个性装扮": {
+      "icon": "person",
+      "shapes": ["wechat", "reactNative", "uniapp", "maui", "cordova", "golang"]
+    }
+  }
+}

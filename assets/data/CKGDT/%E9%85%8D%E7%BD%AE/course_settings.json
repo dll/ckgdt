@@ -1,0 +1,96 @@
+{
+  "version": "1.0.0",
+  "course_name": "课程知识图谱与数字孪生平台",
+  "course_id": "ckgdt",
+
+  "grading": {
+    "pass_score": 60,
+    "excellent_score": 90,
+    "good_score": 70,
+    "qualified_score": 60,
+    "assessment_method": "考查",
+    "total_score": 100,
+    "components": {
+      "homework_weight": 10,
+      "performance_weight": 4,
+      "quiz_weight": 6,
+      "experiment_weight": 30,
+      "final_weight": 50
+    }
+  },
+
+  "experiment": {
+    "default_group_size": 4,
+    "allow_self_registration": true,
+    "require_pdf_submission": true,
+    "submission_naming": "学号+姓名+任务名称.pdf",
+    "ai_grading_enabled": true,
+    "ai_grading_dimensions": ["完成度", "报告质量", "问题分析", "创新能力", "平台操作"],
+    "auto_reminder_days_before_due": 3
+  },
+
+  "quiz": {
+    "questions_per_chapter": 10,
+    "time_limit_minutes": 20,
+    "pass_score": 60,
+    "allow_retake": true,
+    "max_retake_attempts": 3,
+    "show_answer_after_submission": true,
+    "shuffle_options": true
+  },
+
+  "learning_path": {
+    "auto_generate": true,
+    "prerequisite_enforcement": true,
+    "min_mastery_for_next": 0.6,
+    "recommendation_algorithm": "knowledge_graph_based"
+  },
+
+  "digital_twin": {
+    "enabled": true,
+    "student_organs": ["知识掌握", "技能运用", "学习态度", "协作能力", "创新能力"],
+    "teacher_organs": ["教学设计", "课堂管理", "技术运用", "评价反馈", "专业发展"],
+    "risk_warning_enabled": true,
+    "risk_threshold": 0.4
+  },
+
+  "ai_assistant": {
+    "enabled": true,
+    "tutor_enabled": true,
+    "quiz_generation_enabled": true,
+    "lab_grading_enabled": true,
+    "assessment_grading_enabled": true,
+    "works_grading_enabled": true,
+    "courseware_generation_enabled": true,
+    "rag_enabled": true,
+    "max_context_length": 4000
+  },
+
+  "sync": {
+    "auto_sync_enabled": true,
+    "sync_interval_minutes": 30,
+    "conflict_resolution": "latest_wins",
+    "backup_enabled": true
+  },
+
+  "archive": {
+    "enabled": true,
+    "auto_archive_at_semester_end": true,
+    "archive_periods": ["期初", "期中", "期末", "结课"],
+    "template_dir": "归档"
+  },
+
+  "notification": {
+    "enabled": true,
+    "experiment_deadline_reminder": true,
+    "quiz_reminder": true,
+    "achievement_update_notification": true
+  },
+
+  "appearance": {
+    "theme_color": "#667eea",
+    "theme_gradient": ["#667eea", "#764ba2"],
+    "course_icon": "account_tree",
+    "course_description": "以课程知识图谱构建和数字孪生教学场景设计为核心的实践型课程"
+  }
+}

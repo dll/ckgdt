@@ -1,0 +1,105 @@
+[
+  {
+    "chapter": 1,
+    "chapter_title": "课程知识图谱基础",
+    "course_objective": "目标1",
+    "question_count": 10,
+    "time_limit_minutes": 20,
+    "pass_score": 60,
+    "objective_mapping": [
+      {"objective_id": 1, "question_count": 8},
+      {"objective_id": 3, "question_count": 2}
+    ]
+  },
+  {
+    "chapter": 2,
+    "chapter_title": "课程数据建模与资源治理",
+    "course_objective": "目标1",
+    "question_count": 10,
+    "time_limit_minutes": 20,
+    "pass_score": 60,
+    "objective_mapping": [
+      {"objective_id": 1, "question_count": 7},
+      {"objective_id": 5, "question_count": 2},
+      {"objective_id": 3, "question_count": 1}
+    ]
+  },
+  {
+    "chapter": 3,
+    "chapter_title": "学生端学习体验与自主学习",
+    "course_objective": "目标3",
+    "question_count": 10,
+    "time_limit_minutes": 20,
+    "pass_score": 60,
+    "objective_mapping": [
+      {"objective_id": 3, "question_count": 7},
+      {"objective_id": 2, "question_count": 2},
+      {"objective_id": 5, "question_count": 1}
+    ]
+  },
+  {
+    "chapter": 4,
+    "chapter_title": "数字孪生教学场景设计",
+    "course_objective": "目标2",
+    "question_count": 10,
+    "time_limit_minutes": 20,
+    "pass_score": 60,
+    "objective_mapping": [
+      {"objective_id": 2, "question_count": 7},
+      {"objective_id": 4, "question_count": 2},
+      {"objective_id": 3, "question_count": 1}
+    ]
+  },
+  {
+    "chapter": 5,
+    "chapter_title": "智能学习路径与学习分析",
+    "course_objective": "目标3",
+    "question_count": 10,
+    "time_limit_minutes": 20,
+    "pass_score": 60,
+    "objective_mapping": [
+      {"objective_id": 3, "question_count": 8},
+      {"objective_id": 1, "question_count": 1},
+      {"objective_id": 5, "question_count": 1}
+    ]
+  },
+  {
+    "chapter": 6,
+    "chapter_title": "实验实践与作品评价",
+    "course_objective": "目标4",
+    "question_count": 10,
+    "time_limit_minutes": 20,
+    "pass_score": 60,
+    "objective_mapping": [
+      {"objective_id": 4, "question_count": 7},
+      {"objective_id": 3, "question_count": 2},
+      {"objective_id": 2, "question_count": 1}
+    ]
+  },
+  {
+    "chapter": 7,
+    "chapter_title": "达成度评价与教学归档",
+    "course_objective": "目标5",
+    "question_count": 10,
+    "time_limit_minutes": 20,
+    "pass_score": 60,
+    "objective_mapping": [
+      {"objective_id": 5, "question_count": 7},
+      {"objective_id": 3, "question_count": 2},
+      {"objective_id": 1, "question_count": 1}
+    ]
+  },
+  {
+    "chapter": 8,
+    "chapter_title": "教师与管理员平台操作",
+    "course_objective": "目标5",
+    "question_count": 10,
+    "time_limit_minutes": 20,
+    "pass_score": 60,
+    "objective_mapping": [
+      {"objective_id": 5, "question_count": 8},
+      {"objective_id": 4, "question_count": 1},
+      {"objective_id": 3, "question_count": 1}
+    ]
+  }
+]

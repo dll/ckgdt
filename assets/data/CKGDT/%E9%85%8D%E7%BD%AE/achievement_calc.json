@@ -1,0 +1,117 @@
+{
+  "version": "1.0.0",
+  "course_name": "课程知识图谱与数字孪生平台",
+  "course_id": "ckgdt",
+  "calculation_method": "加权平均法",
+  "formula": "达成度(目标i) = Σ(环节得分×环节权重×目标贡献度) / Σ(环节满分×环节权重×目标贡献度)",
+  "objective_weights": [
+    {"id": 1, "name": "知识图谱基础与数据建模", "weight": 0.15},
+    {"id": 2, "name": "数字孪生教学场景设计", "weight": 0.20},
+    {"id": 3, "name": "智能学习路径与学习分析", "weight": 0.25},
+    {"id": 4, "name": "多智能体AI辅助教学", "weight": 0.20},
+    {"id": 5, "name": "教师端与管理员端操作", "weight": 0.20}
+  ],
+  "data_sources": [
+    {
+      "source_id": "homework",
+      "source_name": "平时作业",
+      "component": "平时成绩",
+      "component_weight": 20,
+      "max_score": 100,
+      "aggregation": "average",
+      "description": "8次作业取平均分",
+      "objective_contribution": [
+        {"objective_id": 1, "contribution": 0.30, "description": "第1-2章作业"},
+        {"objective_id": 2, "contribution": 0.20, "description": "第3-4章作业"},
+        {"objective_id": 3, "contribution": 0.25, "description": "第5章作业"},
+        {"objective_id": 4, "contribution": 0.15, "description": "第6章作业"},
+        {"objective_id": 5, "contribution": 0.10, "description": "第7-8章作业"}
+      ]
+    },
+    {
+      "source_id": "class_performance",
+      "source_name": "课堂表现",
+      "component": "平时成绩",
+      "component_weight": 4,
+      "max_score": 100,
+      "aggregation": "manual",
+      "description": "教师手动评分",
+      "objective_contribution": [
+        {"objective_id": 1, "contribution": 0.20},
+        {"objective_id": 2, "contribution": 0.20},
+        {"objective_id": 3, "contribution": 0.20},
+        {"objective_id": 4, "contribution": 0.20},
+        {"objective_id": 5, "contribution": 0.20}
+      ]
+    },
+    {
+      "source_id": "quiz",
+      "source_name": "阶段测验",
+      "component": "平时成绩",
+      "component_weight": 6,
+      "max_score": 100,
+      "aggregation": "average",
+      "description": "8次测验取平均分",
+      "objective_contribution": [
+        {"objective_id": 1, "contribution": 0.30, "description": "第1-2章测验"},
+        {"objective_id": 2, "contribution": 0.15, "description": "第3-4章测验"},
+        {"objective_id": 3, "contribution": 0.25, "description": "第5章测验"},
+        {"objective_id": 4, "contribution": 0.15, "description": "第6章测验"},
+        {"objective_id": 5, "contribution": 0.15, "description": "第7-8章测验"}
+      ]
+    },
+    {
+      "source_id": "experiment",
+      "source_name": "实验成绩",
+      "component": "实验成绩",
+      "component_weight": 30,
+      "max_score": 100,
+      "aggregation": "weighted_average",
+      "description": "8个实验加权平均",
+      "items": [
+        {"id": 1, "name": "实验一", "weight": 3, "objective_mapping": [{"objective_id": 1, "contribution": 1.0}]},
+        {"id": 2, "name": "实验二", "weight": 3, "objective_mapping": [{"objective_id": 1, "contribution": 1.0}]},
+        {"id": 3, "name": "实验三", "weight": 4, "objective_mapping": [{"objective_id": 2, "contribution": 1.0}]},
+        {"id": 4, "name": "实验四", "weight": 4, "objective_mapping": [{"objective_id": 3, "contribution": 1.0}]},
+        {"id": 5, "name": "实验五", "weight": 3, "objective_mapping": [{"objective_id": 4, "contribution": 1.0}]},
+        {"id": 6, "name": "实验六", "weight": 8, "objective_mapping": [{"objective_id": 1, "contribution": 0.30}, {"objective_id": 2, "contribution": 0.25}, {"objective_id": 3, "contribution": 0.25}, {"objective_id": 4, "contribution": 0.20}]},
+        {"id": 7, "name": "实验七", "weight": 3, "objective_mapping": [{"objective_id": 5, "contribution": 1.0}]},
+        {"id": 8, "name": "实验八", "weight": 2, "objective_mapping": [{"objective_id": 1, "contribution": 0.25}, {"objective_id": 2, "contribution": 0.15}, {"objective_id": 3, "contribution": 0.35}, {"objective_id": 4, "contribution": 0.25}]}
+      ]
+    },
+    {
+      "source_id": "final_exam",
+      "source_name": "期末考查",
+      "component": "期末考查",
+      "component_weight": 50,
+      "max_score": 100,
+      "aggregation": "weighted_average",
+      "items": [
+        {"name": "知识图谱构建", "weight": 15, "objective_mapping": [{"objective_id": 1, "contribution": 1.0}]},
+        {"name": "数字孪生设计", "weight": 20, "objective_mapping": [{"objective_id": 2, "contribution": 1.0}]},
+        {"name": "学习分析应用", "weight": 25, "objective_mapping": [{"objective_id": 3, "contribution": 1.0}]},
+        {"name": "AI辅助教学方案", "weight": 20, "objective_mapping": [{"objective_id": 4, "contribution": 0.60}, {"objective_id": 5, "contribution": 0.40}]},
+        {"name": "教师端操作能力", "weight": 20, "objective_mapping": [{"objective_id": 5, "contribution": 1.0}]}
+      ]
+    }
+  ],
+  "achievement_thresholds": [
+    {"level": "优秀", "min": 0.85, "description": "达成度≥0.85"},
+    {"level": "良好", "min": 0.70, "description": "达成度≥0.70"},
+    {"level": "合格", "min": 0.60, "description": "达成度≥0.60"},
+    {"level": "不合格", "min": 0.00, "description": "达成度<0.60"}
+  ],
+  "graduation_requirements": [
+    {"objective_id": 1, "requirement": "1.4", "min_achievement": 0.60},
+    {"objective_id": 2, "requirement": "3.2", "min_achievement": 0.60},
+    {"objective_id": 3, "requirement": "4.2", "min_achievement": 0.60},
+    {"objective_id": 4, "requirement": "5.1", "min_achievement": 0.60},
+    {"objective_id": 5, "requirement": "1.2", "min_achievement": 0.60}
+  ],
+  "overall_achievement_formula": "总达成度 = Σ(目标i达成度 × 目标i权重)",
+  "report_output": {
+    "individual_report": "每位学生的5维达成度雷达图 + 各环节得分明细",
+    "class_report": "班级整体达成度统计 + 各目标分布 + 未达成预警",
+    "course_report": "课程层面达成度汇总 + 毕业要求支撑矩阵 + 持续改进建议"
+  }
+}
