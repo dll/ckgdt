@@ -740,12 +740,24 @@ class _ClassManagePageState extends State<ClassManagePage>
     );
 
     if (confirm == true) {
-      final success = await _classDao.deleteClass(classId);
-      if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('「$name」已删除')),
-        );
-        _loadData();
+      try {
+        final success = await _classDao.deleteClass(classId);
+        if (success && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('「$name」已删除')),
+          );
+          _loadData();
+        } else if (!success && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('删除失败：未找到班级')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('删除失败: $e')),
+          );
+        }
       }
     }
   }
@@ -1235,21 +1247,33 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
                     ),
                     // 添加成员按钮
                     if (!widget.isArchived)
-                      TextButton.icon(
-                        onPressed: _showAddMembersDialog,
-                        icon: const Icon(Icons.person_add_outlined, size: 18),
-                        label: const Text('添加'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: theme.colorScheme.primary,
+                      Container(
+                        margin: const EdgeInsets.only(right: 4),
+                        child: ElevatedButton.icon(
+                          onPressed: _showAddMembersDialog,
+                          icon: const Icon(Icons.person_add_outlined, size: 16),
+                          label: const Text('添加'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.colorScheme.primary,
+                            foregroundColor: theme.colorScheme.onPrimary,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            textStyle: const TextStyle(fontSize: 13),
+                          ),
                         ),
                       ),
                     if (!widget.isArchived)
-                      TextButton.icon(
-                        onPressed: _importStudentsFromExcel,
-                        icon: const Icon(Icons.upload_file, size: 18),
-                        label: const Text('导入'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: theme.colorScheme.primary,
+                      Container(
+                        margin: const EdgeInsets.only(right: 4),
+                        child: OutlinedButton.icon(
+                          onPressed: _importStudentsFromExcel,
+                          icon: const Icon(Icons.upload_file, size: 16),
+                          label: const Text('导入'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: theme.colorScheme.primary,
+                            side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            textStyle: const TextStyle(fontSize: 13),
+                          ),
                         ),
                       ),
                     // 关闭
@@ -1412,14 +1436,28 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
         ),
         trailing: widget.isArchived
             ? null
-            : IconButton(
-                icon: Icon(
-                  Icons.remove_circle_outline,
-                  color: Colors.red.withOpacity(0.7),
-                  size: 20,
-                ),
-                tooltip: '移除成员',
-                onPressed: () => _confirmRemoveMember(userId, displayName),
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.edit_outlined,
+                      color: Colors.blue.withValues(alpha: 0.7),
+                      size: 18,
+                    ),
+                    tooltip: '编辑成员',
+                    onPressed: () => _showEditMemberDialog(member),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.remove_circle_outline,
+                      color: Colors.red.withValues(alpha: 0.7),
+                      size: 18,
+                    ),
+                    tooltip: '移除成员',
+                    onPressed: () => _confirmRemoveMember(userId, displayName),
+                  ),
+                ],
               ),
       ),
     );
@@ -1450,6 +1488,37 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
         );
         _loadMembers();
         widget.onMembersChanged();
+      }
+    }
+  }
+
+  Future<void> _showEditMemberDialog(Map<String, dynamic> member) async {
+    final userId = member['user_id'] as String? ?? '';
+    final currentRole = member['role'] as String? ?? 'student';
+    final realName = member['real_name'] as String? ?? userId;
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) => _EditMemberDialog(
+        userId: userId,
+        realName: realName,
+        currentRole: currentRole,
+      ),
+    );
+
+    if (result != null && mounted) {
+      try {
+        final newRole = result['role'] as String;
+        await widget.classDao.updateMember(widget.classId, userId, role: newRole);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已更新 $realName 的角色')),
+        );
+        _loadMembers();
+        widget.onMembersChanged();
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('更新失败: $e')),
+        );
       }
     }
   }
@@ -1637,16 +1706,8 @@ class _AddMembersDialogState extends State<_AddMembersDialog> {
 
   Future<void> _loadAvailableStudents() async {
     try {
-      // 获取已在其他班级但不在当前班级的学生
-      final currentMembers =
-          await widget.classDao.getClassMembers(widget.classId);
-      final currentMemberIds =
-          currentMembers.map((m) => m['user_id'] as String).toSet();
-
-      final allStudents = await UserDao().getStudents();
-      final available = allStudents
-          .where((s) => !currentMemberIds.contains(s.userId))
-          .toList();
+      // 获取未分配到任何班级的学生（排除已在其他班级的学生）
+      final available = await widget.classDao.getUnassignedStudents();
 
       if (mounted) {
         setState(() {
@@ -1865,6 +1926,108 @@ class _AddMembersDialogState extends State<_AddMembersDialog> {
           child: Text(
             _selectedIds.isEmpty ? '添加' : '添加 (${_selectedIds.length})',
           ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Edit Member Dialog
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _EditMemberDialog extends StatefulWidget {
+  final String userId;
+  final String realName;
+  final String currentRole;
+
+  const _EditMemberDialog({
+    required this.userId,
+    required this.realName,
+    required this.currentRole,
+  });
+
+  @override
+  State<_EditMemberDialog> createState() => _EditMemberDialogState();
+}
+
+class _EditMemberDialogState extends State<_EditMemberDialog> {
+  late String _selectedRole;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedRole = widget.currentRole;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          const Icon(Icons.edit_outlined, size: 22),
+          const SizedBox(width: 8),
+          Expanded(child: Text('编辑 ${widget.realName}')),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '学号: ${widget.userId}',
+            style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '角色',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(
+                value: 'student',
+                label: Text('学生'),
+                icon: Icon(Icons.school_outlined, size: 18),
+              ),
+              ButtonSegment(
+                value: 'teacher',
+                label: Text('教师'),
+                icon: Icon(Icons.menu_book_outlined, size: 18),
+              ),
+            ],
+            selected: {_selectedRole},
+            onSelectionChanged: (selected) {
+              setState(() {
+                _selectedRole = selected.first;
+              });
+            },
+            style: SegmentedButton.styleFrom(
+              selectedBackgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
+              selectedForegroundColor: theme.colorScheme.primary,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pop(context, {
+              'role': _selectedRole,
+            });
+          },
+          child: const Text('保存'),
         ),
       ],
     );

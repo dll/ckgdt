@@ -298,6 +298,11 @@ class VoiceService {
         'headers="host date request-line", signature="$signature"';
     final authorization = base64.encode(utf8.encode(authOrigin));
 
+    InitLogger.log('voice', 'authDate="$date"');
+    InitLogger.log('voice', 'signatureOrigin length=${origin.length}');
+    InitLogger.log('voice', 'signature=$signature');
+    InitLogger.log('voice', 'apiKey=$apiKey secretLen=${apiSecret.length} first4=${apiSecret.substring(0, apiSecret.length > 4 ? 4 : apiSecret.length)}');
+
     // 拼接 URL
     final params = {
       'authorization': authorization,
@@ -308,7 +313,9 @@ class VoiceService {
         .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
         .join('&');
 
-    return 'wss://$_iatHost$_iatPath?$query';
+    final url = 'wss://$_iatHost$_iatPath?$query';
+    InitLogger.log('voice', 'authUrl length=${url.length}');
+    return url;
   }
 
   void _sendAudioFrame(List<int> audioData, String appId) {

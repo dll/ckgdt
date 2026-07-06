@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:sqflite/sqflite.dart';
 import '../../core/error_handler.dart';
 import '../models/user_model.dart';
 import 'active_student_scope.dart';
@@ -117,14 +118,14 @@ class ClassDao {
   // 成员管理
   // ─────────────────────────────────────────────────────────────────────────
 
-  /// 获取班级成员列表
+  /// 获取班级成员列表（仅学生）
   Future<List<Map<String, dynamic>>> getClassMembers(int classId) async {
     final db = await _dbHelper.database;
     return await db.rawQuery('''
       SELECT cm.*, u.real_name, u.role as user_role, u.is_active
       FROM class_members cm
       LEFT JOIN users u ON cm.user_id = u.user_id
-      WHERE cm.class_id = ?
+      WHERE cm.class_id = ? AND cm.role = 'student'
       ORDER BY u.user_id
     ''', [classId]);
   }
@@ -176,7 +177,7 @@ class ClassDao {
           'role': role,
           'joined_at': DateTime.now().toIso8601String(),
         },
-        conflictAlgorithm: null, // 忽略重复
+        conflictAlgorithm: ConflictAlgorithm.ignore,
       );
     }
     try {
@@ -202,6 +203,23 @@ class ClassDao {
     if (count > 0) {
       await _updateStudentCount(classId);
     }
+    return count > 0;
+  }
+
+  /// 更新成员信息
+  Future<bool> updateMember(int classId, String userId,
+      {String? role, String? joinedAt}) async {
+    final db = await _dbHelper.database;
+    final updates = <String, dynamic>{};
+    if (role != null) updates['role'] = role;
+    if (joinedAt != null) updates['joined_at'] = joinedAt;
+    if (updates.isEmpty) return false;
+    final count = await db.update(
+      'class_members',
+      updates,
+      where: 'class_id = ? AND user_id = ?',
+      whereArgs: [classId, userId],
+    );
     return count > 0;
   }
 

@@ -3389,7 +3389,7 @@ class DatabaseHelper {
     // 内置试用凭据（所有用户开箱可用）
     await db.execute('''
       INSERT OR IGNORE INTO xunfei_configs(id, app_id, api_key, api_secret)
-      VALUES(1, '69622bbe', 'c072e757920a38f9645c874ac8822e9f', 'ZGRhY2JlMGFlNTFhMjBjMmMxYzYyNzY4')
+      VALUES(1, '775af9c1', 'd081730c0789df3303ce25605cecb311', 'YmU1NGJkYmIzZDg4MjIjNWUzOWNhNDgx')
     ''');
   }
 
