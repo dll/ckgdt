@@ -57,7 +57,7 @@ class _ConceptNode {
   }
 
   Color get color =>
-      _conceptTypeColors[type] ?? const Color(0xFF9E9E9E);
+      _conceptTypeColors[type] ?? _conceptTypeColors['default']!;
 
   factory _ConceptNode.fromMap(Map<String, dynamic> map) {
     return _ConceptNode(

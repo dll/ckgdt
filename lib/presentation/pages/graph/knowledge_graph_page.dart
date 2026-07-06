@@ -46,6 +46,24 @@ const _conceptTypeColors = {
   'language': Color(0xFFF44336), // red
   'platform': Color(0xFF00BCD4), // cyan
   'pattern': Color(0xFF795548), // brown
+  // 课程类型扩展
+  'experiment': Color(0xFF009688), // teal - 实验
+  'assessment': Color(0xFF3F51B5), // indigo - 考核
+  'homework': Color(0xFFE91E63), // pink - 作业
+  'work': Color(0xFFFF5722), // deep orange - 作品
+  'quiz': Color(0xFF00BCD4), // cyan - 测验
+  'video': Color(0xFF9C27B0), // purple - 视频
+  'document': Color(0xFF607D8B), // blue grey - 文档
+  'slide': Color(0xFF2196F3), // blue - 课件
+  'objective': Color(0xFFFF9800), // orange - 课程目标
+  'ability': Color(0xFF4CAF50), // green - 能力
+  'problem': Color(0xFFF44336), // red - 问题
+  'knowledge': Color(0xFF9C27B0), // purple - 知识
+  'skill': Color(0xFF00BCD4), // cyan - 技能
+  'module': Color(0xFF3F51B5), // indigo - 模块
+  'unit': Color(0xFF795548), // brown - 单元
+  'topic': Color(0xFF009688), // teal - 主题
+  'default': Color(0xFF607D8B), // blue grey - 默认
 };
 
 const _conceptTypeLabels = {

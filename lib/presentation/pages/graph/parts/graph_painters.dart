@@ -236,7 +236,8 @@ class _KnowledgeGraphPainter extends CustomPainter {
             nodeColor = const Color(0xFFE53935); // 红色
         }
       } else {
-        nodeColor = node.color;
+        // 无进度数据时，按节点颜色或层级着色
+        nodeColor = _resolveNodeColor(node);
       }
 
       // 判断是否应该减淡（有选中/高亮时，非相关节点减淡）
@@ -629,6 +630,11 @@ class _KnowledgeGraphPainter extends CustomPainter {
   }
 
   // ── 辅助方法 ──────────────────────────────────────────────────────────
+
+  /// 解析节点颜色：优先自定义颜色，否则按概念类型着色
+  Color _resolveNodeColor(_ConceptNode node) {
+    return node.color;
+  }
 
   bool _hasSelection() => selectedNode != null;
   bool _hasHighlight() => highlightedNodeIds.isNotEmpty;
