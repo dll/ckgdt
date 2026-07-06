@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/survey_dao.dart';
 import '../../../core/error_handler.dart';
 
@@ -137,6 +138,10 @@ class _SurveyStatsPageState extends State<SurveyStatsPage> {
 
         // ── 回收率指标 ──────────────────────────────────────────────
         _buildResponseRateCard(totalResponses, primary),
+        const SizedBox(height: 20),
+
+        // ── 可视化图表概览 ──────────────────────────────────────────
+        _buildChartOverview(questionStats, primary),
         const SizedBox(height: 20),
 
         // ── 各题统计 ──────────────────────────────────────────────
@@ -367,6 +372,241 @@ class _SurveyStatsPageState extends State<SurveyStatsPage> {
         ),
       ),
     );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 可视化图表概览
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Widget _buildChartOverview(
+      List<Map<String, dynamic>> questionStats, Color primary) {
+    final hasData = questionStats.isNotEmpty;
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.bar_chart_rounded, color: primary, size: 20),
+                const SizedBox(width: 8),
+                const Text(
+                  '可视化概览',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (!hasData)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text('暂无数据',
+                      style: TextStyle(color: Colors.grey[400])),
+                ),
+              )
+            else ...[
+              _buildPieChartSection(questionStats, primary),
+              const SizedBox(height: 16),
+              _buildBarChartSection(questionStats, primary),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPieChartSection(
+      List<Map<String, dynamic>> questionStats, Color primary) {
+    // 找到第一个单选的统计数据做饼图
+    final firstChoice =
+        questionStats.cast<Map<String, dynamic>?>().firstWhere(
+              (qs) =>
+                  qs?['type'] == 'single_choice' &&
+                  (qs?['counts'] as Map?)?.isNotEmpty == true,
+              orElse: () => null,
+            );
+    if (firstChoice == null) return const SizedBox.shrink();
+
+    final counts = firstChoice['counts'] as Map<String, int>? ?? {};
+    final total = (firstChoice['total'] as int?) ?? 0;
+    if (counts.isEmpty || total == 0) return const SizedBox.shrink();
+
+    final pieColors = [
+      const Color(0xFF1677FF), const Color(0xFF52C41A),
+      const Color(0xFFFAAD14), const Color(0xFFFF4D4F),
+      const Color(0xFF722ED1), const Color(0xFF13C2C2),
+      const Color(0xFFEB2F96), const Color(0xFFFA8C16),
+    ];
+
+    int ci = 0;
+    final sections = counts.entries.map((e) {
+      final pct = e.value / total;
+      final color = pieColors[ci % pieColors.length];
+      ci++;
+      return PieChartSectionData(
+        value: pct * 100,
+        color: color,
+        radius: 50,
+        title: '${(pct * 100).toStringAsFixed(0)}%',
+        titleStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+      );
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          firstChoice['question'] as String? ?? '',
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 140,
+          child: Row(
+            children: [
+              Expanded(
+                child: PieChart(
+                  PieChartData(
+                    sections: sections,
+                    centerSpaceRadius: 20,
+                    sectionsSpace: 1,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: counts.entries.toList().asMap().entries.map((e) {
+                  final entry = e.value;
+                  final color = pieColors[e.key % pieColors.length];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 10, height: 10,
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${entry.key} ${entry.value}人',
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBarChartSection(
+      List<Map<String, dynamic>> questionStats, Color primary) {
+    // 找出所有评分题做成柱状图对比
+    final ratingQuestions =
+        questionStats.where((qs) => qs['type'] == 'rating').toList();
+    final hasBars = questionStats.any(
+        (qs) => (qs['counts'] as Map?)?.isNotEmpty == true);
+
+    if (ratingQuestions.isEmpty && !hasBars) {
+      return const SizedBox.shrink();
+    }
+
+    // 使用评分题的平均值做柱状图
+    if (ratingQuestions.isNotEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '评分对比',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 160,
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: 5.0,
+                barTouchData: BarTouchData(enabled: true),
+                titlesData: FlTitlesData(
+                  show: true,
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 30,
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.toInt();
+                        if (idx < 0 || idx >= ratingQuestions.length) {
+                          return const SizedBox.shrink();
+                        }
+                        final q = ratingQuestions[idx]['question'] as String? ?? '';
+                        final short = q.length > 6 ? '${q.substring(0, 6)}…' : q;
+                        return SideTitleWidget(
+                          axisSide: meta.axisSide,
+                          child: Text(short, style: const TextStyle(fontSize: 9)),
+                        );
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 30,
+                      interval: 1,
+                      getTitlesWidget: (value, meta) {
+                        return Text('${value.toInt()}',
+                            style: const TextStyle(fontSize: 10));
+                      },
+                    ),
+                  ),
+                  topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                ),
+                borderData: FlBorderData(show: false),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: 1,
+                ),
+                barGroups: List.generate(ratingQuestions.length, (i) {
+                  final avg = (ratingQuestions[i]['average'] as num?)?.toDouble() ?? 0;
+                  return BarChartGroupData(
+                    x: i,
+                    barRods: [
+                      BarChartRodData(
+                        toY: avg,
+                        color: primary,
+                        width: 28,
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(4)),
+                      ),
+                    ],
+                  );
+                }),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   // ─────────────────────────────────────────────────────────────────────────

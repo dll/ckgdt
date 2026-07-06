@@ -626,6 +626,10 @@ class _ReportTabState extends State<ReportTab> {
                   : '0';
               buffer.writeln('- ${entry.key}：${entry.value}人（$pct%）');
             }
+            final achRate = _asDouble(qs['achievementRate']);
+            if (achRate > 0) {
+              buffer.writeln('- **达成率：${(achRate * 100).toStringAsFixed(1)}%**');
+            }
           } else if (qs['type'] == 'rating') {
             buffer.writeln(
                 '- 平均评分：${_asDouble(qs['average']).toStringAsFixed(2)} / 5.0');

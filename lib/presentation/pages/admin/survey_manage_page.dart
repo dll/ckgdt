@@ -1,5 +1,8 @@
 ﻿import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:open_filex/open_filex.dart';
 import '../../../data/local/survey_dao.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../services/auth_service.dart';
@@ -76,6 +79,11 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
       appBar: AppBar(
         title: const Text('问卷管理'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_awesome),
+            tooltip: '从大纲生成',
+            onPressed: _generateFromSyllabus,
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: '刷新',
@@ -441,6 +449,30 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
           label: '统计',
           color: Colors.teal,
           onTap: () => _navigateToStats(id),
+        ),
+
+        // 导出设计
+        _actionChip(
+          icon: Icons.file_download_outlined,
+          label: '导出',
+          color: Colors.indigo,
+          onTap: () => _exportSurveyDesign(id),
+        ),
+
+        // 导入设计
+        _actionChip(
+          icon: Icons.file_upload_outlined,
+          label: '导入',
+          color: Colors.deepPurple,
+          onTap: () => _importSurveyDesign(id),
+        ),
+
+        // 导出数据
+        _actionChip(
+          icon: Icons.table_chart_outlined,
+          label: '数据',
+          color: Colors.blueGrey,
+          onTap: () => _exportSurveyData(id),
         ),
 
         // 删除
@@ -837,6 +869,166 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
         builder: (_) => SurveyStatsPage(surveyId: surveyId),
       ),
     );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 从大纲生成
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Future<void> _generateFromSyllabus() async {
+    final titleCtrl = TextEditingController(
+      text: '课程调查问卷（自动生成）',
+    );
+    final descCtrl = TextEditingController(
+      text: '根据课程大纲和课程目标自动生成的调查问卷',
+    );
+
+    if (!mounted) return;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('从大纲生成问卷'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                decoration: const InputDecoration(
+                  labelText: '问卷标题',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: descCtrl,
+                decoration: const InputDecoration(
+                  labelText: '问卷描述',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '将根据课程目标和章节自动生成相关问题',
+                style: TextStyle(color: Colors.grey[500], fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.auto_awesome, size: 18),
+            label: const Text('生成'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && mounted) {
+      try {
+        final creatorId = _authService.getCurrentUserId() ?? '419116';
+        await _surveyDao.generateSyllabusSurvey(
+          title: titleCtrl.text,
+          description: descCtrl.text,
+          creatorId: creatorId,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('问卷已根据大纲自动生成'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          _loadData();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('生成失败: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 导出/导入
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Future<void> _exportSurveyDesign(int surveyId) async {
+    try {
+      final bytes = await _surveyDao.exportSurveyDesign(surveyId);
+      final dir = Directory.systemTemp;
+      final file = File('${dir.path}/survey_${surveyId}_design.xlsx');
+      await file.writeAsBytes(bytes);
+      await OpenFilex.open(file.path);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已导出: ${file.path}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导出失败: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _importSurveyDesign(int surveyId) async {
+    try {
+      final res = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx'],
+        withData: true,
+      );
+      if (res == null || res.files.isEmpty) return;
+      final f = res.files.first;
+      if (f.bytes == null) throw StateError('无法读取文件');
+
+      final count = await _surveyDao.importSurveyDesign(surveyId, f.bytes!);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已导入 $count 道题目')),
+        );
+        _loadData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导入失败: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _exportSurveyData(int surveyId) async {
+    try {
+      final bytes = await _surveyDao.exportSurveyData(surveyId);
+      final dir = Directory.systemTemp;
+      final file = File('${dir.path}/survey_${surveyId}_data.xlsx');
+      await file.writeAsBytes(bytes);
+      await OpenFilex.open(file.path);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已导出: ${file.path}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导出失败: $e')),
+        );
+      }
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────

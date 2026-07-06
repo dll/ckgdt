@@ -108,42 +108,15 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
     final notifyDao = NotificationDao();
     final teacherId = AuthService().getCurrentUserId();
     try {
-      final surveyId = await surveyDao.createSurvey(
+      final surveyId = await surveyDao.generateSyllabusSurvey(
         title: '《$_currentCourseName》课程满意度调查',
         description: '请对本学期《$_currentCourseName》课程各方面进行评价，帮助我们改进教学质量。',
         creatorId: teacherId,
       );
-      await surveyDao.addQuestion(
-        surveyId: surveyId,
-        question: '您对课程整体教学质量的评价？',
-        questionType: 'single_choice',
-        options: ['非常满意', '满意', '一般', '不太满意', '不满意'],
-        seq: 1,
-      );
-      await surveyDao.addQuestion(
-        surveyId: surveyId,
-        question: '您认为课程中哪些内容最有用？（可多选）',
-        questionType: 'multiple_choice',
-        options: _surveyContentOptions(),
-        seq: 2,
-      );
-      await surveyDao.addQuestion(
-        surveyId: surveyId,
-        question: '请为课程教学打分',
-        questionType: 'rating',
-        seq: 3,
-      );
-      await surveyDao.addQuestion(
-        surveyId: surveyId,
-        question: '您对课程改进的建议',
-        questionType: 'text',
-        isRequired: false,
-        seq: 4,
-      );
       await surveyDao.publishSurvey(surveyId);
       await notifyDao.createNotification(
         title: '课程满意度调查',
-        content: '《$_currentCourseName》课程满意度调查问卷已发布，请前往「问卷调查」完成填写，感谢配合！',
+        content: '《$_currentCourseName》课程满意度调查问卷已发布（根据课程大纲自动生成），请前往「问卷调查」完成填写，感谢配合！',
         creatorId: teacherId,
         targetType: 'all',
         type: 'survey',
@@ -153,7 +126,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('问卷已创建并发布，已通知全体学生填写'),
+              content: Text('问卷已根据大纲自动创建并发布，已通知全体学生填写'),
               backgroundColor: Colors.green),
         );
       }
@@ -174,18 +147,6 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   final Map<String, GlobalKey> _chartKeys = {};
   GlobalKey _chartKey(String id) =>
       _chartKeys.putIfAbsent(id, () => GlobalKey());
-
-  List<String> _surveyContentOptions() {
-    final fromObjectives = [
-      for (final desc in _config.descriptions)
-        if (desc.trim().isNotEmpty)
-          desc.trim().length > 18
-              ? '${desc.trim().substring(0, 18)}…'
-              : desc.trim(),
-    ];
-    if (fromObjectives.isNotEmpty) return fromObjectives.take(6).toList();
-    return const ['课程理论', '课堂案例', '实践训练', '项目任务', '测验反馈', '综合复习'];
-  }
 
   List<int> get _activeObjectiveIndexes {
     final indexes = [

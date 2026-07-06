@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:excel/excel.dart' as xl;
 import 'database_helper.dart';
 
 double _asDouble(Object? value, [double fallback = 0.0]) {
@@ -135,6 +136,249 @@ class SurveyDao {
     final count = await db
         .delete('survey_questions', where: 'id = ?', whereArgs: [questionId]);
     return count > 0;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 大纲出题
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// 从课程大纲（course_objectives + syllabus_items）自动生成问卷题目
+  /// 每项课程目标生成：满意度 + 自我达成评分 + 建议
+  /// 每章节生成：掌握程度 + 改进建议
+  Future<int> generateSyllabusSurvey({
+    required String title,
+    String? description,
+    String? creatorId,
+  }) async {
+    final db = await _dbHelper.database;
+
+    // 读取课程目标
+    final objectives = await db.query('course_objectives',
+        columns: ['idx', 'name', 'description', 'indicator'],
+        orderBy: 'idx ASC');
+    // 读取章节
+    final chapters = await db.query('syllabus_items',
+        columns: ['chapter_number', 'title', 'description'],
+        orderBy: 'chapter_number ASC');
+
+    // 创建问卷
+    final surveyId = await createSurvey(
+      title: title,
+      description: description ?? '根据课程大纲自动生成的问卷调查',
+      creatorId: creatorId,
+    );
+
+    int seq = 0;
+
+    // 1. 课程目标相关题目
+    for (final obj in objectives) {
+      final idx = obj['idx'] as int? ?? 0;
+      final name = obj['name'] as String? ?? '课程目标$idx';
+      final indicator = obj['indicator'] as String? ?? '';
+      final label = indicator.isNotEmpty ? '$name（$indicator）' : name;
+
+      seq++;
+      await addQuestion(
+        surveyId: surveyId,
+        question: '您认为"$label"的达成程度如何？',
+        questionType: 'single_choice',
+        options: ['完全达成', '较好达成', '基本达成', '部分达成', '未达成'],
+        seq: seq,
+      );
+
+      seq++;
+      await addQuestion(
+        surveyId: surveyId,
+        question: '您对"$label"的教学有何建议？',
+        questionType: 'text',
+        isRequired: false,
+        seq: seq,
+      );
+    }
+
+    // 2. 章节掌握度
+    if (chapters.isNotEmpty) {
+      seq++;
+      final chapterOptions = chapters.map((c) {
+        final num = c['chapter_number'] as int? ?? 0;
+        final title = c['title'] as String? ?? '';
+        return '第${num}章 $title';
+      }).toList();
+      // 限制选项数量
+      final opts = chapterOptions.length > 10
+          ? chapterOptions.sublist(0, 10)
+          : chapterOptions;
+      if (opts.isNotEmpty) {
+        await addQuestion(
+          surveyId: surveyId,
+          question: '您认为哪些章节掌握较好？（可多选）',
+          questionType: 'multi_choice',
+          options: opts,
+          seq: seq,
+        );
+      }
+    }
+
+    // 3. 总体评价
+    seq++;
+    await addQuestion(
+      surveyId: surveyId,
+      question: '您对课程整体教学质量的评价？',
+      questionType: 'rating',
+      seq: seq,
+    );
+
+    seq++;
+    await addQuestion(
+      surveyId: surveyId,
+      question: '您认为本课程在哪些方面需要改进？',
+      questionType: 'text',
+      isRequired: false,
+      seq: seq,
+    );
+
+    return surveyId;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Excel 导入导出
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// 导出问卷模板（题目设计）到 Excel
+  Future<List<int>> exportSurveyDesign(int surveyId) async {
+    final questions = await getQuestions(surveyId);
+    final wb = xl.Excel.createExcel();
+    final sheet = wb['问卷设计'];
+
+    // 标题行
+    sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0))
+        .value = xl.TextCellValue('题号');
+    sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 0))
+        .value = xl.TextCellValue('题目');
+    sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: 0))
+        .value = xl.TextCellValue('题型');
+    sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 0))
+        .value = xl.TextCellValue('选项（|分隔）');
+    sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 0))
+        .value = xl.TextCellValue('必填');
+
+    for (int i = 0; i < questions.length; i++) {
+      final q = questions[i];
+      final r = i + 1;
+      final optionsJson = q['options_json'] as String?;
+      final options = optionsJson != null
+          ? (List<String>.from(json.decode(optionsJson))).join('|')
+          : '';
+      sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: r))
+          .value = xl.IntCellValue(i + 1);
+      sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: r))
+          .value = xl.TextCellValue(q['question'] as String? ?? '');
+      sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: r))
+          .value = xl.TextCellValue(q['question_type'] as String? ?? 'single_choice');
+      sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: r))
+          .value = xl.TextCellValue(options);
+      sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: r))
+          .value = xl.TextCellValue((q['is_required'] as int?) == 1 ? '是' : '否');
+    }
+
+    sheet.setColumnWidth(0, 8.0);
+    sheet.setColumnWidth(1, 40.0);
+    sheet.setColumnWidth(2, 12.0);
+    sheet.setColumnWidth(3, 50.0);
+    sheet.setColumnWidth(4, 8.0);
+
+    return wb.save()!;
+  }
+
+  /// 从 Excel 导入问卷设计（覆盖原有题目）
+  Future<int> importSurveyDesign(int surveyId, List<int> bytes) async {
+    final wb = xl.Excel.decodeBytes(bytes);
+    final sheet = wb.tables.values.first;
+    if (sheet.rows.length < 2) return 0;
+
+    // 删除原有题目
+    final db = await _dbHelper.database;
+    await db.delete('survey_questions',
+        where: 'survey_id = ?', whereArgs: [surveyId]);
+
+    int imported = 0;
+    for (int i = 1; i < sheet.rows.length; i++) {
+      final row = sheet.rows[i];
+      final questionStr = _cellStr(row, 1);
+      if (questionStr.isEmpty) continue;
+
+      final type = _cellStr(row, 2).isNotEmpty ? _cellStr(row, 2) : 'single_choice';
+      final optionsStr = _cellStr(row, 3);
+      final options = optionsStr.isNotEmpty ? optionsStr.split('|') : <String>[];
+      final isRequired = _cellStr(row, 4) == '是';
+
+      await addQuestion(
+        surveyId: surveyId,
+        question: questionStr,
+        questionType: type,
+        options: options.isNotEmpty ? options : null,
+        isRequired: isRequired,
+        seq: imported + 1,
+      );
+      imported++;
+    }
+
+    return imported;
+  }
+
+  /// 导出问卷回答数据到 Excel
+  Future<List<int>> exportSurveyData(int surveyId) async {
+    final questions = await getQuestions(surveyId);
+    final responses = await getResponses(surveyId);
+    final wb = xl.Excel.createExcel();
+    final sheet = wb['问卷数据'];
+
+    // 标题行：学号 | 姓名 | 题1 | 题2 | ...
+    sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0))
+        .value = xl.TextCellValue('学号');
+    sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 0))
+        .value = xl.TextCellValue('姓名');
+    for (int i = 0; i < questions.length; i++) {
+      sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: i + 2, rowIndex: 0))
+          .value = xl.TextCellValue(questions[i]['question'] as String? ?? '');
+    }
+
+    for (int r = 0; r < responses.length; r++) {
+      final resp = responses[r];
+      final answersJson = resp['answers_json'] as String?;
+      final answers = answersJson != null
+          ? json.decode(answersJson) as Map<String, dynamic>
+          : <String, dynamic>{};
+
+      final row = r + 1;
+      sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: row))
+          .value = xl.TextCellValue(resp['user_id'] as String? ?? '');
+      sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: row))
+          .value = xl.TextCellValue(resp['real_name'] as String? ?? '');
+
+      for (int qi = 0; qi < questions.length; qi++) {
+        final qId = questions[qi]['id'].toString();
+        final answer = answers[qId];
+        final display = answer is List ? answer.join(', ') : (answer?.toString() ?? '');
+        sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: qi + 2, rowIndex: row))
+            .value = xl.TextCellValue(display);
+      }
+    }
+
+    sheet.setColumnWidth(0, 14.0);
+    sheet.setColumnWidth(1, 12.0);
+    for (int i = 0; i < questions.length; i++) {
+      sheet.setColumnWidth(i + 2, 30.0);
+    }
+
+    return wb.save()!;
+  }
+
+  String _cellStr(List<xl.Data?> row, int col) {
+    if (col >= row.length) return '';
+    final cell = row[col];
+    if (cell == null) return '';
+    return cell.value?.toString().trim() ?? '';
   }
 
   // ─────────────────────────────────────────────────────────────────────────

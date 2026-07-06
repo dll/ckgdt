@@ -1698,12 +1698,25 @@ class AchievementDao {
               satisfactionCount++;
             }
 
+            // 计算达成率（针对'达成程度'类题目）
+            final achievementKeys = ['完全达成', '较好达成', '基本达成'];
+            int achieved = 0;
+            int totalSelected = 0;
+            for (final entry in optionCounts.entries) {
+              totalSelected += entry.value;
+              if (achievementKeys.contains(entry.key)) {
+                achieved += entry.value;
+              }
+            }
+
             allQuestionStats.add({
               'question': q['question'],
               'type': 'single_choice',
               'options': options,
               'counts': optionCounts,
               'total': responses.length,
+              'achievementRate':
+                  totalSelected > 0 ? achieved / totalSelected : 0.0,
               'surveyTitle': survey['title'],
             });
           } else if (qType == 'text') {
