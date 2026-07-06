@@ -576,7 +576,7 @@ class DatabaseHelper {
 
   Future<void> _importStudentRoster(Database db) async {
     try {
-      final bytes = await _loadStudentRosterBytes();
+      final bytes = await _loadStudentRosterBytes(db);
       if (bytes == null || bytes.isEmpty) {
         InitLogger.log(
             'db', 'CKGDT student roster not found, keep existing students');
@@ -711,11 +711,18 @@ class DatabaseHelper {
     }
   }
 
-  Future<Uint8List?> _loadStudentRosterBytes() async {
+  Future<Uint8List?> _loadStudentRosterBytes(Database db) async {
     // 尝试从当前课程目录加载学生名单
+    // 注意：不能走 CourseContextService → CourseDao → DatabaseHelper.instance.database
+    // 因为此时 Completer 还没 complete，会死锁
     String courseId = 'ckgdt';
     try {
-      courseId = await CourseContextService().activeCourseId();
+      final rows = await db.query('courses',
+          columns: ['id'],
+          where: 'is_active = ?',
+          whereArgs: [1],
+          limit: 1);
+      if (rows.isNotEmpty) courseId = rows.first['id'] as String;
     } catch (_) {}
 
     // 候选路径：当前课程目录 → CKGDT 默认目录

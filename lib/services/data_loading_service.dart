@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import '../core/init_logger.dart';
 import '../data/local/database_helper.dart';
 import '../data/local/quiz_dao.dart';
 import '../data/local/puml_dao.dart';
@@ -29,19 +30,29 @@ class DataLoadingService {
     if (_isInitialized) return;
 
     try {
+      InitLogger.log('dls', 'step 0 - db');
       await _dbHelper.database;
+      InitLogger.log('dls', 'step 1 - resourceFiles');
       await _loadResourceFiles();
+      InitLogger.log('dls', 'step 2 - activeCourse');
       await _importActiveCoursePackage();
+      InitLogger.log('dls', 'step 3 - ckgdtResources');
       await _importCkgdtResources();
+      InitLogger.log('dls', 'step 4 - pumlSamples');
       await _initPumlSamples();
+      InitLogger.log('dls', 'step 5 - mdGraphs');
       await _importMdGraphs();
+      InitLogger.log('dls', 'step 6 - ckgdtQuizzes');
       await _importCkgdtQuizzes();
+      InitLogger.log('dls', 'step 7 - cleanEmptyGraphs');
       await _cleanEmptyGraphs();
+      InitLogger.log('dls', 'step 8 - giteeToken');
       await _initGiteeToken();
+      InitLogger.log('dls', 'step 9 - prefetchConfigs');
       await _prefetchRemoteConfigs();
-      debugPrint('=== DataLoadingService: Initialization complete');
+      InitLogger.log('dls', 'Initialization complete');
     } catch (e) {
-      debugPrint('=== DataLoadingService: Initialization error: $e');
+      InitLogger.error('dls', 'Initialization error: $e');
     }
     _isInitialized = true;
   }
