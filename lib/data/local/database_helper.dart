@@ -8,7 +8,6 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
 import '../../core/init_logger.dart';
 import '../../core/error_handler.dart';
-import '../../services/course_context_service.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -576,7 +575,9 @@ class DatabaseHelper {
 
   Future<void> _importStudentRoster(Database db) async {
     try {
+      InitLogger.log('db', '_importStudentRoster: calling _loadStudentRosterBytes');
       final bytes = await _loadStudentRosterBytes(db);
+      InitLogger.log('db', '_importStudentRoster: got ${bytes?.length ?? 0} bytes');
       if (bytes == null || bytes.isEmpty) {
         InitLogger.log(
             'db', 'CKGDT student roster not found, keep existing students');
@@ -712,17 +713,17 @@ class DatabaseHelper {
   }
 
   Future<Uint8List?> _loadStudentRosterBytes(Database db) async {
-    // 尝试从当前课程目录加载学生名单
-    // 注意：不能走 CourseContextService → CourseDao → DatabaseHelper.instance.database
-    // 因为此时 Completer 还没 complete，会死锁
     String courseId = 'ckgdt';
     try {
       final rows = await db.query('courses',
-          columns: ['id'],
-          where: 'is_active = ?',
-          whereArgs: [1],
-          limit: 1);
-      if (rows.isNotEmpty) courseId = rows.first['id'] as String;
+        columns: ['id'],
+        where: 'is_active = ?',
+        whereArgs: [1],
+        limit: 1,
+      );
+      if (rows.isNotEmpty) {
+        courseId = rows.first['id'] as String? ?? 'ckgdt';
+      }
     } catch (_) {}
 
     // 候选路径：当前课程目录 → CKGDT 默认目录
