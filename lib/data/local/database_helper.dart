@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -12,6 +13,7 @@ import '../../services/course_context_service.dart';
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
+  static Completer<Database>? _initCompleter;
 
   /// 启动期 DB 初始化的失败摘要 — UI 可以读出来弹"数据库初始化异常"提示。
   /// null = 一切正常；非空 = 学生看到测验空白时应该向管理员报这条字符串。
@@ -25,8 +27,19 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB();
-    return _database!;
+    // 多个并发调用者共享同一个 Completer，避免重复 _initDB
+    if (_initCompleter != null) return _initCompleter!.future;
+    _initCompleter = Completer<Database>();
+    try {
+      _database = await _initDB();
+      _initCompleter!.complete(_database!);
+      return _database!;
+    } catch (e) {
+      _initCompleter!.completeError(e);
+      rethrow;
+    } finally {
+      _initCompleter = null;
+    }
   }
 
   Future<Database> _initDB() async {
