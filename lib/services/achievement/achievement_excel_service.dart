@@ -845,7 +845,21 @@ class AchievementExcelService {
     final markdownRows = syllabusToObjectiveRows(parsed);
     final looseRows = _parseLooseAssessmentMatrixRows(rawText);
     if (looseRows.isEmpty) return markdownRows;
-    return mergeSyllabusRows(looseRows, markdownRows);
+    // 合并时，markdownRows（第二个参数）只能补充已存在目标的描述字段，
+    // 不能引入确定性解析未找到的新目标编号。
+    final merged = mergeSyllabusRows(looseRows, markdownRows);
+    // 进一步过滤：只保留至少有一个非空字段（除 idx/name 外）的目标
+    final nonEmptyFields = {
+      'description', 'indicator', 'weight', 'full_mark',
+      'pingshi_ratio', 'experiment_ratio', 'exam_ratio',
+    };
+    return merged.where((r) {
+      for (final f in nonEmptyFields) {
+        final v = r[f];
+        if (v != null && v.toString().trim().isNotEmpty && v != 0 && v != 0.0) return true;
+      }
+      return false;
+    }).toList();
   }
 
   /// 用 AI 全面解析大纲原始文本，提取课程目标的完整信息：
@@ -1910,11 +1924,12 @@ $rawText
       'pingshi_standard',
       'experiment_standard',
     ];
+    // AI 只能补充确定性解析已找到的目标的缺失字段，
+    // 不允许 AI 创造确定性解析中不存在的目标。
     for (final ai in aiRows) {
       final idx = (ai['idx'] as num?)?.toInt() ?? 0;
-      if (idx == 0) continue;
-      final row =
-          byIdx.putIfAbsent(idx, () => {'idx': idx, 'name': '课程目标$idx'});
+      if (idx == 0 || !byIdx.containsKey(idx)) continue;
+      final row = byIdx[idx]!;
       for (final field in fillOnlyFields) {
         if (isEmptyValue(row[field]) && !isEmptyValue(ai[field])) {
           row[field] = ai[field];
