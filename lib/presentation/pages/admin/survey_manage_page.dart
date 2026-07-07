@@ -342,6 +342,18 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
               ),
             ],
           ),
+          trailing: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () => _confirmDeleteSurvey(id, title),
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(Icons.delete_outline, size: 18, color: Colors.red[400]),
+            ),
+          ),
           children: [
             // 问卷描述
             if (description.isNotEmpty)

@@ -379,7 +379,7 @@ class _HomePageState extends State<HomePage> {
       ));
       bodyMap[destinations.length - 1] = () => const AchievementPage();
 
-      // 5: 归档（教师/管理员通用）
+      // 6: 归档（教师/管理员通用）
       destinations.add(const NavigationDestination(
         icon: Icon(Icons.school_outlined),
         selectedIcon: Icon(Icons.school),

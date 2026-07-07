@@ -10,6 +10,7 @@ import '../../../services/course_context_service.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../../widgets/inner_tab_request_mixin.dart';
 import '../../pages/learning/video_player_page.dart';
+import '../../pages/admin/survey_manage_page.dart';
 import 'tabs/overview_tab.dart';
 import 'tabs/scores_tab.dart';
 import 'tabs/report_tab.dart';
@@ -47,13 +48,11 @@ class _AchievementPageState extends State<AchievementPage>
     (Icons.analytics_outlined, '达成度概览', '01', null),
     (Icons.edit_note, '成绩管理', '02', null),
     (Icons.calculate_outlined, '计算过程', '03', null),
-    (Icons.school_outlined, '平时达成', '04', 'pingshi'),
-    (Icons.science_outlined, '实验达成', '05', 'experiment'),
-    (Icons.assignment_outlined, '考核达成', '06', 'exam'),
-    (Icons.quiz_outlined, '试卷分析', '07', 'examAnalysis'),
-    (Icons.build_outlined, '持续改进', '08', null),
-    (Icons.summarize_outlined, '报告生成', '09', null),
-    (Icons.compare_arrows_outlined, 'AB 对照', '10', null),
+    (Icons.poll_outlined, '问卷调查', '04', null),
+    (Icons.quiz_outlined, '试卷分析', '05', 'examAnalysis'),
+    (Icons.build_outlined, '持续改进', '06', null),
+    (Icons.summarize_outlined, '报告生成', '07', null),
+    (Icons.compare_arrows_outlined, 'AB 对照', '08', null),
   ];
   List<(IconData, String, String, String?)> _tabSpecs = _allTabSpecs;
 
@@ -72,12 +71,11 @@ class _AchievementPageState extends State<AchievementPage>
     super.initState();
     _tabController = TabController(length: _tabSpecs.length, vsync: this);
     bindInnerTabRequest();
-    _refreshVisibleTabs();
     dataRevision.addListener(_onDataRevision);
   }
 
   void _onDataRevision() {
-    _refreshVisibleTabs();
+    // 子 tab 刷新，无需调整 tab 结构
   }
 
   @override
@@ -95,61 +93,6 @@ class _AchievementPageState extends State<AchievementPage>
   /// GitHub Release 视频下载地址
   static const _videoDownloadUrl =
       'https://github.com/dll/mad-kgdt/releases/download/video-assets/default.mp4';
-
-  Future<void> _refreshVisibleTabs() async {
-    try {
-      final courseName =
-          await _courseContext.activeCourseName(fallback: '当前课程');
-      final objectives = await _achievementDao.getCourseObjectives(courseName);
-      final hasExperiment = objectives.isEmpty ||
-          objectives.any(
-            (row) =>
-                ((row['experiment_ratio'] as num?)?.toDouble() ?? 0) > 0.0001 ||
-                (row['experiments']?.toString().trim().isNotEmpty == true),
-          );
-      final nextSpecs = hasExperiment
-          ? _allTabSpecs
-          : _allTabSpecs
-              .where((spec) => spec.$4 != 'experiment')
-              .toList(growable: false);
-      if (!mounted || _sameTabSpecs(_tabSpecs, nextSpecs)) return;
-
-      final oldController = _tabController;
-      final oldLabel = oldController.index < _tabSpecs.length
-          ? _tabSpecs[oldController.index].$2
-          : null;
-      var nextIndex = oldLabel == null
-          ? 0
-          : nextSpecs.indexWhere((spec) => spec.$2 == oldLabel);
-      if (nextIndex < 0) {
-        nextIndex = oldController.index;
-        if (nextIndex >= nextSpecs.length) nextIndex = nextSpecs.length - 1;
-      }
-      final nextController = TabController(
-        length: nextSpecs.length,
-        vsync: this,
-        initialIndex: nextIndex,
-      );
-      setState(() {
-        _tabSpecs = nextSpecs;
-        _tabController = nextController;
-      });
-      oldController.dispose();
-    } catch (e, st) {
-      swallowDebug(e, tag: 'AchievementPage.refreshVisibleTabs', stack: st);
-    }
-  }
-
-  bool _sameTabSpecs(
-    List<(IconData, String, String, String?)> a,
-    List<(IconData, String, String, String?)> b,
-  ) {
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      if (a[i].$2 != b[i].$2 || a[i].$4 != b[i].$4) return false;
-    }
-    return true;
-  }
 
   Future<void> _playGuideVideo() async {
     try {
@@ -391,24 +334,6 @@ class _AchievementPageState extends State<AchievementPage>
           achievementDao: _achievementDao,
           dataRevision: dataRevision,
         );
-      case '平时达成':
-        return ComponentAchievementTab(
-          achievementDao: _achievementDao,
-          env: 'pingshi',
-          dataRevision: dataRevision,
-        );
-      case '实验达成':
-        return ComponentAchievementTab(
-          achievementDao: _achievementDao,
-          env: 'experiment',
-          dataRevision: dataRevision,
-        );
-      case '考核达成':
-        return ComponentAchievementTab(
-          achievementDao: _achievementDao,
-          env: 'exam',
-          dataRevision: dataRevision,
-        );
       case '试卷分析':
         return const ExamAnalysisTab();
       case '持续改进':
@@ -425,6 +350,8 @@ class _AchievementPageState extends State<AchievementPage>
           achievementDao: _achievementDao,
           dataRevision: dataRevision,
         );
+      case '问卷调查':
+        return const SurveyManagePage();
       default:
         return const SizedBox.shrink();
     }

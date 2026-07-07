@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
 import '../../../../data/local/achievement_dao.dart';
+import '../../../../data/local/class_dao.dart';
 import '../../../../data/local/database_helper.dart';
 import '../../../../data/local/score_audit_dao.dart';
 import '../../../../services/auth_service.dart';
@@ -1079,53 +1080,71 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
 
   Future<void> _createBatch() async {
     final courseName = AchievementContext.instance.courseName;
-    final nameCtrl = TextEditingController(text: '$courseName 达成度评价');
-    final classNameCtrl = TextEditingController();
-    final semCtrl = TextEditingController(
-        text: '${DateTime.now().year}-${DateTime.now().month > 6 ? 1 : 2}');
-    final result = await showDialog<Map<String, String>>(
+    final today = DateTime.now();
+    final dateStr = '${today.year}${today.month.toString().padLeft(2, '0')}${today.day.toString().padLeft(2, '0')}';
+    final classes = await ClassDao().getActiveClasses();
+    String selectedClass = classes.isNotEmpty ? (classes.first['name']?.toString() ?? '') : '';
+
+    final result = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('创建达成度批次'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-                controller: nameCtrl,
-                decoration:
-                    const InputDecoration(labelText: '批次名称', isDense: true)),
-            const SizedBox(height: 8),
-            TextField(
-                controller: classNameCtrl,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('创建达成度批次'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                value: selectedClass.isEmpty ? null : selectedClass,
                 decoration: const InputDecoration(
-                    labelText: '班级', isDense: true, hintText: '如：软件23')),
-            const SizedBox(height: 8),
-            TextField(
-                controller: semCtrl,
-                decoration: const InputDecoration(
-                    labelText: '学期', isDense: true, hintText: '如：2025-1')),
+                    labelText: '班级', isDense: true, contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 12)),
+                items: classes.map((c) => DropdownMenuItem(
+                  value: c['name']?.toString() ?? '',
+                  child: Text(c['name']?.toString() ?? '', style: const TextStyle(fontSize: 13)),
+                )).toList(),
+                onChanged: (v) {
+                  if (v != null) {
+                    setDialogState(() => selectedClass = v);
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              if (selectedClass.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(children: [
+                    const Icon(Icons.auto_awesome, size: 14, color: Colors.grey),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text('$courseName+$selectedClass+$dateStr',
+                          style: const TextStyle(fontSize: 12)),
+                    ),
+                  ]),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            FilledButton(
+              onPressed: selectedClass.isEmpty ? null : () => Navigator.pop(ctx, selectedClass),
+              child: const Text('创建'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, {
-                    'name': nameCtrl.text.trim(),
-                    'className': classNameCtrl.text.trim(),
-                    'semester': semCtrl.text.trim(),
-                  }),
-              child: const Text('创建')),
-        ],
       ),
     );
-    if (result == null || result['name']?.isEmpty == true) return;
+    if (result == null || result.isEmpty) return;
+    final batchName = '$courseName+$result+$dateStr';
+    final semester = '${today.year}-${today.month > 6 ? 2 : 1}';
     try {
       final id = await widget.achievementDao.addBatch(
-        batchName: result['name']!,
+        batchName: batchName,
         courseName: courseName,
-        className: result['className'] ?? '',
-        semester: result['semester'] ?? '',
+        className: result,
+        semester: semester,
       );
       await _loadBatches();
       setState(() => _selectedBatchId = id);

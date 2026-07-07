@@ -104,6 +104,7 @@ app.*.map.json
 key.properties
 google-services.json
 GoogleService-Info.plist
+assets/ai_key.txt
 
 docs/分层架构HelloWorldAndroid版AI问答系统/
 

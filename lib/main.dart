@@ -91,15 +91,15 @@ void main() async {
   }
 
   // Initialize all preset data (resources, PUML samples, clean empty graphs)
-  InitLogger.log('main', 'before DataLoadingService, dbLocked=$dbLocked');
   try {
     if (!dbLocked) {
+      InitLogger.log('main', 'DataLoadingService starting...');
       await DataLoadingService.instance.initialize();
+      InitLogger.log('main', 'DataLoadingService done');
     }
   } catch (e, st) {
     InitLogger.error('main', 'DataLoadingService init error: $e', st);
   }
-  InitLogger.log('main', 'after DataLoadingService');
 
   if (DatabaseHelper.lastInitError != null) {
     InitLogger.log(

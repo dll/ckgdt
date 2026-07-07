@@ -30,29 +30,19 @@ class DataLoadingService {
     if (_isInitialized) return;
 
     try {
-      InitLogger.log('dls', 'step 0 - db');
       await _dbHelper.database;
-      InitLogger.log('dls', 'step 1 - resourceFiles');
       await _loadResourceFiles();
-      InitLogger.log('dls', 'step 2 - activeCourse');
       await _importActiveCoursePackage();
-      InitLogger.log('dls', 'step 3 - ckgdtResources');
       await _importCkgdtResources();
-      InitLogger.log('dls', 'step 4 - pumlSamples');
       await _initPumlSamples();
-      InitLogger.log('dls', 'step 5 - mdGraphs');
       await _importMdGraphs();
-      InitLogger.log('dls', 'step 6 - ckgdtQuizzes');
       await _importCkgdtQuizzes();
-      InitLogger.log('dls', 'step 7 - cleanEmptyGraphs');
       await _cleanEmptyGraphs();
-      InitLogger.log('dls', 'step 8 - giteeToken');
       await _initGiteeToken();
-      InitLogger.log('dls', 'step 9 - prefetchConfigs');
       await _prefetchRemoteConfigs();
-      InitLogger.log('dls', 'Initialization complete');
-    } catch (e) {
-      InitLogger.error('dls', 'Initialization error: $e');
+      InitLogger.log('ds', 'Initialization complete');
+    } catch (e, st) {
+      InitLogger.error('ds', 'Initialization error: $e', st);
     }
     _isInitialized = true;
   }
@@ -65,10 +55,10 @@ class DataLoadingService {
       final gitee = GiteeService();
       final existing = await gitee.getToken();
       if (existing == null || existing.isEmpty) {
-        debugPrint('=== DataLoadingService: Gitee token not configured, sync disabled');
+        InitLogger.log('ds', 'Gitee token not configured, sync disabled');
       }
     } catch (e) {
-      debugPrint('=== DataLoadingService: Gitee token check error: $e');
+      InitLogger.log('ds', 'Gitee token check error: $e');
     }
   }
 
@@ -81,18 +71,17 @@ class DataLoadingService {
       // 并行预取所有配置，缓存到 SharedPreferences
       await Future.wait([
         resource.getLabTasks().then((_) =>
-            debugPrint('=== DataLoadingService: Lab tasks config cached')),
+            InitLogger.log('ds', 'Lab tasks config cached')),
         resource.getChapters().then((_) =>
-            debugPrint('=== DataLoadingService: Chapters config cached')),
+            InitLogger.log('ds', 'Chapters config cached')),
         resource.getAssessment().then((_) =>
-            debugPrint('=== DataLoadingService: Assessment config cached')),
+            InitLogger.log('ds', 'Assessment config cached')),
         resource.getReportTemplates().then((_) =>
-            debugPrint('=== DataLoadingService: Report templates cached')),
+            InitLogger.log('ds', 'Report templates cached')),
       ]);
-      debugPrint('=== DataLoadingService: Remote configs pre-fetched');
+      InitLogger.log('ds', 'Remote configs pre-fetched');
     } catch (e) {
-      debugPrint(
-          '=== DataLoadingService: Remote config prefetch error (non-fatal): $e');
+      InitLogger.log('ds', 'Remote config prefetch error (non-fatal): $e');
     }
   }
 
@@ -111,8 +100,8 @@ class DataLoadingService {
       final pdfDir = '$dataDir/课件/清言智谱';
       final pptDir = '$dataDir/课件/秒出PPT';
 
-      debugPrint('=== DataLoadingService: Resolved dataDir=$dataDir');
-      debugPrint('=== DataLoadingService: videoDir=$videoDir');
+      InitLogger.log('ds', 'Resolved dataDir=$dataDir');
+      InitLogger.log('ds', 'videoDir=$videoDir');
 
       // 检查是否已有数据 且 路径正确（包含当前 dataDir 前缀）
       final existing =
@@ -127,18 +116,15 @@ class DataLoadingService {
             ? (sample.first['file_path'] as String? ?? '')
             : '';
         if (samplePath.startsWith(dataDir)) {
-          debugPrint(
-              '=== DataLoadingService: resource_files paths OK ($count rows, prefix=$dataDir)');
+          InitLogger.log('ds', 'resource_files paths OK ($count rows, prefix=$dataDir)');
           return;
         }
-        debugPrint(
-            '=== DataLoadingService: Paths mismatch! sample=$samplePath, expected prefix=$dataDir');
+        InitLogger.log('ds', 'Paths mismatch! sample=$samplePath, expected prefix=$dataDir');
       }
 
       // 清空旧数据（无论是 assets/ 前缀还是其他错误路径）
       await db.delete('resource_files');
-      debugPrint(
-          '=== DataLoadingService: Cleared old resource_files, re-inserting with correct paths');
+      InitLogger.log('ds', 'Cleared old resource_files, re-inserting with correct paths');
 
       // 从课程上下文动态加载章节名
       final courseCtx = CourseContextService();
@@ -152,8 +138,7 @@ class DataLoadingService {
         }
       }
       if (chapterNames.isEmpty) {
-        debugPrint(
-            '=== DataLoadingService: No chapters from course context, skipping resource insert');
+        InitLogger.log('ds', 'No chapters from course context, skipping resource insert');
         return;
       }
 
@@ -192,18 +177,16 @@ class DataLoadingService {
       }
 
       await batch.commit(noResult: true);
-      debugPrint(
-          '=== DataLoadingService: Inserted ${chapterNames.length * 3} resource files');
+      InitLogger.log('ds', 'Inserted ${chapterNames.length * 3} resource files');
 
       // 验证插入结果
       final verify =
           await db.rawQuery("SELECT file_path FROM resource_files LIMIT 1");
       if (verify.isNotEmpty) {
-        debugPrint(
-            '=== DataLoadingService: Verify → ${verify.first['file_path']}');
+        InitLogger.log('ds', 'Verify → ${verify.first['file_path']}');
       }
     } catch (e) {
-      debugPrint('=== DataLoadingService: Error loading resource files: $e');
+      InitLogger.log('ds', 'Error loading resource files: $e');
     }
   }
 
@@ -224,7 +207,7 @@ class DataLoadingService {
         if (Directory(candidate).existsSync() &&
             (Directory('$candidate/视频').existsSync() ||
                 Directory('$candidate/课件').existsSync())) {
-          debugPrint('=== DataLoadingService: Found data dir: $candidate');
+          InitLogger.log('ds', 'Found data dir: $candidate');
           return candidate;
         }
         final parent = Directory(dir).parent.path.replaceAll('\\', '/');
@@ -234,10 +217,10 @@ class DataLoadingService {
 
       // 策略 2: 发布模式 — exe 同级 data/
       final fallback = '$exeDir/data';
-      debugPrint('=== DataLoadingService: Using fallback data dir: $fallback');
+      InitLogger.log('ds', 'Using fallback data dir: $fallback');
       return fallback;
     } catch (e) {
-      debugPrint('=== DataLoadingService: _resolveDataDir error: $e');
+      InitLogger.log('ds', '_resolveDataDir error: $e');
       return 'data';
     }
   }
@@ -248,7 +231,7 @@ class DataLoadingService {
     try {
       await _pumlDao.initSamples();
     } catch (e) {
-      debugPrint('=== DataLoadingService: Error initializing PUML samples: $e');
+      InitLogger.log('ds', 'Error initializing PUML samples: $e');
     }
   }
 
@@ -258,7 +241,7 @@ class DataLoadingService {
     try {
       await GraphImportService.instance.importAll();
     } catch (e) {
-      debugPrint('=== DataLoadingService: Error importing MD graphs: $e');
+      InitLogger.log('ds', 'Error importing MD graphs: $e');
     }
   }
 
@@ -266,7 +249,7 @@ class DataLoadingService {
     try {
       await CkgdtQuizImporter.instance.importCkgdtQuizzes();
     } catch (e) {
-      debugPrint('=== DataLoadingService: Error importing CKGDT quizzes: $e');
+      InitLogger.log('ds', 'Error importing CKGDT quizzes: $e');
     }
     // 导入作业数据
     await _importCkgdtHomework();
@@ -304,9 +287,9 @@ class DataLoadingService {
 
       final homeworkDao = HomeworkDao();
       final imported = await homeworkDao.importFromJson(courseId, content);
-      debugPrint('=== DataLoadingService: Imported $imported homework sets for $courseId');
+      InitLogger.log('ds', 'Imported $imported homework sets for $courseId');
     } catch (e) {
-      debugPrint('=== DataLoadingService: Error importing homework: $e');
+      InitLogger.log('ds', 'Error importing homework: $e');
     }
   }
 
@@ -314,16 +297,16 @@ class DataLoadingService {
     try {
       await CoursePackageLoader.instance.importActiveCourse();
     } catch (e) {
-      debugPrint('=== DataLoadingService: Error importing course package: $e');
+      InitLogger.log('ds', 'Error importing course package: $e');
     }
   }
 
   Future<void> _importCkgdtResources() async {
     try {
       final count = await CkgdtResourceImporter.instance.importCkgdtResources();
-      debugPrint('=== DataLoadingService: Imported $count course resources');
+      InitLogger.log('ds', 'Imported $count course resources');
     } catch (e) {
-      debugPrint('=== DataLoadingService: Error importing course resources: $e');
+      InitLogger.log('ds', 'Error importing course resources: $e');
     }
   }
 
@@ -344,7 +327,7 @@ class DataLoadingService {
         final ids = emptyGraphs.map((r) => "'${r['id']}'").join(',');
         final deleted =
             await db.rawDelete('DELETE FROM graphs WHERE id IN ($ids)');
-        debugPrint('=== DataLoadingService: Cleaned $deleted empty graphs');
+        InitLogger.log('ds', 'Cleaned $deleted empty graphs');
       }
 
       // 2) 删除非 md_import 类型的旧图谱（保留 md_import 图谱为唯一数据源）
@@ -359,11 +342,10 @@ class DataLoadingService {
         await db.rawDelete('DELETE FROM nodes WHERE graph_id IN ($ids)');
         final deleted =
             await db.rawDelete('DELETE FROM graphs WHERE id IN ($ids)');
-        debugPrint(
-            '=== DataLoadingService: Cleaned $deleted old non-md_import graphs');
+        InitLogger.log('ds', 'Cleaned $deleted old non-md_import graphs');
       }
     } catch (e) {
-      debugPrint('=== DataLoadingService: Error cleaning graphs: $e');
+      InitLogger.log('ds', 'Error cleaning graphs: $e');
     }
   }
 

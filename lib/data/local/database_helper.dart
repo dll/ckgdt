@@ -248,6 +248,8 @@ class DatabaseHelper {
 
     // ── 第五步：确保讯飞凭据为最新值 ──
     await _updateXunfeiCredentials(db);
+    // ── 第五步 b：确保 DeepSeek API Key 为最新值 ──
+    await _updateAiApiKey(db);
 
     return db;
   }
@@ -3323,9 +3325,10 @@ class DatabaseHelper {
     ''');
 
     // 内置试用 AI 配置（管理员/教师自动使用，学生受试用额度限制）
+    // API Key 由 _updateAiApiKey() 在启动时写入，不在源码中硬编码
     await db.execute('''
       INSERT OR IGNORE INTO ai_configs(id, provider, api_key, model, base_url)
-      VALUES(1, 'deepseek', 'sk-717ef9146311424daa2fbead8ed4682b', 'deepseek-v4-pro', 'https://api.deepseek.com')
+      VALUES(1, 'deepseek', '', 'deepseek-v4-pro', 'https://api.deepseek.com')
     ''');
 
     // ── 作业模块 ──────────────────────────────────────────────────────────
@@ -3414,6 +3417,36 @@ class DatabaseHelper {
           where: 'id = 1',
         );
         InitLogger.log('db', 'xunfei credentials updated to latest');
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'db', stack: st);
+    }
+  }
+
+  /// 确保 DeepSeek API Key 为最新值（INSERT OR IGNORE 不会更新已有记录）
+  /// Key 从 assets/ai_key.txt 读取；文件不存在则跳过（用户可在设置页自行配置）
+  Future<void> _updateAiApiKey(Database db) async {
+    try {
+      // 从 assets 读取预置 key（该文件已 gitignore，不进源码仓库）
+      String newKey = '';
+      try {
+        newKey = await rootBundle.loadString('assets/ai_key.txt');
+        newKey = newKey.trim();
+      } catch (_) {
+        // assets/ai_key.txt 不存在，跳过
+      }
+      if (newKey.isEmpty) return;
+
+      final row = await db.query('ai_configs', where: 'id = 1');
+      if (row.isEmpty) return;
+      final current = row.first['api_key'] as String? ?? '';
+      if (current != newKey) {
+        await db.update(
+          'ai_configs',
+          {'api_key': newKey},
+          where: 'id = 1',
+        );
+        InitLogger.log('db', 'DeepSeek API key updated from ai_key.txt');
       }
     } catch (e, st) {
       swallowDebug(e, tag: 'db', stack: st);

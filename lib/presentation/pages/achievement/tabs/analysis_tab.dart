@@ -6,14 +6,12 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import '../../../../data/local/achievement_dao.dart';
-import '../../../../data/local/survey_dao.dart';
-import '../../../../data/local/notification_dao.dart';
-import '../../../../services/auth_service.dart';
 import '../../../../services/course_context_service.dart';
 import '../../../../services/output_path_service.dart';
 import '../../../../core/error_handler.dart';
 import '../achievement_shared.dart';
 import '../achievement_config.dart';
+import 'scores_tab.dart';
 
 double _numAsDouble(Object? value, [double fallback = 0.0]) {
   if (value is num) return value.toDouble();
@@ -34,14 +32,6 @@ List<Map<String, dynamic>> _mapList(Object? value) {
     for (final item in value)
       if (item is Map) Map<String, dynamic>.from(item),
   ];
-}
-
-Map<String, int> _stringIntMap(Object? value) {
-  if (value is! Map) return const {};
-  return {
-    for (final entry in value.entries)
-      entry.key.toString(): _numAsInt(entry.value),
-  };
 }
 
 List<String> _stringList(Object? value) {
@@ -71,9 +61,6 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   bool _loading = true;
   List<double> _classAvgAchievements = [0, 0, 0, 0];
   double _weightedAchievement = 0;
-  Map<String, dynamic>? _surveySummary;
-  bool _creatingSurvey = false;
-  final CourseContextService _courseContext = CourseContextService();
   String _currentCourseName = '课程';
   AchievementConfig _config = AchievementConfig.defaults;
   List<Map<String, double>> _envWeightsByObjective = const [
@@ -82,6 +69,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
     {'pingshi': 0.2, 'experiment': 0.3, 'exam': 0.5},
     {'pingshi': 0.2, 'experiment': 0.3, 'exam': 0.5},
   ];
+  int _selectedComponentTab = 0;
+  final CourseContextService _courseContext = CourseContextService();
 
   @override
   void initState() {
@@ -98,49 +87,6 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
 
   void _onDataChanged() {
     _loadBatches();
-  }
-
-  /// 一键创建课程满意度问卷、发布并通知全体学生。
-  /// 教师无需跳转到「管理 > 问卷管理」即可在达成页直接发起。
-  Future<void> _createAndNotifySurvey() async {
-    setState(() => _creatingSurvey = true);
-    final surveyDao = SurveyDao();
-    final notifyDao = NotificationDao();
-    final teacherId = AuthService().getCurrentUserId();
-    try {
-      final surveyId = await surveyDao.generateSyllabusSurvey(
-        title: '《$_currentCourseName》课程满意度调查',
-        description: '请对本学期《$_currentCourseName》课程各方面进行评价，帮助我们改进教学质量。',
-        creatorId: teacherId,
-      );
-      await surveyDao.publishSurvey(surveyId);
-      await notifyDao.createNotification(
-        title: '课程满意度调查',
-        content: '《$_currentCourseName》课程满意度调查问卷已发布（根据课程大纲自动生成），请前往「问卷调查」完成填写，感谢配合！',
-        creatorId: teacherId,
-        targetType: 'all',
-        type: 'survey',
-        relatedEntityType: 'survey',
-        relatedEntityId: surveyId.toString(),
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('问卷已根据大纲自动创建并发布，已通知全体学生填写'),
-              backgroundColor: Colors.green),
-        );
-      }
-      await _loadBatches(); // 刷新满意度数据
-    } catch (e, st) {
-      swallowDebug(e, tag: 'CalcTab.createSurvey', stack: st);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('问卷创建失败：$e'), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _creatingSurvey = false);
-    }
   }
 
   /// 将 [key] 标记的 Widget 截图保存为 PNG 到输出目录。
@@ -203,18 +149,9 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   Future<void> _loadBatches() async {
     try {
       final batches = await widget.achievementDao.getBatches();
-      // 加载问卷满意度数据
-      Map<String, dynamic>? surveyData;
-      try {
-        surveyData = await widget.achievementDao.getSurveySatisfactionSummary();
-      } catch (e, st) {
-        swallowDebug(e, tag: 'CalcTab.surveySatisfaction', stack: st);
-      }
-
       if (mounted) {
         setState(() {
           _batches = batches;
-          _surveySummary = surveyData;
           _loading = false;
           if (_batches.isNotEmpty && _selectedBatchId == null) {
             _selectedBatchId = _batches.first['id'] as int;
@@ -312,9 +249,9 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
           const SizedBox(height: 16),
           _buildObjectiveCharts(primary),
           const SizedBox(height: 16),
+          _buildComponentSubTabs(primary),
+          const SizedBox(height: 16),
         ],
-        // 七、问卷满意度调查
-        _buildSurveySatisfaction(primary),
         if (_scores.isEmpty && !_loading)
           Padding(
               padding: const EdgeInsets.only(top: 40),
@@ -1229,274 +1166,45 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
         ]));
   }
 
-  /// 七、问卷满意度调查
-  Widget _buildSurveySatisfaction(Color primary) {
-    final hasSurvey = _surveySummary?['hasSurveyData'] == true;
-    final totalResponses = _numAsInt(_surveySummary?['totalResponses']);
-    final overallSat = _numAsDouble(_surveySummary?['overallSatisfaction']);
-    final questionStats = _mapList(_surveySummary?['questionStats']);
 
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              Icon(Icons.poll, color: primary, size: 22),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text('七、课程满意度调查',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-              if (hasSurvey)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text('$totalResponses份回收',
-                      style:
-                          const TextStyle(fontSize: 10, color: Colors.green)),
-                ),
-            ]),
-            const Divider(height: 20),
-            if (!hasSurvey) ...[
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(8),
-                  border:
-                      Border.all(color: Colors.orange.withOpacity(0.2)),
-                ),
-                child: const Row(children: [
-                  Icon(Icons.info_outline, color: Colors.orange, size: 18),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                        '暂无问卷调查数据。可点击下方按钮一键创建并发布课程满意度问卷并通知学生，'
-                        '或在「管理 > 问卷管理」中手动管理。',
-                        style: TextStyle(fontSize: 12, color: Colors.orange)),
-                  ),
-                ]),
-              ),
-              const SizedBox(height: 12),
-              Center(
-                child: FilledButton.icon(
-                  onPressed: _creatingSurvey ? null : _createAndNotifySurvey,
-                  icon: _creatingSurvey
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.campaign, size: 18),
-                  label: Text(_creatingSurvey ? '创建中...' : '一键创建并通知问卷'),
-                ),
-              ),
-            ] else ...[
-              // 已有问卷：显示数据 + 可再发通知提醒学生填写
-              Row(children: [
-                Expanded(
-                    child: Text('问卷调查数据',
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade600))),
-                TextButton.icon(
-                  onPressed: () async {
-                    try {
-                      await NotificationDao().createNotification(
-                          title: '课程满意度调查提醒',
-                          content:
-                              '《$_currentCourseName》课程满意度调查正在进行中，请尚未填写的同学尽快完成。',
-                          creatorId: AuthService().getCurrentUserId(),
-                          targetType: 'all',
-                          type: 'survey',
-                          relatedEntityType: 'survey');
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('已通知全体学生填写问卷'),
-                                backgroundColor: Colors.green));
-                      }
-                    } catch (e, st) {
-                      swallowDebug(e, tag: 'CalcTab.notifySurvey', stack: st);
-                    }
-                  },
-                  icon: const Icon(Icons.campaign, size: 14),
-                  label: const Text('发送问卷通知', style: TextStyle(fontSize: 11)),
-                ),
-              ]),
-              const SizedBox(height: 4),
-              // 满意度概览
-              Row(children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: achievementLevelColor(overallSat)
-                          .withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Column(children: [
-                      Text(
-                        '${(overallSat * 100).toStringAsFixed(1)}%',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: achievementLevelColor(overallSat),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text('综合满意度',
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: achievementLevelColor(overallSat))),
-                    ]),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: primary.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Column(children: [
-                      Text('$totalResponses',
-                          style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: primary)),
-                      const SizedBox(height: 2),
-                      Text('有效回收',
-                          style: TextStyle(fontSize: 11, color: primary)),
-                    ]),
-                  ),
-                ),
-              ]),
-              const SizedBox(height: 12),
-              // 逐题统计
-              ...questionStats.take(6).map((qs) {
-                final type = qs['type']?.toString() ?? '';
-                final question = qs['question'] as String? ?? '';
-                if (type == 'single_choice') {
-                  final counts = _stringIntMap(qs['counts']);
-                  final total = _numAsInt(qs['total']);
-                  return _buildSurveyQuestion(question, counts, total);
-                } else if (type == 'rating') {
-                  final avg = _numAsDouble(qs['average']);
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(children: [
-                      Expanded(
-                        child: Text(question,
-                            style: const TextStyle(fontSize: 12)),
-                      ),
-                      Row(
-                          children: List.generate(5, (i) {
-                        return Icon(
-                          i < avg.round() ? Icons.star : Icons.star_border,
-                          size: 14,
-                          color: Colors.amber,
-                        );
-                      })),
-                      const SizedBox(width: 4),
-                      Text('${avg.toStringAsFixed(1)}/5.0',
-                          style: const TextStyle(
-                              fontSize: 11, fontWeight: FontWeight.bold)),
-                    ]),
-                  );
-                } else if (type == 'text') {
-                  final answers = _stringList(qs['answers']);
-                  if (answers.isEmpty) return const SizedBox.shrink();
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(question,
-                            style: const TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.w500)),
-                        const SizedBox(height: 4),
-                        ...answers.take(3).map((a) => Padding(
-                              padding:
-                                  const EdgeInsets.only(left: 8, bottom: 2),
-                              child: Text('• $a',
-                                  style: const TextStyle(
-                                      fontSize: 11, color: Colors.grey)),
-                            )),
-                        if (answers.length > 3)
-                          Text('  ... 共${answers.length}条',
-                              style: const TextStyle(
-                                  fontSize: 10, color: Colors.grey)),
-                      ],
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              }),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSurveyQuestion(
-      String question, Map<String, int> counts, int total) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(question,
-              style:
-                  const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 4),
-          ...counts.entries.map((entry) {
-            final pct = total > 0 ? entry.value / total : 0.0;
+  Widget _buildComponentSubTabs(Color primary) {
+    final labels = ['平时达成', '实验达成', '考核达成'];
+    final envs = ['pingshi', 'experiment', 'exam'];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          Icon(Icons.donut_small, color: primary, size: 22),
+          const SizedBox(width: 8),
+          const Text('四、分项达成度',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        ]),
+        const Divider(height: 20),
+        Row(
+          children: List.generate(3, (i) {
+            final selected = _selectedComponentTab == i;
             return Padding(
-              padding: const EdgeInsets.only(bottom: 3),
-              child: Row(children: [
-                SizedBox(
-                    width: 65,
-                    child:
-                        Text(entry.key, style: const TextStyle(fontSize: 10))),
-                Expanded(
-                  child: Stack(children: [
-                    Container(
-                        height: 14,
-                        decoration: BoxDecoration(
-                            color: Colors.grey.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(3))),
-                    FractionallySizedBox(
-                      widthFactor: pct,
-                      child: Container(
-                          height: 14,
-                          decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.5),
-                              borderRadius: BorderRadius.circular(3))),
-                    ),
-                  ]),
-                ),
-                const SizedBox(width: 6),
-                SizedBox(
-                    width: 55,
-                    child: Text(
-                        '${entry.value}人 (${(pct * 100).toStringAsFixed(0)}%)',
-                        style: const TextStyle(fontSize: 9),
-                        textAlign: TextAlign.right)),
-              ]),
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(labels[i], style: const TextStyle(fontSize: 12)),
+                selected: selected,
+                onSelected: (v) {
+                  if (v) setState(() => _selectedComponentTab = i);
+                },
+              ),
             );
           }),
-        ],
-      ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 600,
+          child: ComponentAchievementTab(
+            achievementDao: widget.achievementDao,
+            env: envs[_selectedComponentTab],
+            dataRevision: widget.dataRevision,
+          ),
+        ),
+      ],
     );
   }
 }
