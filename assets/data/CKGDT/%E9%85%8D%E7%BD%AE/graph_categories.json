@@ -1,0 +1,26 @@
+{
+  "categories": [
+    {"dir": "01-课程图谱", "label": "课程图谱", "color": "#E53935"},
+    {"dir": "02-技术图谱", "label": "技术图谱", "color": "#1E88E5"},
+    {"dir": "03-实验图谱", "label": "实验图谱", "color": "#FB8C00"},
+    {"dir": "04-项目图谱", "label": "项目图谱", "color": "#43A047"},
+    {"dir": "05-教学图谱", "label": "教学图谱", "color": "#8E24AA"},
+    {"dir": "06-学习图谱", "label": "学习图谱", "color": "#00897B"},
+    {"dir": "07-思政图谱", "label": "思政图谱", "color": "#C62828"},
+    {"dir": "08-作业图谱", "label": "作业图谱", "color": "#FF6F00"},
+    {"dir": "09-作品图谱", "label": "作品图谱", "color": "#6A1B9A"},
+    {"dir": "10-考核图谱", "label": "考核图谱", "color": "#00695C"}
+  ],
+  "cross_refs": [
+    {"from": "01-课程图谱", "to": "02-技术图谱", "type": "requires", "label": "需要"},
+    {"from": "02-技术图谱", "to": "03-实验图谱", "type": "implements", "label": "实现"},
+    {"from": "03-实验图谱", "to": "04-项目图谱", "type": "supports", "label": "支撑"},
+    {"from": "05-教学图谱", "to": "06-学习图谱", "type": "guides", "label": "指导"},
+    {"from": "07-思政图谱", "to": "01-课程图谱", "type": "guides", "label": "思政引领"},
+    {"from": "08-作业图谱", "to": "01-课程图谱", "type": "requires", "label": "基于"},
+    {"from": "09-作品图谱", "to": "03-实验图谱", "type": "supports", "label": "产出"},
+    {"from": "10-考核图谱", "to": "01-课程图谱", "type": "requires", "label": "基于"},
+    {"from": "10-考核图谱", "to": "03-实验图谱", "type": "supports", "label": "评价"},
+    {"from": "10-考核图谱", "to": "09-作品图谱", "type": "supports", "label": "产出"}
+  ]
+}

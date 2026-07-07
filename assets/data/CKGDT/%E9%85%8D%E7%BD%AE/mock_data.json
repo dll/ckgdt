@@ -1,0 +1,86 @@
+{
+  "version": "1.0.0",
+  "course_name": "课程知识图谱与数字孪生平台",
+  "description": "CKGDT课程测试数据配置 — 用于平台初始化和功能验证",
+
+  "test_users": {
+    "admin": {
+      "user_id": "419116",
+      "real_name": "刘老师",
+      "role": "admin",
+      "password_rule": "userId.substring(userId.length - 6)",
+      "password": "419116"
+    },
+    "teachers": [
+      {"user_id": "206004", "real_name": "刘东良", "role": "teacher", "password": "206004"},
+      {"user_id": "203014", "real_name": "徐志红", "role": "teacher", "password": "203014"},
+      {"user_id": "203045", "real_name": "黄晓玲", "role": "teacher", "password": "203045"}
+    ],
+    "students": [
+      {"user_id": "2023211985", "real_name": "测试学生", "role": "student", "password": "211985", "class": "软件23选85"},
+      {"user_id": "2023211001", "real_name": "张三", "role": "student", "password": "211001", "class": "软件23选85"},
+      {"user_id": "2023211002", "real_name": "李四", "role": "student", "password": "211002", "class": "软件23选85"},
+      {"user_id": "2023211003", "real_name": "王五", "role": "student", "password": "211003", "class": "软件23选85"},
+      {"user_id": "2023211004", "real_name": "赵六", "role": "student", "password": "211004", "class": "软件23选85"},
+      {"user_id": "2023211005", "real_name": "钱七", "role": "student", "password": "211005", "class": "软件23选85"}
+    ]
+  },
+
+  "test_classes": [
+    {
+      "class_id": "ckgdt_2026_1",
+      "class_name": "CKGDT 2026 春季班",
+      "teacher_id": "206004",
+      "student_ids": ["2023211985", "2023211001", "2023211002", "2023211003", "2023211004", "2023211005"],
+      "semester": "2025-2026 学年第二学期",
+      "max_students": 50
+    }
+  ],
+
+  "demo_quiz_results": [
+    {"user_id": "2023211985", "chapter": 1, "score": 80, "total": 10, "correct": 8, "time_spent_seconds": 480},
+    {"user_id": "2023211985", "chapter": 2, "score": 70, "total": 10, "correct": 7, "time_spent_seconds": 520},
+    {"user_id": "2023211985", "chapter": 3, "score": 90, "total": 10, "correct": 9, "time_spent_seconds": 400},
+    {"user_id": "2023211001", "chapter": 1, "score": 60, "total": 10, "correct": 6, "time_spent_seconds": 600},
+    {"user_id": "2023211001", "chapter": 2, "score": 80, "total": 10, "correct": 8, "time_spent_seconds": 450}
+  ],
+
+  "demo_learning_records": [
+    {"user_id": "2023211985", "chapter": 1, "study_time_minutes": 120, "completion_rate": 0.85},
+    {"user_id": "2023211985", "chapter": 2, "study_time_minutes": 90, "completion_rate": 0.70},
+    {"user_id": "2023211985", "chapter": 3, "study_time_minutes": 150, "completion_rate": 0.95},
+    {"user_id": "2023211001", "chapter": 1, "study_time_minutes": 60, "completion_rate": 0.50}
+  ],
+
+  "demo_wrong_answers": [
+    {"user_id": "2023211985", "chapter": 1, "question_index": 3, "times_wrong": 2},
+    {"user_id": "2023211985", "chapter": 2, "question_index": 7, "times_wrong": 1},
+    {"user_id": "2023211001", "chapter": 1, "question_index": 5, "times_wrong": 3}
+  ],
+
+  "demo_favorites": [
+    {"user_id": "2023211985", "node_title": "知识图谱定义", "chapter": 1},
+    {"user_id": "2023211985", "node_title": "数字孪生", "chapter": 3},
+    {"user_id": "2023211001", "node_title": "学习分析", "chapter": 5}
+  ],
+
+  "demo_agent_calls": [
+    {"agent_id": "tutor", "user_id": "2023211985", "message": "什么是知识图谱？", "response": "知识图谱是一种图结构的知识组织方式..."},
+    {"agent_id": "quiz", "user_id": "2023211985", "message": "生成5道关于知识图谱的测验题", "response": "已生成5道测验题..."},
+    {"agent_id": "lab_grading", "user_id": "206004", "message": "批阅实验一报告", "response": "已完成AI批阅，评分85分..."}
+  ],
+
+  "demo_notifications": [
+    {"title": "欢迎使用CKGDT平台", "content": "本平台支持课程知识图谱浏览、数字孪生教学、AI辅助学习等功能。", "type": "system"},
+    {"title": "实验一即将截止", "content": "实验一「平台基础操作与图谱浏览」将于3天后截止，请及时提交。", "type": "deadline"},
+    {"title": "新测验已发布", "content": "第三章「学生端学习体验与自主学习」测验已发布，请在规定时间内完成。", "type": "quiz"}
+  ],
+
+  "initial_knowledge_graph": {
+    "name": "CKGDT课程知识图谱",
+    "description": "课程知识图谱与数字孪生平台的完整知识体系",
+    "node_count": 48,
+    "edge_count": 62,
+    "chapters": 8
+  }
+}

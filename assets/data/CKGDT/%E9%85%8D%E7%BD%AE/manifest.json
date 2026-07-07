@@ -1,0 +1,184 @@
+{
+  "schema_version": "2.0.0",
+  "package_version": "1.1.1",
+  "course_id": "ckgdt",
+  "course_name": "课程知识图谱与数字孪生平台",
+  "last_updated": "2026-07-03",
+  "min_app_version": "2.1.0",
+  "description": "《课程知识图谱与数字孪生平台》课程资源配置清单",
+  "resources": {
+    "chapters": {
+      "file": "chapters.json",
+      "version": "1.0.0",
+      "checksum": "sha256:ff1f711d7881fb2c7c8b7e24ed559928ec5ec80e9482f30f910e9c71d814ba1e",
+      "remote_path": "course_config/chapters.json"
+    },
+    "assessment": {
+      "file": "assessment.json",
+      "version": "2.0.0",
+      "checksum": "sha256:c1392999b5ec7286515ba9564aa19666b3165c85bda63ab54b2f0323126515e0",
+      "remote_path": "course_config/assessment.json"
+    },
+    "lab_tasks": {
+      "file": "lab_tasks.json",
+      "version": "1.0.0",
+      "checksum": "sha256:004c8432dc5d639f3cef6818c6a3d146800f552cc0f0bd17df27982f7796c599",
+      "remote_path": "course_config/lab_tasks.json"
+    },
+    "report_templates": {
+      "file": "report_templates.json",
+      "version": "1.0.0",
+      "checksum": "sha256:6b62ae8e48002943ab2041c7dba62d14436f60e0b52a89c2215c4411a5721ff8",
+      "remote_path": "course_config/report_templates.json"
+    },
+    "res_index": {
+      "file": "res_index.json",
+      "version": "2.0.0",
+      "checksum": "sha256:ad3a40e779ff5b75df77e232acffa465da7c66f1a9d02b1f3e817f3a5eff5434",
+      "remote_path": "course_config/res_index.json"
+    },
+    "homework": {
+      "file": "homework.json",
+      "version": "2.0.0",
+      "checksum": "sha256:2125f2f70913eaaad75b05b73491df9f7a42f6c96c9ff888eb5facf04f828b14",
+      "remote_path": null
+    },
+    "quiz_config": {
+      "file": "quiz_config.json",
+      "version": "2.0.0",
+      "checksum": "sha256:78e53c6256f60f80412047dfd2a111f7ab7b7f79e96525b9b6fdf2a9354c3940",
+      "remote_path": null
+    },
+    "achievement_calc": {
+      "file": "achievement_calc.json",
+      "version": "2.0.0",
+      "checksum": "sha256:815db6390263869999fb7a903530c7d6c9ed4d5502a6347e3672a1e27e26ead7",
+      "remote_path": null
+    },
+    "score_aggregator": {
+      "file": "score_aggregator.json",
+      "version": "2.0.0",
+      "checksum": "sha256:dad158d6b7dc3576cca68171bf04a3a43b4560e7d94819a3a8bf64a665db3675",
+      "remote_path": null
+    },
+    "roles": {
+      "file": "roles.json",
+      "version": "2.0.0",
+      "checksum": "sha256:be7985914ba0d494607c7e2a4cef815bac9b474fea523a46452f48a4a1c0f28b",
+      "remote_path": null
+    },
+    "course_settings": {
+      "file": "course_settings.json",
+      "version": "2.0.0",
+      "checksum": "sha256:893c5352357da299406d22c64738ec6e47d4a92123afffb97d2efbe410f74361",
+      "remote_path": null
+    },
+    "graph_categories": {
+      "file": "graph_categories.json",
+      "version": "1.0.0",
+      "checksum": "",
+      "remote_path": null
+    },
+    "mock_data": {
+      "file": "mock_data.json",
+      "version": "2.0.0",
+      "checksum": "sha256:8f0ba3a8321c764ff7185746e140d41a77f72ebfe1a3b0cde35c9d79c3280e38",
+      "remote_path": null
+    },
+    "course_gen_input": {
+      "file": "course_gen_input.json",
+      "version": "2.0.0",
+      "checksum": "sha256:3d227eaafd66538c521b31a4c4d95f612757eb1a62ba75e6c24794e261a2557d",
+      "remote_path": null
+    },
+    "smart_course_features": {
+      "file": "../文档/数智课程特色设计.md",
+      "version": "1.0.0",
+      "checksum": "",
+      "remote_path": null
+    },
+    "graph_twin_loop": {
+      "file": "../文档/知识图谱与数字孪生闭环.md",
+      "version": "1.0.0",
+      "checksum": "",
+      "remote_path": null
+    },
+    "smart_course_checklist": {
+      "file": "../文档/智慧课程审核清单.md",
+      "version": "1.0.0",
+      "checksum": "",
+      "remote_path": null
+    },
+    "homework_chapter1": {
+      "file": "../作业/第1章 课程知识图谱基础-作业.md",
+      "version": "1.0.0",
+      "checksum": "",
+      "remote_path": null
+    },
+    "homework_chapter2": {
+      "file": "../作业/第2章 课程数据建模与资源治理-作业.md",
+      "version": "1.0.0",
+      "checksum": "",
+      "remote_path": null
+    },
+    "homework_chapter3": {
+      "file": "../作业/第3章 学生端学习体验与自主学习-作业.md",
+      "version": "1.0.0",
+      "checksum": "",
+      "remote_path": null
+    },
+    "homework_chapter4": {
+      "file": "../作业/第4章 数字孪生教学场景设计-作业.md",
+      "version": "1.0.0",
+      "checksum": "",
+      "remote_path": null
+    },
+    "homework_chapter5": {
+      "file": "../作业/第5章 智能学习路径与学习分析-作业.md",
+      "version": "1.0.0",
+      "checksum": "",
+      "remote_path": null
+    },
+    "homework_chapter6": {
+      "file": "../作业/第6章 实验实践与作品评价-作业.md",
+      "version": "1.0.0",
+      "checksum": "",
+      "remote_path": null
+    },
+    "homework_chapter7": {
+      "file": "../作业/第7章 达成度评价与教学归档-作业.md",
+      "version": "1.0.0",
+      "checksum": "",
+      "remote_path": null
+    },
+    "homework_chapter8": {
+      "file": "../作业/第8章 教师与管理员平台操作-作业.md",
+      "version": "1.0.0",
+      "checksum": "",
+      "remote_path": null
+    }
+  },
+  "repositories": {
+    "system": {
+      "owner": "chzcldl",
+      "repo": "mad-kgdt",
+      "description": "CKGDT平台主仓库"
+    },
+    "data": {
+      "owner": "chzcldl",
+      "repo": "mad-data",
+      "description": "课程资源与通知仓库"
+    },
+    "enterprise": {
+      "path": "chzuczldl",
+      "name": "学生项目组仓库",
+      "description": "学生项目仓库所在命名空间"
+    },
+    "student_repo_prefixes": [
+      "cg1",
+      "cg2",
+      "cg3"
+    ],
+    "branch_convention": "feat-{学生姓名拼音缩写}"
+  }
+}

@@ -1,0 +1,295 @@
+[
+  {
+    "id": 1,
+    "chapter": "第1章",
+    "chapter_title": "课程知识图谱基础",
+    "course_objective": "目标1",
+    "items": [
+      {
+        "id": 1,
+        "type": "基础题",
+        "type_code": "basic",
+        "question": "简述知识图谱的定义和基本组成元素。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 1, "contribution": 1.0}]
+      },
+      {
+        "id": 2,
+        "type": "实践题",
+        "type_code": "practice",
+        "question": "选择一个你熟悉的课程，提取至少5个核心概念和3条语义关系，尝试绘制简易知识图谱。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 1, "contribution": 1.0}]
+      },
+      {
+        "id": 3,
+        "type": "思考题",
+        "type_code": "thinking",
+        "question": "讨论知识图谱与传统目录式知识组织方式的优缺点。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 1, "contribution": 1.0}]
+      }
+    ],
+    "objective_summary": [
+      {"objective_id": 1, "weight": 1.0}
+    ]
+  },
+  {
+    "id": 2,
+    "chapter": "第2章",
+    "chapter_title": "课程数据建模与资源治理",
+    "course_objective": "目标1",
+    "items": [
+      {
+        "id": 1,
+        "type": "基础题",
+        "type_code": "basic",
+        "question": "解释课程数据建模中实体-关系模型的基本概念，举例说明课程领域的实体类型。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 1, "contribution": 1.0}]
+      },
+      {
+        "id": 2,
+        "type": "实践题",
+        "type_code": "practice",
+        "question": "针对某一课程资源（如课件、视频、习题），设计一个数据治理方案，包含资源分类、元数据标注和质量控制流程。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 1, "contribution": 0.7}, {"objective_id": 3, "contribution": 0.3}]
+      },
+      {
+        "id": 3,
+        "type": "思考题",
+        "type_code": "thinking",
+        "question": "分析课程数据孤岛问题产生的原因，讨论打破数据壁垒的技术路径和管理策略。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 1, "contribution": 0.6}, {"objective_id": 5, "contribution": 0.4}]
+      }
+    ],
+    "objective_summary": [
+      {"objective_id": 1, "weight": 0.77},
+      {"objective_id": 3, "weight": 0.10},
+      {"objective_id": 5, "weight": 0.13}
+    ]
+  },
+  {
+    "id": 3,
+    "chapter": "第3章",
+    "chapter_title": "学生端学习体验与自主学习",
+    "course_objective": "目标3",
+    "items": [
+      {
+        "id": 1,
+        "type": "基础题",
+        "type_code": "basic",
+        "question": "描述CKGDT平台学生端的主要功能模块及其作用。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 3, "contribution": 0.8}, {"objective_id": 5, "contribution": 0.2}]
+      },
+      {
+        "id": 2,
+        "type": "实践题",
+        "type_code": "practice",
+        "question": "利用平台学习资源，为某一知识点设计个性化学习路径，并记录学习过程中的关键节点和时间分配。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 3, "contribution": 1.0}]
+      },
+      {
+        "id": 3,
+        "type": "思考题",
+        "type_code": "thinking",
+        "question": "对比分析自主学习与传统课堂学习的差异，讨论数字化学习环境如何促进学生自主学习能力的发展。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 3, "contribution": 0.7}, {"objective_id": 2, "contribution": 0.3}]
+      }
+    ],
+    "objective_summary": [
+      {"objective_id": 2, "weight": 0.10},
+      {"objective_id": 3, "weight": 0.83},
+      {"objective_id": 5, "weight": 0.07}
+    ]
+  },
+  {
+    "id": 4,
+    "chapter": "第4章",
+    "chapter_title": "数字孪生教学场景设计",
+    "course_objective": "目标2",
+    "items": [
+      {
+        "id": 1,
+        "type": "基础题",
+        "type_code": "basic",
+        "question": "解释数字孪生在教育领域的含义，说明其与传统仿真教学的区别。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 2, "contribution": 1.0}]
+      },
+      {
+        "id": 2,
+        "type": "实践题",
+        "type_code": "practice",
+        "question": "选择一个教学场景（如实验教学、课堂互动），设计数字孪生方案，包含虚拟对象建模、实时数据映射和交互逻辑。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 2, "contribution": 0.8}, {"objective_id": 4, "contribution": 0.2}]
+      },
+      {
+        "id": 3,
+        "type": "思考题",
+        "type_code": "thinking",
+        "question": "讨论数字孪生教学场景可能带来的教学模式变革，分析其在提升教学质量方面的潜力与挑战。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 2, "contribution": 0.9}, {"objective_id": 3, "contribution": 0.1}]
+      }
+    ],
+    "objective_summary": [
+      {"objective_id": 2, "weight": 0.90},
+      {"objective_id": 3, "weight": 0.03},
+      {"objective_id": 4, "weight": 0.07}
+    ]
+  },
+  {
+    "id": 5,
+    "chapter": "第5章",
+    "chapter_title": "智能学习路径与学习分析",
+    "course_objective": "目标3",
+    "items": [
+      {
+        "id": 1,
+        "type": "基础题",
+        "type_code": "basic",
+        "question": "列举至少三种常用的学习分析指标，并说明其在学习路径推荐中的作用。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 3, "contribution": 1.0}]
+      },
+      {
+        "id": 2,
+        "type": "实践题",
+        "type_code": "practice",
+        "question": "基于平台提供的学习行为数据，分析某位学生的学习特征，为其生成个性化学习路径推荐报告。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 3, "contribution": 0.9}, {"objective_id": 1, "contribution": 0.1}]
+      },
+      {
+        "id": 3,
+        "type": "思考题",
+        "type_code": "thinking",
+        "question": "讨论学习分析中的数据隐私保护问题，如何在个性化推荐与学生隐私之间取得平衡？",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 3, "contribution": 0.8}, {"objective_id": 5, "contribution": 0.2}]
+      }
+    ],
+    "objective_summary": [
+      {"objective_id": 1, "weight": 0.03},
+      {"objective_id": 3, "weight": 0.90},
+      {"objective_id": 5, "weight": 0.07}
+    ]
+  },
+  {
+    "id": 6,
+    "chapter": "第6章",
+    "chapter_title": "实验实践与作品评价",
+    "course_objective": "目标4",
+    "items": [
+      {
+        "id": 1,
+        "type": "基础题",
+        "type_code": "basic",
+        "question": "说明CKGDT平台中多智能体AI辅助实验指导的工作流程和主要功能。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 4, "contribution": 1.0}]
+      },
+      {
+        "id": 2,
+        "type": "实践题",
+        "type_code": "practice",
+        "question": "完成一个AI辅助的实验任务，记录与智能体的交互过程，分析AI反馈对实验结果的影响。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 4, "contribution": 0.85}, {"objective_id": 3, "contribution": 0.15}]
+      },
+      {
+        "id": 3,
+        "type": "思考题",
+        "type_code": "thinking",
+        "question": "评价AI辅助教学的优缺点，讨论人工智能在实验教学中应扮演的角色定位。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 4, "contribution": 0.9}, {"objective_id": 2, "contribution": 0.1}]
+      }
+    ],
+    "objective_summary": [
+      {"objective_id": 2, "weight": 0.03},
+      {"objective_id": 3, "weight": 0.05},
+      {"objective_id": 4, "weight": 0.92}
+    ]
+  },
+  {
+    "id": 7,
+    "chapter": "第7章",
+    "chapter_title": "达成度评价与教学归档",
+    "course_objective": "目标5",
+    "items": [
+      {
+        "id": 1,
+        "type": "基础题",
+        "type_code": "basic",
+        "question": "解释课程达成度评价的基本原理，说明达成度计算公式中各参数的含义。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 5, "contribution": 0.8}, {"objective_id": 3, "contribution": 0.2}]
+      },
+      {
+        "id": 2,
+        "type": "实践题",
+        "type_code": "practice",
+        "question": "利用平台数据，为某班级生成课程达成度评价报告，包含各目标达成度、成绩分布和改进建议。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 5, "contribution": 1.0}]
+      },
+      {
+        "id": 3,
+        "type": "思考题",
+        "type_code": "thinking",
+        "question": "讨论基于达成度的教学归档对工程教育认证的意义，分析其在持续改进中的作用。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 5, "contribution": 0.7}, {"objective_id": 3, "contribution": 0.3}]
+      }
+    ],
+    "objective_summary": [
+      {"objective_id": 3, "weight": 0.17},
+      {"objective_id": 5, "weight": 0.83}
+    ]
+  },
+  {
+    "id": 8,
+    "chapter": "第8章",
+    "chapter_title": "教师与管理员平台操作",
+    "course_objective": "目标5",
+    "items": [
+      {
+        "id": 1,
+        "type": "基础题",
+        "type_code": "basic",
+        "question": "列出CKGDT平台教师端的核心功能模块，并说明各模块的管理职责。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 5, "contribution": 1.0}]
+      },
+      {
+        "id": 2,
+        "type": "实践题",
+        "type_code": "practice",
+        "question": "模拟教师角色，完成课程资源上传、实验任务发布、学生作业批改和成绩统计的完整操作流程。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 5, "contribution": 0.9}, {"objective_id": 4, "contribution": 0.1}]
+      },
+      {
+        "id": 3,
+        "type": "思考题",
+        "type_code": "thinking",
+        "question": "分析管理员在平台运维中的角色，讨论如何通过数据驱动的管理决策提升教学质量。",
+        "max_score": 100,
+        "objective_mapping": [{"objective_id": 5, "contribution": 0.85}, {"objective_id": 3, "contribution": 0.15}]
+      }
+    ],
+    "objective_summary": [
+      {"objective_id": 3, "weight": 0.05},
+      {"objective_id": 4, "weight": 0.03},
+      {"objective_id": 5, "weight": 0.92}
+    ]
+  }
+]

@@ -1,0 +1,176 @@
+{
+  "version": "1.0.0",
+  "description": "一键生课输入配置 — 定义课程生成器的输入源和输出目标",
+
+  "course_info": {
+    "name": "课程知识图谱与数字孪生平台",
+    "id": "ckgdt",
+    "code": "CKGDT",
+    "category": "教师教育类",
+    "nature": "选修",
+    "credits": 2.5,
+    "total_hours": 48,
+    "lecture_hours": 24,
+    "lab_hours": 24,
+    "semester": "第5/6学期",
+    "prerequisites": ["程序设计基础"],
+    "target_audience": "新入职教师、在岗教师、教育技术方向研究生"
+  },
+
+  "input_sources": {
+    "syllabus": {
+      "file": "大纲/课程知识图谱与数字孪生平台-教学大纲.md",
+      "format": "markdown",
+      "description": "教学大纲，包含8章内容、5个课程目标、8个实验"
+    },
+    "schedule": {
+      "file": "进度/课程知识图谱与数字孪生平台-教学进度.md",
+      "format": "markdown",
+      "description": "16周教学进度表"
+    },
+    "chapters_config": {
+      "file": "配置/chapters.json",
+      "format": "json",
+      "description": "8章课程结构，含子章节、颜色、图标"
+    },
+    "assessment_config": {
+      "file": "配置/assessment.json",
+      "format": "json",
+      "description": "成绩构成（20%+30%+50%），含课程目标映射"
+    },
+    "lab_tasks_config": {
+      "file": "配置/lab_tasks.json",
+      "format": "json",
+      "description": "8个实验任务定义"
+    },
+    "homework_config": {
+      "file": "配置/homework.json",
+      "format": "json",
+      "description": "8章作业（每章3题），含课程目标映射"
+    },
+    "quiz_config": {
+      "file": "配置/quiz_config.json",
+      "format": "json",
+      "description": "8章测验配置（每章10题），含课程目标映射"
+    },
+    "achievement_config": {
+      "file": "配置/achievement_calc.json",
+      "format": "json",
+      "description": "达成度计算引擎配置"
+    },
+    "role_config": {
+      "file": "配置/roles.json",
+      "format": "json",
+      "description": "角色权限矩阵"
+    },
+    "course_settings": {
+      "file": "配置/course_settings.json",
+      "format": "json",
+      "description": "课程级系统设置"
+    },
+    "lesson_plans": {
+      "file": "理论/",
+      "format": "markdown",
+      "pattern": "第*章*.md",
+      "description": "8章教案"
+    },
+    "courseware": {
+      "file": "课件/",
+      "format": "markdown",
+      "pattern": "第*章*.md",
+      "description": "8章幻灯片大纲"
+    },
+    "experiment_tutorials": {
+      "file": "实验/实验教程/",
+      "format": "markdown",
+      "pattern": "实验*.md",
+      "description": "8个实验教程"
+    },
+    "report_templates": {
+      "file": "实验/报告模板/",
+      "format": "markdown",
+      "pattern": "实验*.md",
+      "description": "8个实验报告模板"
+    },
+    "video_scripts": {
+      "file": "视频/",
+      "format": "markdown",
+      "pattern": "第*章*.md",
+      "description": "8个视频脚本"
+    },
+    "archive_templates": {
+      "file": "归档/",
+      "format": "markdown",
+      "description": "32个归档模板（期初14+期中3+期末13+结课2）"
+    },
+    "achievement_templates": {
+      "file": "达成/",
+      "format": "markdown",
+      "description": "5个达成度评价模板"
+    },
+    "smart_course_features": {
+      "file": "文档/数智课程特色设计.md",
+      "format": "markdown",
+      "description": "AI时代数智课程特色、教学模式和预期成果"
+    },
+    "graph_twin_loop": {
+      "file": "文档/知识图谱与数字孪生闭环.md",
+      "format": "markdown",
+      "description": "知识图谱、数字孪生、学习数据、教学干预和达成评价闭环"
+    },
+    "smart_course_checklist": {
+      "file": "文档/智慧课程审核清单.md",
+      "format": "markdown",
+      "description": "资源、图谱、孪生、评价、平台化五类审核标准"
+    },
+    "assessment_report_templates": {
+      "file": "考核/",
+      "format": "markdown",
+      "description": "11个考核报告模板"
+    },
+    "mock_data": {
+      "file": "配置/mock_data.json",
+      "format": "json",
+      "description": "测试用户与模拟数据"
+    }
+  },
+
+  "output_targets": {
+    "database_tables": [
+      {"table": "courses", "source": "course_info"},
+      {"table": "chapters", "source": "chapters_config"},
+      {"table": "questions", "source": "quiz_config + 理论/测验/*.md"},
+      {"table": "lab_tasks", "source": "lab_tasks_config"},
+      {"table": "resource_files", "source": "课件/ + 视频/ + 理论/"},
+      {"table": "graphs", "source": "knowledge_graph generation"},
+      {"table": "nodes", "source": "knowledge_graph generation"},
+      {"table": "edges", "source": "knowledge_graph generation"},
+      {"table": "knowledge_concepts", "source": "knowledge_extract_service"},
+      {"table": "concept_relations", "source": "knowledge_extract_service"},
+      {"table": "learning_paths", "source": "path_generation"},
+      {"table": "twin_profiles", "source": "learning data + assessment data"},
+      {"table": "users", "source": "mock_data + 用户/*.xlsx"},
+      {"table": "classes", "source": "mock_data"},
+      {"table": "class_members", "source": "mock_data"}
+    ],
+    "file_outputs": {
+      "generated_courseware": "输出/课件/{chapter}_{title}.pptx",
+      "generated_videos": "输出/视频/{chapter}_{title}.mp4",
+      "generated_pdfs": "输出/资料/{chapter}_{title}.pdf"
+    }
+  },
+
+  "generation_steps": [
+    {"step": 1, "action": "load_chapters", "source": "chapters_config", "description": "加载章节目录"},
+    {"step": 2, "action": "create_course_record", "source": "course_info", "description": "创建课程记录"},
+    {"step": 3, "action": "generate_quiz_questions", "source": "quiz_config + 理论/测验/*.md", "description": "生成测验题库"},
+    {"step": 4, "action": "create_resource_entries", "source": "课件/ + 视频/ + 理论/", "description": "创建资源条目"},
+    {"step": 5, "action": "create_lab_tasks", "source": "lab_tasks_config", "description": "创建实验任务"},
+    {"step": 6, "action": "build_knowledge_graph", "source": "chapters_config + 大纲", "description": "构建知识图谱"},
+    {"step": 7, "action": "extract_concepts_relations", "source": "大纲 + 理论/", "description": "提取知识概念与关系"},
+    {"step": 8, "action": "create_homework_tasks", "source": "homework_config", "description": "创建课后作业"},
+    {"step": 9, "action": "setup_achievement_system", "source": "achievement_config", "description": "配置达成度评价系统"},
+    {"step": 10, "action": "create_smart_course_documents", "source": "smart_course_features + graph_twin_loop + smart_course_checklist", "description": "生成数智课程特色材料"},
+    {"step": 11, "action": "seed_mock_data", "source": "mock_data", "description": "初始化测试数据"}
+  ]
+}
