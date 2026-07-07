@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
@@ -767,10 +767,8 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
           children: [
             Icon(Icons.info_outline,
                 size: 48,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withOpacity(0.3)),
+                color:
+                    Theme.of(context).colorScheme.onSurface.withOpacity(0.3)),
             const SizedBox(height: 12),
             Text('暂无数据，请先从平台聚合或导入成绩',
                 style: TextStyle(
@@ -1081,77 +1079,43 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
   Future<void> _createBatch() async {
     final courseName = AchievementContext.instance.courseName;
     final today = DateTime.now();
-    final dateStr = '${today.year}${today.month.toString().padLeft(2, '0')}${today.day.toString().padLeft(2, '0')}';
     final classes = await ClassDao().getActiveClasses();
-    String selectedClass = classes.isNotEmpty ? (classes.first['name']?.toString() ?? '') : '';
+    final selectedClass =
+        classes.isNotEmpty ? (classes.first['name']?.toString() ?? '') : '';
 
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('创建达成度批次'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                value: selectedClass.isEmpty ? null : selectedClass,
-                decoration: const InputDecoration(
-                    labelText: '班级', isDense: true, contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 12)),
-                items: classes.map((c) => DropdownMenuItem(
-                  value: c['name']?.toString() ?? '',
-                  child: Text(c['name']?.toString() ?? '', style: const TextStyle(fontSize: 13)),
-                )).toList(),
-                onChanged: (v) {
-                  if (v != null) {
-                    setDialogState(() => selectedClass = v);
-                  }
-                },
-              ),
-              const SizedBox(height: 12),
-              if (selectedClass.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(children: [
-                    const Icon(Icons.auto_awesome, size: 14, color: Colors.grey),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text('$courseName+$selectedClass+$dateStr',
-                          style: const TextStyle(fontSize: 12)),
-                    ),
-                  ]),
-                ),
-            ],
+    if (selectedClass.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('没有可用班级，请先在班级管理中创建或导入班级'),
+            backgroundColor: Colors.orange,
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-            FilledButton(
-              onPressed: selectedClass.isEmpty ? null : () => Navigator.pop(ctx, selectedClass),
-              child: const Text('创建'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (result == null || result.isEmpty) return;
-    final batchName = '$courseName+$result+$dateStr';
-    final semester = '${today.year}-${today.month > 6 ? 2 : 1}';
+        );
+      }
+      return;
+    }
+
+    final semester = _semesterForClass(classes, selectedClass, today);
+    final syllabusVersion =
+        await widget.achievementDao.currentSyllabusVersion(courseName);
+    final batchName = '$courseName+$selectedClass+$semester+$syllabusVersion';
     try {
       final id = await widget.achievementDao.addBatch(
         batchName: batchName,
         courseName: courseName,
-        className: result,
+        className: selectedClass,
         semester: semester,
+        syllabusVersion: syllabusVersion,
       );
       await _loadBatches();
       setState(() => _selectedBatchId = id);
       _loadComponentScores();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('批次已创建'), backgroundColor: Colors.green),
+          SnackBar(
+            content: Text('已自动创建批次：$batchName'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e, st) {
@@ -1162,6 +1126,45 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
         );
       }
     }
+  }
+
+  String _semesterForClass(
+    List<Map<String, dynamic>> classes,
+    String className,
+    DateTime now,
+  ) {
+    final row = classes.cast<Map<String, dynamic>?>().firstWhere(
+          (c) => c?['name']?.toString() == className,
+          orElse: () => null,
+        );
+    return _normalizeAcademicSemester(row?['semester']?.toString(), now: now);
+  }
+
+  String _normalizeAcademicSemester(String? raw, {DateTime? now}) {
+    final current = now ?? DateTime.now();
+    final text = (raw ?? '').trim();
+    final yearMatch = RegExp(r'(\d{4})\s*[-—~至]\s*(\d{4})').firstMatch(text);
+    int startYear;
+    int endYear;
+    if (yearMatch != null) {
+      startYear = int.parse(yearMatch.group(1)!);
+      endYear = int.parse(yearMatch.group(2)!);
+    } else if (current.month >= 9) {
+      startYear = current.year;
+      endYear = current.year + 1;
+    } else {
+      startYear = current.year - 1;
+      endYear = current.year;
+    }
+
+    final term = text.contains('第一') || text.contains('第1')
+        ? 1
+        : text.contains('第二') || text.contains('第2')
+            ? 2
+            : current.month >= 9
+                ? 1
+                : 2;
+    return '$startYear-$endYear年第$term学期';
   }
 
   Widget _buildActionChip({
@@ -2392,10 +2395,7 @@ class _ComponentExpandTileState extends State<_ComponentExpandTile> {
                 return DataRow(
                   color: WidgetStateProperty.all(i.isEven
                       ? Theme.of(context).colorScheme.surface
-                      : Theme.of(context)
-                          .colorScheme
-                          .surface
-                          .withOpacity(0.6)),
+                      : Theme.of(context).colorScheme.surface.withOpacity(0.6)),
                   cells: [
                     DataCell(Text('${r['student_id'] ?? ''}',
                         style: TextStyle(

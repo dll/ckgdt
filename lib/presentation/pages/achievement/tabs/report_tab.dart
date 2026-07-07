@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:excel/excel.dart' as xl;
@@ -291,6 +291,7 @@ class _ReportTabState extends State<ReportTab> {
       final courseName = batch['course_name'] ?? _fallbackCourseName;
       final className = batch['class_name'] ?? '软件23';
       final semester = batch['semester'] ?? '-';
+      final syllabusVersion = (batch['syllabus_version'] ?? '未标注版本').toString();
       final teacherId = batch['teacher_id'] ?? '';
 
       // 获取三类评价分项达成度（班级平均）
@@ -372,7 +373,8 @@ class _ReportTabState extends State<ReportTab> {
         buffer.writeln('| 学生人数 | $studentCount | 评价日期 | $dateStr |');
       }
       buffer.writeln('| 课程性质 | 考查（大作业） | 评价方式 | 定量+定性 |');
-      buffer.writeln('| 开课学期 | $semester | 达成度预期阈值 | 0.60 |');
+      buffer.writeln('| 开课学期 | $semester | 大纲版本 | $syllabusVersion |');
+      buffer.writeln('| 达成度预期阈值 | 0.60 | 计算依据 | 课程目标管理 |');
       buffer.writeln();
 
       buffer.writeln('### 2. 课程支撑毕业要求与课程目标对应关系');
@@ -628,7 +630,8 @@ class _ReportTabState extends State<ReportTab> {
             }
             final achRate = _asDouble(qs['achievementRate']);
             if (achRate > 0) {
-              buffer.writeln('- **达成率：${(achRate * 100).toStringAsFixed(1)}%**');
+              buffer
+                  .writeln('- **达成率：${(achRate * 100).toStringAsFixed(1)}%**');
             }
           } else if (qs['type'] == 'rating') {
             buffer.writeln(
@@ -822,6 +825,7 @@ class _ReportTabState extends State<ReportTab> {
           '英文名称': (batch['course_name'] ?? _fallbackCourseName).toString(),
           '考核方式': '考查',
           '开课学期': (batch['semester'] ?? '').toString(),
+          '大纲版本': (batch['syllabus_version'] ?? '未标注版本').toString(),
         },
         'objectives': [
           for (final i in activeObjectiveIndexes)
@@ -908,6 +912,7 @@ class _ReportTabState extends State<ReportTab> {
           (batch['course_name'] ?? _fallbackCourseName).toString();
       final className = (batch['class_name'] ?? '班级').toString();
       final semester = (batch['semester'] ?? '').toString();
+      final syllabusVersion = (batch['syllabus_version'] ?? '未标注版本').toString();
       final scores = await widget.achievementDao.getScores(_selectedBatchId!);
       final comb = await widget.achievementDao
           .calculateCombinedAchievement(_selectedBatchId!);
@@ -995,6 +1000,7 @@ class _ReportTabState extends State<ReportTab> {
           courseName: courseName,
           className: className,
           semester: semester,
+          syllabusVersion: syllabusVersion,
           scores: scores,
           combined: comb,
           config: cf,
@@ -1375,6 +1381,7 @@ class _ReportTabState extends State<ReportTab> {
     required String courseName,
     required String className,
     required String semester,
+    required String syllabusVersion,
     required List<Map<String, dynamic>> scores,
     required Map<String, dynamic> combined,
     required AchievementConfig config,
@@ -1482,6 +1489,17 @@ class _ReportTabState extends State<ReportTab> {
 
     final syllabus = excel['大纲对照表'];
     syllabus.appendRow([
+      t('课程名称'),
+      t(courseName),
+      t('班级'),
+      t(className),
+      t('学期'),
+      t(semester),
+      t('大纲版本'),
+      t(syllabusVersion),
+    ]);
+    syllabus.appendRow([]);
+    syllabus.appendRow([
       t('课程目标'),
       t('指标点'),
       t('目标权重'),
@@ -1551,6 +1569,7 @@ class _ReportTabState extends State<ReportTab> {
       final courseName = batch['course_name'] ?? _fallbackCourseName;
       final className = batch['class_name'] ?? '软件23';
       final semester = batch['semester'] ?? '-';
+      final syllabusVersion = (batch['syllabus_version'] ?? '未标注版本').toString();
       final teacherId = batch['teacher_id'] ?? '';
       final dateStr = DateTime.now().toString().substring(0, 10);
       final cfg = _config;
@@ -1588,6 +1607,7 @@ class _ReportTabState extends State<ReportTab> {
           courseName: courseName.toString(),
           className: className.toString(),
           semester: semester.toString(),
+          syllabusVersion: (batch['syllabus_version'] ?? '未标注版本').toString(),
           dateStr: dateStr,
           scores: scores,
           config: cfg,
@@ -1676,7 +1696,8 @@ class _ReportTabState extends State<ReportTab> {
                 else
                   ['学生人数', '${scores.length}', '评价日期', dateStr],
                 ['课程性质', '考查（大作业）', '评价方式', '定量+定性'],
-                ['开课学期', semester, '达成度预期阈值', '0.60'],
+                ['开课学期', semester, '大纲版本', syllabusVersion],
+                ['达成度预期阈值', '0.60', '计算依据', '课程目标管理'],
               ],
             ),
             pw.SizedBox(height: 12),
@@ -2149,6 +2170,7 @@ class _ReportTabState extends State<ReportTab> {
     required String courseName,
     required String className,
     required String semester,
+    required String syllabusVersion,
     required String dateStr,
     required List<Map<String, dynamic>> scores,
     required AchievementConfig config,
@@ -2214,7 +2236,8 @@ class _ReportTabState extends State<ReportTab> {
           data: [
             ['课程名称', courseName, '授课班级', className],
             ['开课学期', semester, '评价日期', dateStr],
-            ['学生人数', '${scores.length}', '达成阈值', '0.60'],
+            ['大纲版本', syllabusVersion, '达成阈值', '0.60'],
+            ['学生人数', '${scores.length}', '计算依据', '课程目标管理'],
           ],
         ),
         pw.SizedBox(height: 12),
@@ -2815,8 +2838,7 @@ class _ReportTabState extends State<ReportTab> {
                               CircularProgressIndicator(
                                 value: achievement.clamp(0.0, 1.0),
                                 strokeWidth: 4,
-                                backgroundColor:
-                                    Colors.grey.withOpacity(0.15),
+                                backgroundColor: Colors.grey.withOpacity(0.15),
                                 color: kObjectiveColors[i],
                               ),
                               Text(
@@ -2864,8 +2886,7 @@ class _ReportTabState extends State<ReportTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color:
-            i.isEven ? Colors.transparent : Colors.grey.withOpacity(0.04),
+        color: i.isEven ? Colors.transparent : Colors.grey.withOpacity(0.04),
         border: isLast
             ? null
             : Border(

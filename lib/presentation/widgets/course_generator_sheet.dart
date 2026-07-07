@@ -1,4 +1,4 @@
-﻿// ignore_for_file: unnecessary_brace_in_string_interps
+// ignore_for_file: unnecessary_brace_in_string_interps
 
 import 'dart:convert';
 import 'dart:io';
@@ -8,10 +8,12 @@ import '../../data/local/course_dao.dart';
 import '../../data/local/database_helper.dart';
 import '../../data/local/graph_dao.dart';
 import '../../data/local/lab_task_dao.dart';
+import '../../data/local/achievement_dao.dart';
 import '../../data/models/course_model.dart';
 import '../../data/models/edge_model.dart';
 import '../../data/models/graph_model.dart';
 import '../../data/models/node_model.dart';
+import '../../services/achievement/achievement_excel_service.dart';
 import '../../services/ai_service.dart';
 import '../../services/course_generation_service.dart';
 import '../../services/resource_persistence_service.dart';
@@ -239,9 +241,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
             ),
             const SizedBox(height: 4),
             Text(
-              hasOutline
-                  ? '点击重新选择'
-                  : '支持 TXT / Markdown / Word (.docx)',
+              hasOutline ? '点击重新选择' : '支持 Markdown / Word / Excel / CSV',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
               ),
@@ -265,18 +265,17 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['txt', 'md', 'docx'],
+        allowedExtensions: ['txt', 'md', 'docx', 'xlsx', 'xls', 'csv'],
+        withData: true,
       );
       if (result == null || result.files.isEmpty) return;
 
       final file = result.files.first;
-      String text = '';
-
-      if (file.bytes != null) {
-        text = utf8.decode(file.bytes!);
-      } else if (file.path != null) {
-        text = await File(file.path!).readAsString();
-      }
+      final ext = (file.extension ?? '').toLowerCase();
+      final bytes = file.bytes ??
+          (file.path == null ? null : await File(file.path!).readAsBytes());
+      if (bytes == null) throw StateError('无法读取文件内容');
+      final text = AchievementExcelService.instance.syllabusRawText(bytes, ext);
 
       if (text.trim().isEmpty) {
         setState(() {
@@ -366,7 +365,8 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
       } else {
         _log('从大纲提取章节中...');
         final aiService = AiService();
-        final prompt = '根据以下课程大纲，提取章节标题列表，返回 JSON: {"chapters": ["第1章 标题", ...]}\n\n大纲：\n${_outlineText!.length > 3000 ? _outlineText!.substring(0, 3000) : _outlineText}';
+        final prompt =
+            '根据以下课程大纲，提取章节标题列表，返回 JSON: {"chapters": ["第1章 标题", ...]}\n\n大纲：\n${_outlineText!.length > 3000 ? _outlineText!.substring(0, 3000) : _outlineText}';
         final response = await aiService.chat([
           {'role': 'user', 'content': prompt}
         ]);
@@ -386,6 +386,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
       final result = await generator.generateAll(
         courseName: name,
         chapters: finalChapters,
+        syllabusContent: _outlineText,
       );
 
       if (!result.isSuccess) {
@@ -416,6 +417,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
       // 保存到数据库
       _updateProgress('保存到数据库...');
       await _saveToDatabase(result);
+      await _saveCourseObjectivesFromSyllabus(result);
 
       _log('课程《$name》创建成功！');
       _log('包含 ${result.quizzes.length} 道测验题');
@@ -464,6 +466,27 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
         setState(() => _isGenerating = false);
       }
     }
+  }
+
+  Future<void> _saveCourseObjectivesFromSyllabus(
+    CourseGenerationResult result,
+  ) async {
+    final outline = _outlineText;
+    if (outline == null || outline.trim().isEmpty) return;
+    final rows = await AchievementExcelService.instance
+        .extractSyllabusRowsFromRawText(outline);
+    if (rows.isEmpty) {
+      _log('未从大纲识别课程目标，请到课程目标管理中审核补录');
+      return;
+    }
+    final version =
+        AchievementExcelService.instance.syllabusVersionFromText(outline);
+    await AchievementDao().saveCourseObjectives(
+      result.courseName,
+      rows,
+      syllabusVersion: version,
+    );
+    _log('已保存 ${rows.length} 个课程目标到课程目标管理（$version）');
   }
 
   /// 保存到数据库

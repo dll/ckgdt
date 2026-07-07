@@ -1,12 +1,8 @@
-﻿import 'dart:convert';
-import 'dart:io';
-import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 import '../../../../core/error_handler.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../data/local/course_dao.dart';
-import '../../../../services/achievement/achievement_excel_service.dart';
 import '../../../../services/achievement_context.dart';
 import '../../../../services/auth_service.dart';
 import '../../admin/course_objectives_manage_page.dart';
@@ -58,7 +54,6 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
   List<Map<String, dynamic>> _batches = [];
   List<Map<String, dynamic>> _objectives = [];
   bool _loading = true;
-  bool _uploadingSyllabus = false;
   String _currentCourseName = '当前课程';
 
   @override
@@ -88,7 +83,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
           _batches = batches;
           _objectives = objectives.where((o) {
             final idx = _objectiveInt(o['idx']);
-            return idx >= 1 && idx <= 4;
+            return idx >= 1;
           }).toList();
           _loading = false;
         });
@@ -104,64 +99,6 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
       MaterialPageRoute(builder: (_) => const CourseObjectivesManagePage()),
     );
     if (mounted) await _loadBatches();
-  }
-
-  Future<void> _uploadSyllabus() async {
-    try {
-      final res = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['docx', 'md'],
-        withData: true,
-      );
-      if (res == null || res.files.isEmpty) return;
-      final f = res.files.first;
-      final ext = (f.extension ?? '').toLowerCase();
-      Uint8List bytes;
-      if (f.bytes != null) {
-        bytes = f.bytes!;
-      } else if (f.path != null) {
-        bytes = await File(f.path!).readAsBytes();
-      } else {
-        throw StateError('无法读取文件内容');
-      }
-
-      if (!mounted) return;
-      setState(() => _uploadingSyllabus = true);
-      final rawText =
-          AchievementExcelService.instance.syllabusRawText(bytes, ext);
-      if (rawText.trim().isEmpty) throw StateError('大纲文本为空或格式不支持');
-
-      await showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        useSafeArea: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        builder: (_) => AgentChatOverlay(
-          initialAgentId: 'achievement',
-          initialContext: '以下是一份课程大纲原始文本。请重点识别“课程目标达成考核与评价方式及成绩评定对照表”，'
-              '提取课程目标、权重、满分、指标点、平时/实验/期末占比、支撑章节、实验和考核内容。'
-              '当前课程：$_currentCourseName。\n\n$rawText',
-          onAgentResult: (params) {
-            if (params['kind'] == 'syllabus_submitted') {
-              widget.dataRevision.value++;
-            }
-            _loadBatches();
-          },
-        ),
-      );
-      if (mounted) await _loadBatches();
-    } catch (e, st) {
-      swallowDebug(e, tag: 'AchievementOverview.uploadSyllabus', stack: st);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('上传大纲失败: $e'), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _uploadingSyllabus = false);
-    }
   }
 
   Future<void> _deleteBatch(int batchId, String batchName) async {
@@ -242,17 +179,6 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
             ),
             const SizedBox(width: 8),
             TextButton.icon(
-              onPressed: _uploadingSyllabus ? null : _uploadSyllabus,
-              icon: _uploadingSyllabus
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.upload_file, size: 16),
-              label: const Text('上传', style: TextStyle(fontSize: 12)),
-            ),
-            TextButton.icon(
               onPressed: _openCourseObjectivesManager,
               icon: const Icon(Icons.fact_check_outlined, size: 16),
               label: const Text('去维护', style: TextStyle(fontSize: 12)),
@@ -274,17 +200,6 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
               child: Text('课程大纲 · $_currentCourseName',
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.bold)),
-            ),
-            TextButton.icon(
-              onPressed: _uploadingSyllabus ? null : _uploadSyllabus,
-              icon: _uploadingSyllabus
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.upload_file, size: 16),
-              label: const Text('上传大纲', style: TextStyle(fontSize: 12)),
             ),
             TextButton.icon(
               onPressed: _openCourseObjectivesManager,
@@ -541,6 +456,9 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
                   const SizedBox(height: 4),
                   _buildInfoRow(
                       Icons.calendar_month, '学期', batch['semester'] ?? '-'),
+                  const SizedBox(height: 4),
+                  _buildInfoRow(Icons.description_outlined, '大纲版本',
+                      batch['syllabus_version'] ?? '未标注版本'),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -731,6 +649,7 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
             _detailRow('课程', widget.batch['course_name'] ?? '-'),
             _detailRow('班级', widget.batch['class_name'] ?? '-'),
             _detailRow('学期', widget.batch['semester'] ?? '-'),
+            _detailRow('大纲版本', widget.batch['syllabus_version'] ?? '未标注版本'),
             _detailRow('学生人数', '${_scores.length}'),
           ],
         ),
@@ -767,10 +686,8 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
               children: [
                 CircleAvatar(
                   radius: 16,
-                  backgroundColor: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withOpacity(0.1),
+                  backgroundColor:
+                      Theme.of(context).colorScheme.primary.withOpacity(0.1),
                   child: Text(
                     (score['student_name'] ?? '?').toString().substring(0, 1),
                     style: TextStyle(
@@ -1450,8 +1367,7 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                 decoration: BoxDecoration(
                   color: Colors.blue.withOpacity(0.04),
                   borderRadius: BorderRadius.circular(8),
-                  border:
-                      Border.all(color: Colors.blue.withOpacity(0.15)),
+                  border: Border.all(color: Colors.blue.withOpacity(0.15)),
                 ),
                 padding: const EdgeInsets.all(10),
                 child: Column(
@@ -1507,8 +1423,7 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                   decoration: BoxDecoration(
                     color: Colors.teal.withOpacity(0.04),
                     borderRadius: BorderRadius.circular(8),
-                    border:
-                        Border.all(color: Colors.teal.withOpacity(0.15)),
+                    border: Border.all(color: Colors.teal.withOpacity(0.15)),
                   ),
                   padding: const EdgeInsets.all(10),
                   child: Column(
@@ -1551,8 +1466,7 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                   decoration: BoxDecoration(
                     color: Colors.orange.withOpacity(0.04),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                        color: Colors.orange.withOpacity(0.15)),
+                    border: Border.all(color: Colors.orange.withOpacity(0.15)),
                   ),
                   padding: const EdgeInsets.all(10),
                   child: Column(

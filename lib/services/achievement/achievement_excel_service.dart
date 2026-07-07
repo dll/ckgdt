@@ -779,6 +779,7 @@ class AchievementExcelService {
   Map<String, dynamic> parseSyllabusBytes(Uint8List bytes, String ext) {
     final e = ext.toLowerCase();
     if (e == 'md') return _parseMarkdownSyllabus(utf8.decode(bytes));
+    if (e == 'csv') return _parseCsvSyllabus(bytes);
     if (e == 'docx') return parseWordSyllabus(bytes);
     if (e == 'xlsx' || e == 'xls') return _parseExcelSyllabus(bytes);
     return {'error': '不支持的文件格式: $ext'};
@@ -790,6 +791,8 @@ class AchievementExcelService {
   String syllabusRawText(Uint8List bytes, String ext) {
     final e = ext.toLowerCase();
     if (e == 'md') return utf8.decode(bytes);
+    if (e == 'csv') return utf8.decode(bytes, allowMalformed: true);
+    if (e == 'xlsx' || e == 'xls') return _excelBytesToMarkdownTables(bytes);
     if (e == 'docx') {
       try {
         final archive = ZipDecoder().decodeBytes(bytes);
@@ -827,6 +830,24 @@ class AchievementExcelService {
     return '';
   }
 
+  String syllabusVersionFromText(String rawText) {
+    final text = rawText.replaceAll(RegExp(r'\s+'), ' ');
+    final patterns = [
+      RegExp(r'(20\d{2})\s*年?\s*版'),
+      RegExp(r'大纲版本[:：]?\s*([A-Za-z0-9.\-_\u4e00-\u9fa5]+)'),
+      RegExp(r'版本[:：]?\s*([A-Za-z0-9.\-_\u4e00-\u9fa5]+)'),
+      RegExp(r'(20\d{2}\s*-\s*20\d{2,4})\s*版'),
+    ];
+    for (final pattern in patterns) {
+      final match = pattern.firstMatch(text);
+      if (match == null) continue;
+      final value = match.group(1)?.replaceAll(RegExp(r'\s+'), '') ?? '';
+      if (value.isEmpty) continue;
+      return value.endsWith('版') ? value : '$value版';
+    }
+    return '未标注版本';
+  }
+
   /// 从上传大纲原始文本提取课程目标行。
   /// 本地确定性解析优先锁定对照表中的权重/满分/比例，AI 只补充描述、
   /// 支撑章节、实验和评价文字，避免 AI 失败时整个导入流程不可用。
@@ -834,7 +855,10 @@ class AchievementExcelService {
       String rawText) async {
     final deterministicRows = deterministicSyllabusRowsFromRawText(rawText);
     final aiRows = await aiExtractSyllabus(rawText);
-    return mergeSyllabusRows(deterministicRows, aiRows);
+    return _constrainRowsToDeclaredObjectives(
+      rawText,
+      mergeSyllabusRows(deterministicRows, aiRows),
+    );
   }
 
   List<Map<String, dynamic>> deterministicSyllabusRowsFromRawText(
@@ -844,22 +868,32 @@ class AchievementExcelService {
         parseSyllabusBytes(Uint8List.fromList(utf8.encode(rawText)), 'md');
     final markdownRows = syllabusToObjectiveRows(parsed);
     final looseRows = _parseLooseAssessmentMatrixRows(rawText);
-    if (looseRows.isEmpty) return markdownRows;
+    if (looseRows.isEmpty) {
+      return _constrainRowsToDeclaredObjectives(rawText, markdownRows);
+    }
     // 合并时，markdownRows（第二个参数）只能补充已存在目标的描述字段，
     // 不能引入确定性解析未找到的新目标编号。
     final merged = mergeSyllabusRows(looseRows, markdownRows);
     // 进一步过滤：只保留至少有一个非空字段（除 idx/name 外）的目标
     final nonEmptyFields = {
-      'description', 'indicator', 'weight', 'full_mark',
-      'pingshi_ratio', 'experiment_ratio', 'exam_ratio',
+      'description',
+      'indicator',
+      'weight',
+      'full_mark',
+      'pingshi_ratio',
+      'experiment_ratio',
+      'exam_ratio',
     };
-    return merged.where((r) {
+    final rows = merged.where((r) {
       for (final f in nonEmptyFields) {
         final v = r[f];
-        if (v != null && v.toString().trim().isNotEmpty && v != 0 && v != 0.0) return true;
+        if (v != null && v.toString().trim().isNotEmpty && v != 0 && v != 0.0) {
+          return true;
+        }
       }
       return false;
     }).toList();
+    return _constrainRowsToDeclaredObjectives(rawText, rows);
   }
 
   /// 用 AI 全面解析大纲原始文本，提取课程目标的完整信息：
@@ -953,7 +987,7 @@ $rawText
               'idx': idx,
               'name': (o['name'] as String?) ?? '课程目标$idx',
               'indicator':
-                  (o['indicator'] ?? table?['indicator'] ?? '').toString(),
+                  (table?['indicator'] ?? o['indicator'] ?? '').toString(),
               'weight': fromTableOrAi(table, o, 'weight', asRatio: true),
               'full_mark': fromTableOrAi(table, o, 'full_mark'),
               'description': (o['description'] ?? '').toString(),
@@ -1009,17 +1043,29 @@ $rawText
         continue;
       }
       if (inObjTable) {
+        if (line.trim().isEmpty) {
+          if (objectives.isNotEmpty) inObjTable = false;
+          continue;
+        }
+        if (!line.contains('|')) {
+          if (objectives.isNotEmpty) inObjTable = false;
+          continue;
+        }
         final match = RegExp(r'\|\s*(\d)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|')
             .firstMatch(line);
         if (match != null) {
+          final objectiveText = match.group(2)!.trim();
+          final requirementText = match.group(3)!.trim();
+          if (_extractIndicator(requirementText) == null ||
+              objectiveText.length <= 8 ||
+              objectiveText.contains('课程目标')) {
+            continue;
+          }
           objectives.add({
             'num': match.group(1)!,
-            'objective': match.group(2)!.trim(),
-            'requirement': match.group(3)!.trim(),
+            'objective': objectiveText,
+            'requirement': requirementText,
           });
-        }
-        if (line.trim().isEmpty && objectives.isNotEmpty) {
-          inObjTable = false;
         }
       }
     }
@@ -1155,8 +1201,75 @@ $rawText
   }
 
   Map<String, dynamic> _parseExcelSyllabus(Uint8List bytes) {
-    // Excel 大纲较少见；优先支持 MD/Word。Excel 暂回退到通用提示。
-    return {'note': 'Excel 大纲解析暂未支持，请用 Markdown 或 Word 格式大纲'};
+    final markdown = _excelBytesToMarkdownTables(bytes);
+    if (markdown.trim().isEmpty) {
+      return {'error': 'Excel 文件为空或无法解析'};
+    }
+    return _parseMarkdownSyllabus(markdown);
+  }
+
+  Map<String, dynamic> _parseCsvSyllabus(Uint8List bytes) {
+    final text = utf8.decode(bytes, allowMalformed: true);
+    final buf = StringBuffer();
+    for (final line in text.split(RegExp(r'\r?\n'))) {
+      if (line.trim().isEmpty) {
+        buf.writeln();
+        continue;
+      }
+      final cells = _splitCsvLine(line)
+          .map(_normalizeSyllabusText)
+          .where((cell) => cell.isNotEmpty)
+          .toList();
+      if (cells.isNotEmpty) buf.writeln('| ${cells.join(' | ')} |');
+    }
+    return _parseMarkdownSyllabus(buf.toString());
+  }
+
+  String _excelBytesToMarkdownTables(Uint8List bytes) {
+    try {
+      final excel = xl.Excel.decodeBytes(bytes);
+      final buf = StringBuffer();
+      for (final table in excel.tables.values) {
+        for (final row in table.rows) {
+          final cells = row
+              .map((cell) =>
+                  _normalizeSyllabusText(cell?.value.toString() ?? ''))
+              .toList();
+          if (cells.any((cell) => cell.isNotEmpty)) {
+            buf.writeln('| ${cells.join(' | ')} |');
+          }
+        }
+        buf.writeln();
+      }
+      return buf.toString();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementExcel.excelTables', stack: st);
+      return '';
+    }
+  }
+
+  List<String> _splitCsvLine(String line) {
+    final cells = <String>[];
+    final current = StringBuffer();
+    var inQuotes = false;
+    for (var i = 0; i < line.length; i++) {
+      final ch = line[i];
+      if (ch == '"') {
+        if (inQuotes && i + 1 < line.length && line[i + 1] == '"') {
+          current.write('"');
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch == ',' && !inQuotes) {
+        cells.add(current.toString());
+        current.clear();
+      } else {
+        current.write(ch);
+      }
+    }
+    cells.add(current.toString());
+    return cells;
   }
 
   /// 解析 Word(docx) 大纲：解压 word/document.xml，提取「课程目标达成考核与评价
@@ -1482,7 +1595,8 @@ $rawText
 
     final fullMark = (items.first['full'] as num).toDouble();
     final requirement = cells.firstWhere(
-      (cell) => _extractIndicator(cell) != null && _parseWeightCell(cell) == null,
+      (cell) =>
+          _extractIndicator(cell) != null && _parseWeightCell(cell) == null,
       orElse: () => '',
     );
     return {
@@ -1609,6 +1723,94 @@ $rawText
             ((row['idx'] as int?) ?? 0) <= 10)
         .toList()
       ..sort((a, b) => (a['idx'] as int).compareTo(b['idx'] as int));
+  }
+
+  List<Map<String, dynamic>> _constrainRowsToDeclaredObjectives(
+    String rawText,
+    List<Map<String, dynamic>> rows,
+  ) {
+    if (rows.isEmpty) return rows;
+    final deduped = _deduplicateObjectiveRows(rows);
+    final declared = _declaredObjectiveIndexes(rawText);
+    if (declared.isEmpty) {
+      final described = deduped
+          .where((row) =>
+              (row['description']?.toString().trim().length ?? 0) >= 8 &&
+              (row['indicator']?.toString().trim().isNotEmpty ?? false))
+          .toList();
+      if (described.length >= 2) return described;
+      return deduped;
+    }
+    final allowed = declared.toSet();
+    return deduped
+        .where((row) => allowed.contains(_intValue(row['idx'])))
+        .toList()
+      ..sort((a, b) => _intValue(a['idx']).compareTo(_intValue(b['idx'])));
+  }
+
+  List<Map<String, dynamic>> _deduplicateObjectiveRows(
+    List<Map<String, dynamic>> rows,
+  ) {
+    final byIdx = <int, Map<String, dynamic>>{};
+    for (final row in rows) {
+      final idx = _intValue(row['idx']);
+      if (idx <= 0) continue;
+      byIdx.putIfAbsent(idx, () => Map<String, dynamic>.from(row));
+    }
+    return byIdx.values.toList()
+      ..sort((a, b) => _intValue(a['idx']).compareTo(_intValue(b['idx'])));
+  }
+
+  List<int> _declaredObjectiveIndexes(String rawText) {
+    final indexes = <int>{};
+    try {
+      final parsed =
+          parseSyllabusBytes(Uint8List.fromList(utf8.encode(rawText)), 'md');
+      final objectives = parsed['objectives'] as List? ?? const [];
+      for (final objective in objectives) {
+        final idx = int.tryParse(objective['num']?.toString() ?? '') ?? 0;
+        if (idx > 0) indexes.add(idx);
+      }
+    } catch (e, st) {
+      swallowDebug(e,
+          tag: 'AchievementExcel.declaredObjectiveIndexes', stack: st);
+    }
+    if (indexes.length >= 2) return indexes.toList()..sort();
+
+    final lines = rawText
+        .split(RegExp(r'\r?\n'))
+        .map(_normalizeSyllabusText)
+        .where((line) => line.isNotEmpty)
+        .toList();
+    var inObjectiveSection = false;
+    for (final line in lines) {
+      if (!inObjectiveSection &&
+          line.contains('课程目标') &&
+          (line.contains('支撑的毕业要求') || line.contains('毕业要求指标点'))) {
+        inObjectiveSection = true;
+        continue;
+      }
+      if (!inObjectiveSection) continue;
+      if (line.contains('课程目标达成考核') ||
+          line.contains('成绩评定对照表') ||
+          line.contains('教学内容') ||
+          line.contains('实验项目')) {
+        break;
+      }
+      final tableMatch =
+          RegExp(r'^\|?\s*(\d{1,2})\s*\|.*?(?:\d+\.\d+)').firstMatch(line);
+      if (tableMatch != null) {
+        final idx = int.tryParse(tableMatch.group(1)!);
+        if (idx != null && idx > 0) indexes.add(idx);
+        continue;
+      }
+      final plainMatch = RegExp(r'课程目标\s*(\d{1,2})').firstMatch(line);
+      if (plainMatch != null && line.contains(RegExp(r'\d+\.\d+'))) {
+        final idx = int.tryParse(plainMatch.group(1)!);
+        if (idx != null && idx > 0) indexes.add(idx);
+      }
+    }
+    return indexes.toList()..sort();
   }
 
   String _kindForComponentOrdinal(int ordinal) {

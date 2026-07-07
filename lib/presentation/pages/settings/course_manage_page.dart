@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../data/local/course_dao.dart';
 import '../../../data/models/course_model.dart';
 import '../../../services/knowledge_seed_service.dart';
@@ -102,11 +102,79 @@ class _CourseManagePageState extends State<CourseManagePage> {
   Widget _buildCourseList(ThemeData theme) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _courses.length,
+      itemCount: _courses.length + 1,
       itemBuilder: (context, index) {
-        final course = _courses[index];
+        if (index == 0) return _buildCourseHub(theme);
+        final course = _courses[index - 1];
         return _buildCourseCard(theme, course);
       },
+    );
+  }
+
+  Widget _buildCourseHub(ThemeData theme) {
+    final active = _courses
+        .where((c) => c.isActive)
+        .cast<CourseModel?>()
+        .firstWhere((c) => c != null, orElse: () => null);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.55),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.hub_outlined, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '课程中枢',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (active != null)
+                Text(
+                  '当前：${active.name}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '一键生课负责创建课程资源包；课程管理负责切换和查看课程；课程目标管理负责维护当前课程的大纲目标、指标点和达成评价矩阵。',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.72),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton.icon(
+                icon: const Icon(Icons.auto_awesome),
+                label: const Text('一键生课'),
+                onPressed: _showGenerator,
+              ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.fact_check_outlined),
+                label: const Text('课程目标管理'),
+                onPressed: _openCourseObjectivesManager,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

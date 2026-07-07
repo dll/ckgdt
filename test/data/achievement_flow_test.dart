@@ -27,6 +27,7 @@ Future<Database> _createAchievementDb() async {
     CREATE TABLE achievement_batches(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       batch_name TEXT, course_name TEXT, class_name TEXT, semester TEXT,
+      syllabus_version TEXT,
       teacher_id TEXT, status TEXT DEFAULT 'draft',
       objective_weights_json TEXT, calc_results_json TEXT,
       report_content TEXT,
@@ -79,6 +80,7 @@ Future<Database> _createAchievementDb() async {
       pingshi_ratio REAL, experiment_ratio REAL, exam_ratio REAL,
       experiments TEXT, pingshi_standard TEXT, experiment_standard TEXT,
       assessment_items_json TEXT, extra_columns_json TEXT,
+      syllabus_version TEXT,
       created_at TEXT, updated_at TEXT, UNIQUE(course_name, idx))''');
   await db.execute('''
     CREATE TABLE courses(
@@ -226,6 +228,92 @@ void main() {
         (rows[0]['experiment_ratio'] as num).toDouble(), closeTo(0.30, 0.0001));
     expect((rows[0]['exam_ratio'] as num).toDouble(), closeTo(0.50, 0.0001));
     expect(rows[0]['indicator'], '1.4');
+  });
+
+  test('大纲声明5个课程目标时过滤误识别的第6个目标', () {
+    const raw = '''
+| 序号 | 课程目标 | 支撑的毕业要求指标点 |
+| --- | --- | --- |
+| 1 | 掌握课程知识图谱基本概念。 | 1.4 |
+| 2 | 能够设计课程知识建模方案。 | 3.2 |
+| 3 | 能够分析学习行为数据。 | 4.2 |
+| 4 | 能够设计智能体辅助教学方案。 | 5.1 |
+| 5 | 能够完成课程配置和达成分析。 | 1.2 |
+
+课程目标达成考核与评价方式及成绩评定对照表
+课程目标
+权重
+毕业要求
+平时 支撑课程目标的满分（比例%）
+实验 支撑课程目标的满分（比例%）
+期末 支撑课程目标的满分（比例%）
+课程目标 1
+0.15
+支撑毕业要求 1.4
+15（20%）
+15（30%）
+15（50%）
+课程目标 2
+0.20
+支撑毕业要求 3.2
+20（20%）
+20（30%）
+20（50%）
+课程目标 3
+0.20
+支撑毕业要求 4.2
+20（20%）
+20（30%）
+20（50%）
+课程目标 4
+0.25
+支撑毕业要求 5.1
+25（20%）
+25（30%）
+25（50%）
+课程目标 5
+0.20
+支撑毕业要求 1.2
+20（20%）
+20（30%）
+20（50%）
+课程目标 6
+实验6
+平时成绩评价标准
+''';
+
+    final rows = AchievementExcelService.instance
+        .deterministicSyllabusRowsFromRawText(raw);
+
+    expect(rows.length, 5);
+    expect(rows.map((r) => r['idx']).toList(), [1, 2, 3, 4, 5]);
+    expect(rows.map((r) => r['indicator']).toList(),
+        ['1.4', '3.2', '4.2', '5.1', '1.2']);
+  });
+
+  test('达成批次固化当前课程目标的大纲版本', () async {
+    await dao.saveCourseObjectives(
+      '移动应用开发',
+      [
+        {
+          'idx': 1,
+          'name': '课程目标1',
+          'indicator': '1.4',
+          'weight': 1.0,
+          'full_mark': 100,
+        }
+      ],
+      syllabusVersion: '2023版',
+    );
+
+    final batchId = await dao.addBatch(
+      batchName: '移动应用开发+软件23+2025-2026年第2学期+2023版',
+      courseName: '移动应用开发',
+      className: '软件23',
+      semester: '2025-2026年第2学期',
+    );
+    final batch = await dao.getBatch(batchId);
+    expect(batch?['syllabus_version'], '2023版');
   });
 
   test('无实验课程动态成绩模板不生成实验列，并按大纲比例合成达成度', () {

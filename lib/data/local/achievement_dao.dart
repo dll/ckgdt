@@ -54,12 +54,20 @@ class AchievementDao {
   /// [objectives] 每项含 idx/name/indicator/weight/full_mark/
   /// pingshi_ratio/experiment_ratio/exam_ratio/chapters/description/assess_content。
   Future<void> saveCourseObjectives(
-      String courseName, List<Map<String, dynamic>> objectives) async {
+    String courseName,
+    List<Map<String, dynamic>> objectives, {
+    String? syllabusVersion,
+  }) async {
     final db = await DatabaseHelper.instance.database;
     final now = DateTime.now().toIso8601String();
-    final normalizedCourseName = courseName.trim().isNotEmpty
-        ? courseName.trim()
-        : '当前课程';
+    final normalizedCourseName =
+        courseName.trim().isNotEmpty ? courseName.trim() : '当前课程';
+    final effectiveVersion = (syllabusVersion?.trim().isNotEmpty == true
+            ? syllabusVersion!.trim()
+            : objectives
+                .map((o) => o['syllabus_version']?.toString().trim() ?? '')
+                .firstWhere((v) => v.isNotEmpty, orElse: () => '未标注版本'))
+        .trim();
     await db.transaction((txn) async {
       await txn.delete('course_objectives',
           where: 'course_name = ?', whereArgs: [normalizedCourseName]);
@@ -86,6 +94,7 @@ class AchievementDao {
           'experiment_standard': o['experiment_standard'],
           'assessment_items_json': o['assessment_items_json'],
           'extra_columns_json': o['extra_columns_json'],
+          'syllabus_version': effectiveVersion,
           'created_at': now,
           'updated_at': now,
         });
@@ -97,8 +106,7 @@ class AchievementDao {
   Future<int> deleteCourseObjective(String courseName, int idx) async {
     final db = await DatabaseHelper.instance.database;
     return db.delete('course_objectives',
-        where: 'course_name = ? AND idx = ?',
-        whereArgs: [courseName, idx]);
+        where: 'course_name = ? AND idx = ?', whereArgs: [courseName, idx]);
   }
 
   /// 删除指定课程的全部目标。
@@ -546,18 +554,45 @@ class AchievementDao {
     String className = '软件23',
     String semester = '',
     String teacherId = '',
+    String? syllabusVersion,
   }) async {
     final effectiveCourseName = courseName.isNotEmpty
         ? courseName
         : await _courseContext.activeCourseName();
+    final effectiveVersion = syllabusVersion?.trim().isNotEmpty == true
+        ? syllabusVersion!.trim()
+        : await currentSyllabusVersion(effectiveCourseName);
     return createBatch({
       'batch_name': batchName,
       'course_name': effectiveCourseName,
       'class_name': className,
       'semester': semester,
       'teacher_id': teacherId,
+      'syllabus_version': effectiveVersion,
       'status': 'draft',
     });
+  }
+
+  Future<String> currentSyllabusVersion(String courseName) async {
+    final db = await DatabaseHelper.instance.database;
+    try {
+      final rows = await db.query(
+        'course_objectives',
+        columns: ['syllabus_version'],
+        where:
+            'course_name = ? AND syllabus_version IS NOT NULL AND syllabus_version <> ?',
+        whereArgs: [courseName, ''],
+        orderBy: 'updated_at DESC',
+        limit: 1,
+      );
+      if (rows.isNotEmpty) {
+        final version = rows.first['syllabus_version']?.toString().trim();
+        if (version != null && version.isNotEmpty) return version;
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementDao.currentSyllabusVersion', stack: st);
+    }
+    return '未标注版本';
   }
 
   /// addScore — 命名参数便捷方法（计算达成度后插入）
@@ -610,10 +645,14 @@ class AchievementDao {
       'weighted_achievement': weightedAchievement,
     };
     // 兼容旧的4参数调用
-    if (objective1Achievement != null) results['objective1_achievement'] = objective1Achievement;
-    if (objective2Achievement != null) results['objective2_achievement'] = objective2Achievement;
-    if (objective3Achievement != null) results['objective3_achievement'] = objective3Achievement;
-    if (objective4Achievement != null) results['objective4_achievement'] = objective4Achievement;
+    if (objective1Achievement != null)
+      results['objective1_achievement'] = objective1Achievement;
+    if (objective2Achievement != null)
+      results['objective2_achievement'] = objective2Achievement;
+    if (objective3Achievement != null)
+      results['objective3_achievement'] = objective3Achievement;
+    if (objective4Achievement != null)
+      results['objective4_achievement'] = objective4Achievement;
     // 新的动态数量支持
     if (objectiveAchievements != null) {
       for (final entry in objectiveAchievements.entries) {
@@ -1482,8 +1521,8 @@ class AchievementDao {
     final chapters = await _getCourseChapters(db, courseId);
     if (chapters.isEmpty) return _defaultChapterKeywords;
     if (chapters.length == _defaultChapterKeywords.length) {
-      final isMad = chapters.every((c) =>
-          _defaultChapterKeywords.values.any((kws) => kws.any((kw) => c.contains(kw))));
+      final isMad = chapters.every((c) => _defaultChapterKeywords.values
+          .any((kws) => kws.any((kw) => c.contains(kw))));
       if (isMad) return _defaultChapterKeywords;
     }
     final result = <int, List<String>>{};
@@ -1510,7 +1549,10 @@ class AchievementDao {
         try {
           final decoded = jsonDecode(raw);
           if (decoded is List) {
-            return decoded.map((e) => e.toString().trim()).where((s) => s.isNotEmpty).toList();
+            return decoded
+                .map((e) => e.toString().trim())
+                .where((s) => s.isNotEmpty)
+                .toList();
           }
         } catch (_) {
           // ignore parse error, return empty

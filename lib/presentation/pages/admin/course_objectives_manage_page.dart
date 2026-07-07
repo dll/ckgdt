@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io' show File;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -279,10 +279,15 @@ class _CourseObjectivesManagePageState
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除全部课程目标'),
-        content: Text('确定删除「$_courseName」的全部 ${_objectives.length} 个课程目标吗？此操作不可撤销。'),
+        content:
+            Text('确定删除「$_courseName」的全部 ${_objectives.length} 个课程目标吗？此操作不可撤销。'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('删除全部')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('删除全部')),
         ],
       ),
     );
@@ -295,7 +300,8 @@ class _CourseObjectivesManagePageState
       _hasUnsaved = false;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已删除全部课程目标'), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text('已删除全部课程目标'), backgroundColor: Colors.green),
         );
       }
     } catch (e, st) {
@@ -368,7 +374,7 @@ class _CourseObjectivesManagePageState
     try {
       final res = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['docx', 'md'],
+        allowedExtensions: ['docx', 'md', 'xlsx', 'xls', 'csv'],
         withData: true,
       );
       if (res == null || res.files.isEmpty) return;
@@ -388,7 +394,12 @@ class _CourseObjectivesManagePageState
       // 解析大纲 → 自动保存 → 自动刷新，全程无需人工确认
       final rows = await _svc.extractSyllabusRowsFromRawText(rawText);
       if (rows.isEmpty) throw StateError('未能从大纲中识别课程目标');
-      await _dao.saveCourseObjectives(_courseName, rows);
+      final version = _svc.syllabusVersionFromText(rawText);
+      await _dao.saveCourseObjectives(
+        _courseName,
+        rows,
+        syllabusVersion: version,
+      );
       _ctx.courseName = _courseName;
 
       if (mounted) {
@@ -396,7 +407,7 @@ class _CourseObjectivesManagePageState
         setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('已解析并保存 ${rows.length} 个课程目标'),
+            content: Text('已解析并保存 ${rows.length} 个课程目标（$version）'),
             backgroundColor: Colors.green,
           ),
         );
@@ -411,6 +422,124 @@ class _CourseObjectivesManagePageState
     } finally {
       if (mounted) setState(() => _importing = false);
     }
+  }
+
+  Future<void> _appendAssessmentMatrix() async {
+    try {
+      final res = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'xls', 'csv', 'docx', 'md'],
+        withData: true,
+      );
+      if (res == null || res.files.isEmpty) return;
+      final f = res.files.first;
+      final ext = (f.extension ?? '').toLowerCase();
+      setState(() => _importing = true);
+      final bytes = f.bytes ??
+          (f.path == null ? null : await File(f.path!).readAsBytes());
+      if (bytes == null) throw StateError('无法读取文件内容');
+      final rawText = _svc.syllabusRawText(bytes, ext);
+      final rows = _svc.deterministicSyllabusRowsFromRawText(rawText);
+      if (rows.isEmpty) throw StateError('未能识别课程目标达成考核对照表');
+
+      _readCtrls();
+      final merged = _mergeObjectiveRows(_objectives, rows);
+      final version = _svc.syllabusVersionFromText(rawText);
+      await _dao.saveCourseObjectives(
+        _courseName,
+        merged,
+        syllabusVersion: version,
+      );
+      _ctx.courseName = _courseName;
+
+      if (mounted) {
+        await _loadObjectives();
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已追加/更新 ${rows.length} 条对照表数据（$version）'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CourseObjectives.appendMatrix', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('追加导入失败: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _importing = false);
+    }
+  }
+
+  List<Map<String, dynamic>> _mergeObjectiveRows(
+    List<Map<String, dynamic>> current,
+    List<Map<String, dynamic>> imported,
+  ) {
+    final byIdx = <int, Map<String, dynamic>>{
+      for (final row in current)
+        (row['idx'] as num?)?.toInt() ?? 0: Map<String, dynamic>.from(row),
+    }..remove(0);
+    final lockedIndexes = byIdx.keys.toSet();
+
+    bool empty(Object? value) {
+      if (value == null) return true;
+      if (value is num) return value == 0;
+      return value.toString().trim().isEmpty;
+    }
+
+    for (final row in imported) {
+      final idx = (row['idx'] as num?)?.toInt() ?? 0;
+      if (idx <= 0) continue;
+      if (lockedIndexes.isNotEmpty && !lockedIndexes.contains(idx)) continue;
+      final target = byIdx.putIfAbsent(idx, () {
+        return {
+          'idx': idx,
+          'name': '课程目标$idx',
+          'indicator': '',
+          'weight': 0.0,
+          'full_mark': 0.0,
+          'pingshi_ratio': 0.0,
+          'experiment_ratio': 0.0,
+          'exam_ratio': 0.0,
+          'description': '',
+          'chapters': '',
+          'experiments': '',
+          'assess_content': '',
+          'pingshi_standard': '',
+          'experiment_standard': '',
+          'extra_columns_json': '{}',
+        };
+      });
+      for (final field in [
+        'indicator',
+        'weight',
+        'full_mark',
+        'pingshi_ratio',
+        'experiment_ratio',
+        'exam_ratio',
+        'assessment_items_json',
+      ]) {
+        if (!empty(row[field])) target[field] = row[field];
+      }
+      for (final field in [
+        'description',
+        'chapters',
+        'experiments',
+        'assess_content',
+        'pingshi_standard',
+        'experiment_standard',
+      ]) {
+        if (empty(target[field]) && !empty(row[field])) {
+          target[field] = row[field];
+        }
+      }
+    }
+    return byIdx.values.toList()
+      ..sort((a, b) => ((a['idx'] as num?)?.toInt() ?? 0)
+          .compareTo((b['idx'] as num?)?.toInt() ?? 0));
   }
 
   Future<void> _openAgentWithText(String text) async {
@@ -440,8 +569,11 @@ class _CourseObjectivesManagePageState
     _readCtrls();
     final rawText = _buildRawTextForAgent();
     _openAgentWithText(
-      '请分析以下课程目标对照表草稿，检查权重、满分、指标点、支撑章节、实验和考核内容是否完整准确。'
-      '如需要修正，请用 clarify_objective 工具更新；确认后用 submit_syllabus 保存。'
+      '请基于以下已导入的大纲课程目标对照表进行审核，只能校验和补全现有目标，禁止新增课程目标。'
+      '重点检查：目标数量是否与大纲一致、指标点是否错位、权重合计是否为1、满分合计是否为100、'
+      '平时/实验/期末比例是否合理、支撑章节和实验是否引用了不存在的目标。'
+      '如果发现错误，先说明证据；只有在有明确依据时才用 clarify_objective 修正现有目标，'
+      '不要创建目标6这类大纲未声明的目标；确认后用 submit_syllabus 保存。'
       '\n\n$rawText',
     );
   }
@@ -452,7 +584,8 @@ class _CourseObjectivesManagePageState
       buf.writeln('目标${o['idx']}: ${o['name'] ?? ''}');
       buf.writeln('  权重: ${o['weight']}  满分: ${o['full_mark']}');
       buf.writeln('  指标点: ${o['indicator']}');
-      buf.writeln('  平时占比: ${o['pingshi_ratio']}  实验占比: ${o['experiment_ratio']}  期末占比: ${o['exam_ratio']}');
+      buf.writeln(
+          '  平时占比: ${o['pingshi_ratio']}  实验占比: ${o['experiment_ratio']}  期末占比: ${o['exam_ratio']}');
       buf.writeln('  描述: ${o['description']}');
       buf.writeln('  章节: ${o['chapters']}  实验: ${o['experiments']}');
       buf.writeln('  考核内容: ${o['assess_content']}');
@@ -512,7 +645,8 @@ class _CourseObjectivesManagePageState
           children: [
             SizedBox(
               width: 200,
-              child: DropdownButtonFormField<String>(value: _allCourses.any((c) => c.name == _courseName)
+              child: DropdownButtonFormField<String>(
+                value: _allCourses.any((c) => c.name == _courseName)
                     ? _courseName
                     : null,
                 decoration: const InputDecoration(
@@ -559,6 +693,13 @@ class _CourseObjectivesManagePageState
               label: '导入大纲',
               loading: _importing,
               onPressed: _importDocx,
+            ),
+            const SizedBox(width: 8),
+            _ActionChip(
+              icon: Icons.table_view,
+              label: '追加对照表',
+              loading: _importing,
+              onPressed: _appendAssessmentMatrix,
             ),
             const SizedBox(width: 8),
             _ActionChip(
@@ -709,8 +850,27 @@ class _CourseObjectivesManagePageState
       child: isReadonly
           ? Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Text(_ctrls[idx].text,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(_ctrls[idx].text,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    tooltip: '删除此目标',
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints.tightFor(width: 28, height: 28),
+                    icon: const Icon(Icons.delete_outline, size: 16),
+                    color: Colors.red.shade400,
+                    onPressed: () {
+                      _deleteRow(ri);
+                      setState(() {});
+                    },
+                  ),
+                ],
+              ),
             )
           : TextField(
               controller: _ctrls[idx],

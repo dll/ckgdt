@@ -580,9 +580,11 @@ class DatabaseHelper {
 
   Future<void> _importStudentRoster(Database db) async {
     try {
-      InitLogger.log('db', '_importStudentRoster: calling _loadStudentRosterBytes');
+      InitLogger.log(
+          'db', '_importStudentRoster: calling _loadStudentRosterBytes');
       final bytes = await _loadStudentRosterBytes(db);
-      InitLogger.log('db', '_importStudentRoster: got ${bytes?.length ?? 0} bytes');
+      InitLogger.log(
+          'db', '_importStudentRoster: got ${bytes?.length ?? 0} bytes');
       if (bytes == null || bytes.isEmpty) {
         InitLogger.log(
             'db', 'CKGDT student roster not found, keep existing students');
@@ -720,7 +722,8 @@ class DatabaseHelper {
   Future<Uint8List?> _loadStudentRosterBytes(Database db) async {
     String courseId = 'ckgdt';
     try {
-      final rows = await db.query('courses',
+      final rows = await db.query(
+        'courses',
         columns: ['id'],
         where: 'is_active = ?',
         whereArgs: [1],
@@ -760,7 +763,8 @@ class DatabaseHelper {
       try {
         final assetPath = relative.join('/');
         final data = await rootBundle.load(assetPath);
-        InitLogger.log('db', 'loading student roster from bundled asset $assetPath');
+        InitLogger.log(
+            'db', 'loading student roster from bundled asset $assetPath');
         return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
       } catch (e) {
         swallow(e, tag: 'DatabaseHelper.studentRosterAsset');
@@ -1263,20 +1267,10 @@ class DatabaseHelper {
 
   /// 补齐 achievement_batches 表可能缺少的 calc_results_json 列
   Future<void> _ensureAchievementColumns(Database db) async {
-    try {
-      await db.rawQuery(
-          'SELECT calc_results_json FROM achievement_batches LIMIT 1');
-    } catch (e) {
-      swallow(e, tag: 'DatabaseHelper.ensureAchievement');
-      try {
-        await db.execute(
-            'ALTER TABLE achievement_batches ADD COLUMN calc_results_json TEXT');
-        debugPrint(
-            '=== DatabaseHelper: Added calc_results_json column to achievement_batches');
-      } catch (e2) {
-        swallow(e2, tag: 'DatabaseHelper.alterAchievement');
-      }
-    }
+    await _addTextColumnIfMissing(
+        db, 'achievement_batches', 'calc_results_json', 'achievement_batches');
+    await _addTextColumnIfMissing(
+        db, 'achievement_batches', 'syllabus_version', 'achievement_batches');
   }
 
   /// 补齐 course_objectives 表可能缺少的 AI 解析列
@@ -1287,6 +1281,7 @@ class DatabaseHelper {
       'experiment_standard',
       'assessment_items_json',
       'extra_columns_json',
+      'syllabus_version',
     ]) {
       try {
         await db.rawQuery('SELECT $col FROM course_objectives LIMIT 1');
@@ -1820,6 +1815,7 @@ class DatabaseHelper {
         experiment_standard TEXT,
         assessment_items_json TEXT,
         extra_columns_json TEXT,
+        syllabus_version TEXT,
         created_at TEXT,
         updated_at TEXT,
         UNIQUE(course_name, idx)
