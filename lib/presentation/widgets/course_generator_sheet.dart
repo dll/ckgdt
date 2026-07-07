@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../data/local/course_dao.dart';
 import '../../data/local/database_helper.dart';
@@ -16,7 +17,7 @@ import '../../services/course_generation_service.dart';
 import '../../services/resource_persistence_service.dart';
 import 'package:knowledge_graph_app/core/error_handler.dart';
 
-/// 一键生课 — 底部弹出表单
+/// 一键生课 — 底部弹出表单（只上传大纲）
 class CourseGeneratorSheet extends StatefulWidget {
   const CourseGeneratorSheet({super.key});
 
@@ -26,10 +27,14 @@ class CourseGeneratorSheet extends StatefulWidget {
 
 class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
   final _nameController = TextEditingController();
-  int _chapterCount = 6;
   bool _isGenerating = false;
   String _progress = '';
   final List<String> _logs = [];
+
+  // 大纲相关
+  String? _outlineFileName;
+  String? _outlineText;
+  String? _outlineError;
 
   @override
   void dispose() {
@@ -60,7 +65,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface.withOpacity(0.3),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -77,9 +82,9 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
             ),
             const SizedBox(height: 8),
             Text(
-              'AI 自动生成完整课程体系：大纲、章节、题库、资源',
+              '上传课程大纲，AI 自动生成完整课程体系',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               textAlign: TextAlign.center,
             ),
@@ -100,41 +105,8 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
             ),
             const SizedBox(height: 16),
 
-            // 章节数量
-            Row(
-              children: [
-                const Icon(Icons.format_list_numbered, size: 20),
-                const SizedBox(width: 8),
-                Text('章节数量：', style: theme.textTheme.bodyMedium),
-                Expanded(
-                  child: Slider(
-                    value: _chapterCount.toDouble(),
-                    min: 4,
-                    max: 12,
-                    divisions: 8,
-                    label: '$_chapterCount 章',
-                    onChanged: _isGenerating
-                        ? null
-                        : (v) => setState(() => _chapterCount = v.toInt()),
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '$_chapterCount',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            // 上传大纲
+            _buildOutlineUpload(theme),
             const SizedBox(height: 24),
 
             // 生成进度
@@ -186,7 +158,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                               _logs[_logs.length - 1 - i],
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurface
-                                    .withOpacity(0.6),
+                                    .withValues(alpha: 0.6),
                                 fontSize: 11,
                               ),
                             ),
@@ -227,6 +199,108 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
     );
   }
 
+  Widget _buildOutlineUpload(ThemeData theme) {
+    final hasOutline = _outlineText != null && _outlineText!.isNotEmpty;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: _isGenerating ? null : _pickOutline,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: hasOutline
+              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
+              : theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _outlineError != null
+                ? theme.colorScheme.error
+                : hasOutline
+                    ? theme.colorScheme.primary.withValues(alpha: 0.4)
+                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              hasOutline ? Icons.description : Icons.upload_file,
+              size: 36,
+              color: hasOutline
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.4),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              hasOutline ? '已上传: $_outlineFileName' : '上传课程大纲',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: hasOutline ? theme.colorScheme.primary : null,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              hasOutline
+                  ? '点击重新选择'
+                  : '支持 TXT / Markdown / Word (.docx)',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+            if (_outlineError != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                _outlineError!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickOutline() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['txt', 'md', 'docx'],
+      );
+      if (result == null || result.files.isEmpty) return;
+
+      final file = result.files.first;
+      String text = '';
+
+      if (file.bytes != null) {
+        text = utf8.decode(file.bytes!);
+      } else if (file.path != null) {
+        text = await File(file.path!).readAsString();
+      }
+
+      if (text.trim().isEmpty) {
+        setState(() {
+          _outlineError = '文件内容为空';
+          _outlineFileName = null;
+          _outlineText = null;
+        });
+        return;
+      }
+
+      setState(() {
+        _outlineFileName = file.name;
+        _outlineText = text;
+        _outlineError = null;
+      });
+    } catch (e) {
+      setState(() {
+        _outlineError = '读取文件失败: $e';
+        _outlineFileName = null;
+        _outlineText = null;
+      });
+    }
+  }
+
   void _log(String msg) {
     setState(() {
       _logs.add(msg);
@@ -240,12 +314,19 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
     }
   }
 
-  /// 增强版课程生成 — 使用 CourseGenerationService 生成完整资源包
+  /// 增强版课程生成 — 从大纲生成完整课程资源包
   Future<void> _generateCourseEnhanced() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('请输入课程名称')),
+      );
+      return;
+    }
+
+    if (_outlineText == null || _outlineText!.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请上传课程大纲')),
       );
       return;
     }
@@ -256,17 +337,44 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
     });
 
     try {
-      // 使用 AI 生成章节
-      final aiService = AiService();
-      final prompt =
-          '为《$name》课程生成 $_chapterCount 个章节标题，返回 JSON: {"chapters": ["第1章 标题", ...]}';
-      final response = await aiService.chat([
-        {'role': 'user', 'content': prompt}
-      ]);
-      final chapters = _parseChapters(response, _chapterCount);
+      // 从大纲解析章节
+      final outlineLines = _outlineText!
+          .split('\n')
+          .map((l) => l.trim())
+          .where((l) => l.isNotEmpty)
+          .toList();
+
+      // 提取章节标题（以"第X章"、数字序号、或 ## 标记开头的行）
+      final chapters = <String>[];
+      final chapterPattern = RegExp(
+          r'^(第[一二三四五六七八九十\d]+章|[一二三四五六七八九十]+[、.]|\d+[.、)]]\s|#{1,3}\s+)');
+
+      for (final line in outlineLines) {
+        if (chapterPattern.hasMatch(line)) {
+          // 去掉 Markdown 标记
+          final cleaned = line.replaceFirst(RegExp(r'^#{1,3}\s+'), '').trim();
+          if (cleaned.isNotEmpty && cleaned.length > 2) {
+            chapters.add(cleaned);
+          }
+        }
+      }
+
+      // 如果没解析出章节，用 AI 从大纲生成
+      List<String> finalChapters;
+      if (chapters.isNotEmpty) {
+        finalChapters = chapters;
+      } else {
+        _log('从大纲提取章节中...');
+        final aiService = AiService();
+        final prompt = '根据以下课程大纲，提取章节标题列表，返回 JSON: {"chapters": ["第1章 标题", ...]}\n\n大纲：\n${_outlineText!.length > 3000 ? _outlineText!.substring(0, 3000) : _outlineText}';
+        final response = await aiService.chat([
+          {'role': 'user', 'content': prompt}
+        ]);
+        finalChapters = _parseChapters(response, 8);
+      }
 
       _log('开始生成完整课程资源包...');
-      _log('共 ${chapters.length} 个章节');
+      _log('共 ${finalChapters.length} 个章节');
 
       // 使用 CourseGenerationService 生成所有资源
       final generator = CourseGenerationService(
@@ -277,7 +385,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
 
       final result = await generator.generateAll(
         courseName: name,
-        chapters: chapters,
+        chapters: finalChapters,
       );
 
       if (!result.isSuccess) {
