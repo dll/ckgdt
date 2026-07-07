@@ -3,6 +3,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../models/user_model.dart';
+import 'active_student_scope.dart';
 import 'database_helper.dart';
 import 'package:knowledge_graph_app/core/error_handler.dart';
 
@@ -39,6 +40,60 @@ class UserDao {
       whereArgs: ['student'],
       orderBy: 'user_id',
     );
+    return maps.map((map) => UserModel.fromMap(map)).toList();
+  }
+
+  /// 当前教学作用域学生。
+  ///
+  /// 优先使用当前课程最新达成批次的班级名，限定到同名未归档班级成员；
+  /// 若课程尚未创建达成批次，则退回所有未归档班级学生。不会包含已归档
+  /// 班级中残留的往届学生，也不会包含未分班学生。
+  Future<List<UserModel>> getCurrentCourseActiveStudents({
+    required String courseName,
+  }) async {
+    final db = await _dbHelper.database;
+    final activeWhere = ActiveStudentScope.where(alias: 'u');
+    String? className;
+
+    try {
+      final batches = await db.rawQuery('''
+        SELECT class_name
+        FROM achievement_batches
+        WHERE course_name = ?
+          AND class_name IS NOT NULL
+          AND TRIM(class_name) <> ''
+        ORDER BY
+          COALESCE(updated_at, created_at, '') DESC,
+          id DESC
+        LIMIT 1
+      ''', [courseName]);
+      if (batches.isNotEmpty) {
+        className = batches.first['class_name']?.toString().trim();
+      }
+    } catch (e, st) {
+      swallowDebug(e,
+          tag: 'UserDao.getCurrentCourseActiveStudents.batch', stack: st);
+    }
+
+    final classFilter =
+        className == null || className.isEmpty ? '' : 'AND c.name = ?';
+    final args = className == null || className.isEmpty
+        ? <Object?>[]
+        : <Object?>[className];
+    final maps = await db.rawQuery('''
+      SELECT DISTINCT u.*
+      FROM users u
+      INNER JOIN class_members cm
+        ON cm.user_id = u.user_id
+       AND cm.role = 'student'
+      INNER JOIN classes c
+        ON c.id = cm.class_id
+       AND COALESCE(c.is_archived, 0) = 0
+      WHERE $activeWhere
+        $classFilter
+      ORDER BY u.user_id
+    ''', args);
+
     return maps.map((map) => UserModel.fromMap(map)).toList();
   }
 
@@ -302,7 +357,9 @@ class UserDao {
         where: 'user_id = ?',
         whereArgs: [userId],
       );
-    } catch (e) { swallowDebug(e, tag: 'user_dao'); }
+    } catch (e) {
+      swallowDebug(e, tag: 'user_dao');
+    }
   }
 
   // ── 密码管理 ──────────────────────────────────────────────────────────

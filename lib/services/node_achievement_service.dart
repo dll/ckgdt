@@ -169,6 +169,21 @@ class NodeAchievementService {
     final rows = await db.rawQuery('''
       SELECT ab.*
       FROM achievement_batches ab
+      WHERE ab.course_name = ?
+        AND EXISTS (
+          SELECT 1 FROM achievement_scores s WHERE s.batch_id = ab.id
+        )
+      ORDER BY
+        CASE WHEN ab.status = 'completed' THEN 0 ELSE 1 END,
+        COALESCE(ab.updated_at, ab.created_at, '') DESC,
+        ab.id DESC
+      LIMIT 1
+    ''', [await _courseContext.activeCourseName(fallback: '当前课程')]);
+    if (rows.isNotEmpty) return rows.first;
+
+    final fallbackRows = await db.rawQuery('''
+      SELECT ab.*
+      FROM achievement_batches ab
       WHERE EXISTS (
         SELECT 1 FROM achievement_scores s WHERE s.batch_id = ab.id
       )
@@ -178,7 +193,7 @@ class NodeAchievementService {
         ab.id DESC
       LIMIT 1
     ''');
-    return rows.isEmpty ? null : rows.first;
+    return fallbackRows.isEmpty ? null : fallbackRows.first;
   }
 
   Future<List<Map<String, dynamic>>> _loadKnowledgeConcepts(Database db) async {
@@ -499,7 +514,11 @@ class NodeAchievementService {
   }
 
   /// 获取全班或单生的节点热力图 → Map<nodeId, 0-100>
-  Future<Map<int, double>> getHeatmap({String? userId, int? batchId}) async {
+  Future<Map<int, double>> getHeatmap({
+    String? userId,
+    int? batchId,
+    Set<String>? userIds,
+  }) async {
     final db = await _dbHelper.database;
     await _ensureNodeAchievementTable(db);
     final map = <int, double>{};
@@ -511,6 +530,18 @@ class NodeAchievementService {
       if (userId != null) {
         sql = 'SELECT node_id, overall FROM node_achievement WHERE user_id = ?';
         args = [userId];
+      } else if (userIds != null) {
+        final scopedIds = userIds.where((id) => id.trim().isNotEmpty).toList()
+          ..sort();
+        if (scopedIds.isEmpty) return {};
+        final placeholders = List.filled(scopedIds.length, '?').join(',');
+        sql = '''
+          SELECT node_id, AVG(overall) as overall
+          FROM node_achievement
+          WHERE user_id IN ($placeholders)
+          GROUP BY node_id
+        ''';
+        args = scopedIds;
       } else {
         sql =
             'SELECT node_id, AVG(overall) as overall FROM node_achievement GROUP BY node_id';

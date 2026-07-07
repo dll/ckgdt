@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import '../../core/text_utils.dart';
 import '../../services/course_context_service.dart';
+import 'active_student_scope.dart';
 import 'database_helper.dart';
 
 class LearningRecordDao {
@@ -185,25 +186,23 @@ class LearningRecordDao {
   /// 获取所有学生对每个概念的完成比率
   /// 返回 Map<conceptId, completionRatio(0.0~1.0)>
   Future<Map<int, double>> getAllStudentsConceptRatio(
-      List<Map<String, dynamic>> concepts) async {
+    List<Map<String, dynamic>> concepts, {
+    Set<String>? studentIds,
+  }) async {
     await _ensureConceptProgressTable();
     final db = await _dbHelper.database;
 
-    // 获取所有学生
-    final studentRows = await db.query(
-      'users',
-      columns: ['user_id'],
-      where: 'role = ?',
-      whereArgs: ['student'],
-    );
-    if (studentRows.isEmpty) return {};
+    final scopedIds = studentIds == null
+        ? await _loadActiveStudentIds(db)
+        : studentIds.where((id) => id.trim().isNotEmpty).toSet();
+    if (scopedIds.isEmpty) return {};
 
-    final studentIds = studentRows.map((r) => r['user_id'] as String).toList();
-    final totalStudents = studentIds.length;
+    final orderedStudentIds = scopedIds.toList()..sort();
+    final totalStudents = orderedStudentIds.length;
 
     // 为每个学生同步达成度（确保数据最新）
     final allProgress = <String, Map<int, String>>{};
-    for (final sid in studentIds) {
+    for (final sid in orderedStudentIds) {
       allProgress[sid] = await autoSyncConceptProgress(sid, concepts);
     }
 
@@ -213,7 +212,7 @@ class LearningRecordDao {
       final cId = c['id'] as int;
       int completedCount = 0;
       int inProgressCount = 0;
-      for (final sid in studentIds) {
+      for (final sid in orderedStudentIds) {
         final status = allProgress[sid]?[cId] ?? 'not_started';
         if (status == 'completed') {
           completedCount++;
@@ -225,6 +224,26 @@ class LearningRecordDao {
       ratioMap[cId] = (completedCount + inProgressCount * 0.5) / totalStudents;
     }
     return ratioMap;
+  }
+
+  Future<Set<String>> _loadActiveStudentIds(Database db) async {
+    final activeWhere = ActiveStudentScope.where(alias: 'u');
+    final rows = await db.rawQuery('''
+      SELECT DISTINCT u.user_id
+      FROM users u
+      INNER JOIN class_members cm
+        ON cm.user_id = u.user_id
+       AND cm.role = 'student'
+      INNER JOIN classes c
+        ON c.id = cm.class_id
+       AND COALESCE(c.is_archived, 0) = 0
+      WHERE $activeWhere
+      ORDER BY u.user_id
+    ''');
+    return rows
+        .map((r) => (r['user_id'] ?? '').toString().trim())
+        .where((id) => id.isNotEmpty)
+        .toSet();
   }
 
   /// 获取单个学生的达成度统计（教师查看用）

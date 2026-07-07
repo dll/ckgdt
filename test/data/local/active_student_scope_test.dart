@@ -3,6 +3,7 @@ import 'package:knowledge_graph_app/data/local/class_dao.dart';
 import 'package:knowledge_graph_app/data/local/classroom_dao.dart';
 import 'package:knowledge_graph_app/data/local/database_helper.dart';
 import 'package:knowledge_graph_app/data/local/notification_dao.dart';
+import 'package:knowledge_graph_app/data/local/user_dao.dart';
 
 import '../../helpers/test_db.dart';
 
@@ -75,6 +76,17 @@ void main() {
         created_at TEXT
       )
     ''');
+    await db.execute('''
+      CREATE TABLE achievement_batches(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch_name TEXT,
+        course_name TEXT,
+        class_name TEXT,
+        status TEXT,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    ''');
     await db.insert('courses', {
       'id': 'mad',
       'name': '移动应用开发',
@@ -106,6 +118,12 @@ void main() {
       'is_active': 1,
     });
     await db.insert('users', {
+      'user_id': 'other_active_class',
+      'real_name': '其它当前班学生',
+      'role': 'student',
+      'is_active': 1,
+    });
+    await db.insert('users', {
       'user_id': 'inactive',
       'real_name': '停用学生',
       'role': 'student',
@@ -121,6 +139,11 @@ void main() {
       'name': '归档班',
       'is_archived': 1,
     });
+    await db.insert('classes', {
+      'id': 3,
+      'name': '其它当前班',
+      'is_archived': 0,
+    });
     await db.insert('class_members', {
       'class_id': 1,
       'user_id': 'active_class',
@@ -129,6 +152,11 @@ void main() {
     await db.insert('class_members', {
       'class_id': 2,
       'user_id': 'archived_only',
+      'role': 'student',
+    });
+    await db.insert('class_members', {
+      'class_id': 3,
+      'user_id': 'other_active_class',
       'role': 'student',
     });
   }
@@ -151,7 +179,28 @@ void main() {
     );
     final ids = rows.map((r) => r['user_id']).toList();
 
-    expect(ids, ['active_class', 'unassigned']);
+    expect(ids, ['active_class', 'other_active_class', 'unassigned']);
+  });
+
+  test('当前课程学生作用域优先使用课程达成批次的未归档班级', () async {
+    final db = await openInMemoryDb();
+    DatabaseHelper.databaseForTest = db;
+    await createSchema(db);
+    await seedStudents(db);
+    await db.insert('achievement_batches', {
+      'batch_name': '移动应用开发+当前班+2025-2026年第2学期',
+      'course_name': '移动应用开发',
+      'class_name': '当前班',
+      'status': 'draft',
+      'created_at': '2026-07-07T00:00:00',
+      'updated_at': '2026-07-07T00:00:00',
+    });
+
+    final students =
+        await UserDao().getCurrentCourseActiveStudents(courseName: '移动应用开发');
+    final ids = students.map((s) => s.userId).toList();
+
+    expect(ids, ['active_class']);
   });
 
   test('无指定班级签到只为当前活跃学生生成记录', () async {
@@ -168,7 +217,7 @@ void main() {
     final rows = await db.query('checkin_records', orderBy: 'user_id');
     final ids = rows.map((r) => r['user_id']).toList();
 
-    expect(ids, ['active_class', 'unassigned']);
+    expect(ids, ['active_class', 'other_active_class', 'unassigned']);
   });
 
   test('班级管理待添加学生排除只属于归档班级的学生', () async {
@@ -189,21 +238,21 @@ void main() {
     await createSchema(db);
     await seedStudents(db);
     await db.insert('classes', {
-      'id': 3,
+      'id': 4,
       'name': '新当前班',
       'is_archived': 0,
     });
 
-    await ClassDao().syncAllStudentsToClass(3);
+    await ClassDao().syncAllStudentsToClass(4);
 
     final rows = await db.query(
       'class_members',
       where: 'class_id = ?',
-      whereArgs: [3],
+      whereArgs: [4],
       orderBy: 'user_id',
     );
     final ids = rows.map((r) => r['user_id']).toList();
 
-    expect(ids, ['active_class', 'unassigned']);
+    expect(ids, ['active_class', 'other_active_class', 'unassigned']);
   });
 }

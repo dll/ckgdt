@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/constants/chapter_helper.dart';
 import '../../../core/constants/mask_shapes.dart';
@@ -13,7 +13,6 @@ import '../../../services/course_context_service.dart';
 import '../../../services/knowledge_seed_service.dart';
 import '../../../services/node_achievement_service.dart';
 import '../../../data/local/user_dao.dart';
-import '../../../services/default_class_service.dart';
 import '../../../data/models/user_model.dart';
 import '../learning/learning_chain_page.dart';
 import '../learning/video_page.dart';
@@ -306,17 +305,16 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       if (isTeacherOrAdmin) {
         _teacherAchievementMode = true;
 
-        // 加载学生列表（首次）—— 按默认班级过滤，避免混入已归档年级
+        // 加载学生列表（首次）—— 按当前课程与未归档班级过滤，避免混入往届学生。
         if (_studentList.isEmpty) {
-          final all = await UserDao().getStudents();
-          _studentList = await DefaultClassService.instance
-              .filterByDefaultClass(all, (u) => u.userId);
+          _studentList = await _loadCurrentCourseStudents();
         }
 
         if (_selectedStudentId == null) {
           // 全体学生聚合视图
           _allStudentsRatio =
-              await _learningRecordDao.getAllStudentsConceptRatio(conceptMaps);
+              await _learningRecordDao.getAllStudentsConceptRatio(conceptMaps,
+                  studentIds: _currentStudentIds());
 
           _applyLearningRatioProgress(_allStudentsRatio);
           // 清空个人进度（使用 ratio 模式）
@@ -355,13 +353,12 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       _teacherAchievementMode = true;
 
       if (_studentList.isEmpty) {
-        final all = await UserDao().getStudents();
-        _studentList = await DefaultClassService.instance
-            .filterByDefaultClass(all, (u) => u.userId);
+        _studentList = await _loadCurrentCourseStudents();
       }
 
       final heatmap = await _nodeAchievementService.getHeatmap(
         userId: _selectedStudentId,
+        userIds: _selectedStudentId == null ? _currentStudentIds() : null,
       );
       _applyAchievementHeatmap(heatmap);
     } else {
@@ -372,6 +369,20 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
 
     return true;
   }
+
+  Future<List<UserModel>> _loadCurrentCourseStudents() async {
+    final courseName = await CourseContextService().activeCourseName();
+    final students =
+        await UserDao().getCurrentCourseActiveStudents(courseName: courseName);
+    if (_selectedStudentId != null &&
+        !students.any((student) => student.userId == _selectedStudentId)) {
+      _selectedStudentId = null;
+    }
+    return students;
+  }
+
+  Set<String> _currentStudentIds() =>
+      _studentList.map((student) => student.userId).toSet();
 
   void _applyAchievementHeatmap(Map<int, double> heatmap) {
     _conceptProgress = {};
