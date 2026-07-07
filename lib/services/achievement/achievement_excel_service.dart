@@ -1079,7 +1079,13 @@ $rawText
       if (!inWeightTable &&
           line.contains('课程目标') &&
           line.contains('权重') &&
-          (line.contains('毕业要求') || line.contains('指标点'))) {
+          (line.contains('毕业要求') ||
+              line.contains('指标点') ||
+              line.contains('满分') ||
+              line.contains('比例') ||
+              line.contains('平时') ||
+              line.contains('实验') ||
+              line.contains('期末'))) {
         inWeightTable = true;
         final cells = _splitMarkdownCells(line);
         if (cells.isNotEmpty) matrixRows.add(cells);
@@ -1392,60 +1398,10 @@ $rawText
         // 归入内部三类桶：pingshi / experiment / exam。
         if (_looksLikeAssessmentMatrix(tableRows, headerText)) {
           for (var rowIndex = 0; rowIndex < tableRows.length; rowIndex++) {
-            final cells = tableRows[rowIndex];
-            final m = RegExp(r'课程目标\s*(\d)').firstMatch(cells[0]);
-            if (m == null || cells.length < 3) continue;
-            final idx = int.parse(m.group(1)!);
-
-            // 两类模板：
-            // 1) 课程目标1 | 0.15 | 支撑毕业要求1.4 | 15(20%) | 15(30%) | 15(50%)
-            // 2) 课程目标1 | 支撑毕业要求2.2 | 20(20%) | 20(30%) | 20(50%)
-            final explicitWeight =
-                _parseWeightCell(cells.length > 1 ? cells[1] : '');
-            final componentStart = explicitWeight != null ? 3 : 2;
-            final items = <Map<String, dynamic>>[];
-            final ratioByKind = <String, double>{
-              'pingshi': 0,
-              'experiment': 0,
-              'exam': 0,
-            };
-            final fullByKind = <String, double>{};
-            for (int i = componentStart; i < cells.length; i++) {
-              final parsed = _parseFullAndRatio(cells[i]);
-              if (parsed == null) continue;
-              final label =
-                  _assessmentLabelForCell(tableRows, rowIndex, i, items.length);
-              final kind = _assessmentKind(label);
-              final ratio = parsed.ratio ?? 0;
-              ratioByKind[kind] = (ratioByKind[kind] ?? 0) + ratio;
-              fullByKind[kind] = parsed.full;
-              items.add({
-                'label': label,
-                'kind': kind,
-                'full': parsed.full,
-                'ratio': ratio,
-              });
+            final parsed = _parseAssessmentMatrixWeightRow(tableRows, rowIndex);
+            if (parsed != null) {
+              weights.add(parsed);
             }
-            if (items.isEmpty) continue;
-            final fullMark = (items.first['full'] as num).toDouble();
-            final requirement = cells.length > 1
-                ? cells.firstWhere((c) => _extractIndicator(c) != null,
-                    orElse: () => '')
-                : '';
-            final weight = explicitWeight ?? (fullMark / 100.0);
-            weights.add({
-              'objective': idx,
-              'weight': weight,
-              'requirement': requirement,
-              'full_mark': fullMark,
-              'pingshi_full': fullByKind['pingshi'] ?? fullMark,
-              'experiment_full': fullByKind['experiment'] ?? 0,
-              'exam_full': fullByKind['exam'] ?? fullMark,
-              'pingshi_ratio': ratioByKind['pingshi'] ?? 0,
-              'experiment_ratio': ratioByKind['experiment'] ?? 0,
-              'exam_ratio': ratioByKind['exam'] ?? 0,
-              'assessment_items_json': jsonEncode(items),
-            });
           }
           continue;
         }
@@ -1566,8 +1522,18 @@ $rawText
     final idx = int.tryParse(m.group(1)!);
     if (idx == null || idx <= 0) return null;
 
-    final explicitWeight = cells.length > 1 ? _parseWeightCell(cells[1]) : null;
-    final componentStart = explicitWeight != null ? 3 : 2;
+    double? explicitWeight;
+    for (var i = 0; i < cells.length; i++) {
+      final weight = _parseWeightCell(cells[i]);
+      if (weight == null) continue;
+      final header = _assessmentHeaderForCell(tableRows, rowIndex, i);
+      if (header.contains('权重')) {
+        explicitWeight = weight;
+        break;
+      }
+      explicitWeight ??= weight;
+    }
+
     final items = <Map<String, dynamic>>[];
     final ratioByKind = <String, double>{
       'pingshi': 0,
@@ -1575,7 +1541,7 @@ $rawText
       'exam': 0,
     };
     final fullByKind = <String, double>{};
-    for (int i = componentStart; i < cells.length; i++) {
+    for (int i = 0; i < cells.length; i++) {
       final parsed = _parseFullAndRatio(cells[i]);
       if (parsed == null || parsed.full <= 1) continue;
       final label =
@@ -1835,12 +1801,24 @@ $rawText
     var objectiveRowsWithScores = 0;
     for (final cells in tableRows) {
       if (cells.isEmpty) continue;
-      if (RegExp(r'课程目标\s*\d').hasMatch(cells[0])) {
+      if (RegExp(r'课程目标\s*\d').hasMatch(cells.join('|'))) {
         final scoreCells = cells.where((c) => _parseFullAndRatio(c) != null);
         if (scoreCells.isNotEmpty) objectiveRowsWithScores++;
       }
     }
     return objectiveRowsWithScores > 0;
+  }
+
+  String _assessmentHeaderForCell(
+      List<List<String>> tableRows, int rowIndex, int colIndex) {
+    for (var r = rowIndex - 1; r >= 0; r--) {
+      if (colIndex >= tableRows[r].length) continue;
+      final text = _normalizeSyllabusText(tableRows[r][colIndex]);
+      if (text.isEmpty) continue;
+      if (_parseFullAndRatio(text) != null) continue;
+      return text;
+    }
+    return '';
   }
 
   String _assessmentLabelForCell(List<List<String>> tableRows, int rowIndex,

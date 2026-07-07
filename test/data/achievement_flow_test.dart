@@ -291,6 +291,53 @@ void main() {
         ['1.4', '3.2', '4.2', '5.1', '1.2']);
   });
 
+  test('无毕业要求列的成绩评定对照表可准确解析权重满分比例', () {
+    const raw = '''
+| 序号 | 课程目标 | 支撑的毕业要求指标点 |
+| --- | --- | --- |
+| 1 | 掌握课程知识图谱基本概念。 | 1.4 |
+| 2 | 能够设计课程知识建模方案。 | 3.2 |
+| 3 | 能够分析学习行为数据。 | 4.2 |
+| 4 | 能够设计智能体辅助教学方案。 | 5.1 |
+| 5 | 能够完成课程配置和达成分析。 | 1.2 |
+
+| 课程目标 | 权重 | 平时 支撑课程目标的满分（比例%） | 实验 支撑课程目标的满分（比例%） | 期末 支撑课程目标的满分（比例%） |
+| --- | --- | --- | --- | --- |
+| 课程目标1 | 0.15 | 15（20%） | 15（30%） | 15（50%） |
+| 课程目标2 | 0.20 | 20（20%） | 20（30%） | 20（50%） |
+| 课程目标3 | 0.25 | 25（20%） | 25（30%） | 25（50%） |
+| 课程目标4 | 0.20 | 20（20%） | 20（30%） | 20（50%） |
+| 课程目标5 | 0.20 | 20（20%） | 20（30%） | 20（50%） |
+''';
+
+    final rows = AchievementExcelService.instance
+        .deterministicSyllabusRowsFromRawText(raw);
+
+    expect(rows.length, 5);
+    expect(rows.map((r) => r['indicator']).toList(),
+        ['1.4', '3.2', '4.2', '5.1', '1.2']);
+    expect(rows.map((r) => (r['weight'] as num).toDouble()).toList(), [
+      closeTo(0.15, 0.0001),
+      closeTo(0.20, 0.0001),
+      closeTo(0.25, 0.0001),
+      closeTo(0.20, 0.0001),
+      closeTo(0.20, 0.0001),
+    ]);
+    expect(rows.map((r) => (r['full_mark'] as num).toDouble()).toList(), [
+      closeTo(15, 0.0001),
+      closeTo(20, 0.0001),
+      closeTo(25, 0.0001),
+      closeTo(20, 0.0001),
+      closeTo(20, 0.0001),
+    ]);
+    for (final row in rows) {
+      expect((row['pingshi_ratio'] as num).toDouble(), closeTo(0.20, 0.0001));
+      expect(
+          (row['experiment_ratio'] as num).toDouble(), closeTo(0.30, 0.0001));
+      expect((row['exam_ratio'] as num).toDouble(), closeTo(0.50, 0.0001));
+    }
+  });
+
   test('达成批次固化当前课程目标的大纲版本', () async {
     await dao.saveCourseObjectives(
       '移动应用开发',
