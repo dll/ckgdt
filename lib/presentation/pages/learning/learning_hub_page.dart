@@ -18,6 +18,7 @@ import '../../../data/local/ai_config_dao.dart';
 import '../../../data/local/learning_record_dao.dart';
 import '../materials/courseware_workshop_page.dart';
 import '../materials/ai_settings_page.dart';
+import '../../../services/resource_generation_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/error_handler.dart';
 import '../../../data/local/hot_video_dao.dart';
@@ -74,6 +75,11 @@ class _LearningHubPageState extends State<LearningHubPage>
   String _aiProviderLabel = 'DeepSeek';
   String _aiModel = 'deepseek-v4-pro';
   String _courseName = '课程';
+
+  // 资源生成
+  bool _generating = false;
+  String _generateStatus = '';
+  double _generateProgress = 0;
 
   @override
   void initState() {
@@ -240,6 +246,80 @@ class _LearningHubPageState extends State<LearningHubPage>
       });
     } catch (e, st) {
       swallowDebug(e, tag: 'LearningHub.loadAiConfig', stack: st);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 资源生成
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// 为当前课程的所有章节生成三种资源（PDF / PPT / 视频脚本）
+  Future<void> _generateAllResources() async {
+    if (_generating) return;
+    setState(() {
+      _generating = true;
+      _generateProgress = 0;
+      _generateStatus = '正在扫描课程包...';
+    });
+
+    try {
+      final courseId = await _courseContext.activeCourseId();
+      if (courseId == null || courseId.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('请先选择课程')),
+        );
+        return;
+      }
+
+      final service = ResourceGenerationService(
+        onProgress: (chapter, fileType, progress) {
+          if (!mounted) return;
+          setState(() {
+            _generateProgress = progress;
+            _generateStatus = '$chapter → ${fileType.toUpperCase()}';
+          });
+        },
+      );
+
+      final results = await service.generateAll(
+        courseId: courseId,
+        sourceType: _isTeacherOrAdmin ? 'preset' : 'extended',
+      );
+
+      if (!mounted) return;
+
+      final totalGenerated = results.fold<int>(
+          0, (sum, r) => sum + r.generated.length);
+      final totalErrors = results.fold<int>(
+          0, (sum, r) => sum + r.errors.length);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            totalErrors > 0
+                ? '生成完成：$totalGenerated 个资源，$totalErrors 个错误'
+                : '已生成 $totalGenerated 个资源',
+          ),
+          backgroundColor: totalErrors > 0 ? Colors.orange : Colors.green,
+        ),
+      );
+
+      _loadAllData();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LearningHub.generateAll', stack: st);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('生成失败: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _generating = false;
+          _generateProgress = 0;
+          _generateStatus = '';
+        });
+      }
     }
   }
 
@@ -472,6 +552,18 @@ class _LearningHubPageState extends State<LearningHubPage>
             style: const TextStyle(color: NoirTokens.paper)),
         actions: [
           if (_isTeacherOrAdmin) ...[
+            // 一键生成全部资源按钮
+            IconButton(
+              icon: _generating
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.auto_awesome),
+              tooltip: _generating ? _generateStatus : 'AI 生成全部资源',
+              onPressed: _generating ? null : _generateAllResources,
+            ),
             IconButton(
               icon: const Icon(Icons.movie_creation_outlined),
               tooltip: '课件工坊',
@@ -511,7 +603,7 @@ class _LearningHubPageState extends State<LearningHubPage>
           labelColor: NoirTokens.paper,
           labelStyle: const TextStyle(
               fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1.5),
-          unselectedLabelColor: NoirTokens.paper.withOpacity(0.5),
+          unselectedLabelColor: NoirTokens.paper.withValues(alpha: 0.5),
           unselectedLabelStyle:
               const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
           tabs: [
@@ -534,6 +626,42 @@ class _LearningHubPageState extends State<LearningHubPage>
       body: NoirBackground(
         child: Column(
           children: [
+            // 资源生成进度条
+            if (_generating)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: Colors.blue.shade50,
+                child: Row(
+                  children: [
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _generateStatus,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          LinearProgressIndicator(
+                            value: _generateProgress > 0 ? _generateProgress : null,
+                            backgroundColor: Colors.grey.shade200,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             // 预制/扩展 过滤条
             _buildResourceModeBar(),
             if (_resourceMode == 'recommend')
@@ -576,13 +704,13 @@ class _LearningHubPageState extends State<LearningHubPage>
             color: NoirTokens.inkAlpha(0.08),
             border: Border(
               bottom:
-                  BorderSide(color: NoirTokens.paper.withOpacity(0.08)),
+                  BorderSide(color: NoirTokens.paper.withValues(alpha: 0.08)),
             ),
           ),
           child: Row(
             children: [
               Icon(Icons.filter_list,
-                  size: 16, color: NoirTokens.paper.withOpacity(0.5)),
+                  size: 16, color: NoirTokens.paper.withValues(alpha: 0.5)),
               const SizedBox(width: 8),
               SegmentedButton<String>(
                 segments: const [
@@ -634,7 +762,7 @@ class _LearningHubPageState extends State<LearningHubPage>
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     minimumSize: const Size(0, 32),
-                    foregroundColor: NoirTokens.paper.withOpacity(0.5),
+                    foregroundColor: NoirTokens.paper.withValues(alpha: 0.5),
                   ),
                   onPressed: _cleanupEmptyExtended,
                 ),
@@ -745,37 +873,80 @@ class _LearningHubPageState extends State<LearningHubPage>
       return const Center(child: CircularProgressIndicator());
     }
     if (_videos.isEmpty) {
-      return _buildEmptyState(Icons.video_library, '暂无视频教程');
+      return _buildEmptyState(Icons.video_library, '暂无视频教程', fileType: 'video');
     }
     return RefreshIndicator(
       onRefresh: _loadVideos,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(12),
-        itemCount: _videos.length,
-        itemBuilder: (context, index) {
-          final video = _videos[index];
-          final isExtended = video['source_type'] == 'extended';
-          return Card(
-            margin: const EdgeInsets.only(bottom: 10),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: isExtended ? Colors.purple : Colors.red,
-                child: Icon(
-                  isExtended ? Icons.auto_awesome : Icons.play_arrow,
-                  color: Colors.white,
+      child: Column(
+        children: [
+          // 一键生成按钮（有资源时也显示）
+          if (_isTeacherOrAdmin)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _generating ? null : _generateAllResources,
+                  icon: const Icon(Icons.auto_awesome, size: 16),
+                  label: Text(_generating ? '正在生成...' : 'AI 重新生成全部资源'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF667eea),
+                    side: const BorderSide(color: Color(0xFF667eea)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                 ),
               ),
-              title: Text(
-                video['chapter'] ?? '视频',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: const Text('点击播放', style: TextStyle(fontSize: 12)),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _openFile(video),
             ),
-          );
-        },
+          // 资源列表
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: _videos.length,
+              itemBuilder: (context, index) {
+                final video = _videos[index];
+                final isExtended = video['source_type'] == 'extended';
+                final chapter = video['chapter'] as String? ?? '';
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: isExtended ? Colors.purple : Colors.red,
+                      child: Icon(
+                        isExtended ? Icons.auto_awesome : Icons.play_arrow,
+                        color: Colors.white,
+                      ),
+                    ),
+                    title: Text(
+                      chapter,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      isExtended ? 'AI 扩展生成' : '预制资源',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_isTeacherOrAdmin)
+                          IconButton(
+                            icon: const Icon(Icons.refresh, size: 20),
+                            tooltip: '重新生成',
+                            onPressed: () => _generateAllResources(),
+                          ),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
+                    onTap: () => _openFile(video),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -796,53 +967,97 @@ class _LearningHubPageState extends State<LearningHubPage>
       return _buildEmptyState(
         type == 'PPT' ? Icons.slideshow : Icons.picture_as_pdf,
         '暂无 $type 文件',
+        fileType: type.toLowerCase(),
       );
     }
     return RefreshIndicator(
       onRefresh: onRefresh,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: files.length,
-        separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
-        itemBuilder: (context, index) {
-          final file = files[index];
-          final name = file['file_name'] as String? ?? '未命名';
-          final chapter = file['chapter'] as String?;
-          final desc = file['description'] as String?;
-          final isExtended = file['source_type'] == 'extended';
+      child: Column(
+        children: [
+          // 一键生成按钮
+          if (_isTeacherOrAdmin)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _generating ? null : _generateAllResources,
+                  icon: const Icon(Icons.auto_awesome, size: 16),
+                  label: Text(_generating ? '正在生成...' : 'AI 重新生成全部 $type 资源'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF667eea),
+                    side: const BorderSide(color: Color(0xFF667eea)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          // 文件列表
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: files.length,
+              separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
+              itemBuilder: (context, index) {
+                final file = files[index];
+                final name = file['file_name'] as String? ?? '未命名';
+                final chapter = file['chapter'] as String?;
+                final desc = file['description'] as String?;
+                final isExtended = file['source_type'] == 'extended';
 
-          return ListTile(
-            leading: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color:
-                    isExtended ? Colors.purple.shade50 : Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Center(
-                child: isExtended
-                    ? const Icon(Icons.auto_awesome,
-                        size: 22, color: Colors.purple)
-                    : Text(emoji, style: const TextStyle(fontSize: 24)),
-              ),
+                return ListTile(
+                  leading: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color:
+                          isExtended ? Colors.purple.shade50 : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      child: isExtended
+                          ? const Icon(Icons.auto_awesome,
+                              size: 22, color: Colors.purple)
+                          : Text(emoji, style: const TextStyle(fontSize: 24)),
+                    ),
+                  ),
+                  title: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  subtitle: Text(
+                    [
+                      if (chapter != null) chapter,
+                      if (desc != null) desc,
+                      if (isExtended) '· AI 扩展' else '· 预制',
+                    ].join('  '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_isTeacherOrAdmin)
+                        IconButton(
+                          icon: const Icon(Icons.refresh, size: 20),
+                          tooltip: '重新生成',
+                          onPressed: () => _generateAllResources(),
+                        ),
+                      const Icon(Icons.chevron_right, color: Colors.grey),
+                    ],
+                  ),
+                  onTap: () => _openFile(file),
+                );
+              },
             ),
-            title: Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-            subtitle: Text(
-              [if (chapter != null) chapter, if (desc != null) desc].join('  '),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12),
-            ),
-            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-            onTap: () => _openFile(file),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -884,7 +1099,7 @@ class _LearningHubPageState extends State<LearningHubPage>
             color: Theme.of(context).scaffoldBackgroundColor,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, -2),
               ),
@@ -942,7 +1157,7 @@ class _LearningHubPageState extends State<LearningHubPage>
         color: Theme.of(context)
             .colorScheme
             .surfaceContainerHighest
-            .withOpacity(0.3),
+            .withValues(alpha: 0.3),
         border: Border(
           bottom: BorderSide(color: Colors.grey.shade200),
         ),
@@ -954,7 +1169,7 @@ class _LearningHubPageState extends State<LearningHubPage>
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color:
-                  Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -1680,7 +1895,7 @@ class _LearningHubPageState extends State<LearningHubPage>
     }
   }
 
-  Widget _buildEmptyState(IconData icon, String text) {
+  Widget _buildEmptyState(IconData icon, String text, {String? fileType}) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1696,6 +1911,22 @@ class _LearningHubPageState extends State<LearningHubPage>
             '课件将从 Gitee 仓库自动获取',
             style: TextStyle(fontSize: 13, color: Colors.grey[500]),
           ),
+          if (_isTeacherOrAdmin && fileType != null) ...[
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _generating ? null : () => _generateAllResources(),
+              icon: const Icon(Icons.auto_awesome, size: 18),
+              label: Text('AI 生成全部 ${fileType.toUpperCase()} 资源'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF667eea),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1818,7 +2049,7 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface.withOpacity(0.3),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1834,7 +2065,7 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
             Text(
               '根据您的需求，AI 将生成实际的 PDF 课件文件',
               style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -1996,7 +2227,7 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
                               _logs[_logs.length - 1 - i],
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurface
-                                    .withOpacity(0.6),
+                                    .withValues(alpha: 0.6),
                                 fontSize: 11,
                               ),
                             ),
@@ -2292,20 +2523,20 @@ class _RecommendVideoCard extends StatelessWidget {
             // 缩略图占位
             Expanded(
               child: Container(
-                color: accent.withOpacity(0.15),
+                          color: accent.withValues(alpha: 0.15),
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.play_circle_fill,
-                          size: 32, color: accent.withOpacity(0.6)),
+                          size: 32, color: accent.withValues(alpha: 0.6)),
                       if (isAi) ...[
                         const SizedBox(height: 4),
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Colors.purple.withOpacity(0.15),
+                            color: Colors.purple.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text('AI推荐',
@@ -2340,7 +2571,7 @@ class _RecommendVideoCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 4, vertical: 1),
                         decoration: BoxDecoration(
-                          color: accent.withOpacity(0.15),
+                color: accent.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(3),
                         ),
                         child: Text(platformName,

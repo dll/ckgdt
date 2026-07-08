@@ -9,6 +9,7 @@ import '../../../data/models/quiz_result_model.dart';
 import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/course_context_service.dart';
+import '../../../services/quiz_generation_service.dart';
 import '../../../services/tts_flutter_service.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../admin/question_manage_page.dart';
@@ -49,6 +50,11 @@ class _QuizPageState extends State<QuizPage> {
   List<Map<String, dynamic>> _chapterPerformance = [];
   List<Map<String, dynamic>> _recentResults = [];
   List<Map<String, dynamic>> _chapterStats = [];
+
+  // ── 测验生成 ───────────────────────────────────────────────
+  bool _generating = false;
+  String _generateStatus = '';
+  double _generateProgress = 0;
 
   bool get _isTeacherOrAdmin => _authService.isTeacher || _authService.isAdmin;
 
@@ -93,6 +99,75 @@ class _QuizPageState extends State<QuizPage> {
         });
       }
     } catch (e) { swallowDebug(e, tag: 'quiz_page'); }
+  }
+
+  /// 自动生成测验题目
+  Future<void> _generateQuizQuestions() async {
+    if (_generating) return;
+    setState(() {
+      _generating = true;
+      _generateProgress = 0;
+      _generateStatus = '正在分析课程内容...';
+    });
+
+    try {
+      final courseId = await _courseContext.activeCourseId();
+      if (courseId.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('请先选择课程')),
+        );
+        return;
+      }
+
+      final service = QuizGenerationService(
+        onProgress: (chapter, progress) {
+          if (!mounted) return;
+          setState(() {
+            _generateProgress = progress;
+            _generateStatus = '正在生成: $chapter';
+          });
+        },
+      );
+
+      final result = await service.generateAll(courseId: courseId);
+
+      if (!mounted) return;
+
+      if (result.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('未能生成题目，请检查课程包内容'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '已生成 ${result.totalQuestions} 道题目，覆盖 ${result.generated.length} 个章节',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadChapters();
+        if (_isTeacherOrAdmin) _loadTeacherData();
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'QuizPage.generate', stack: st);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('生成失败: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _generating = false;
+          _generateProgress = 0;
+          _generateStatus = '';
+        });
+      }
+    }
   }
 
   Future<void> _startQuiz(String chapter) async {
@@ -434,7 +509,7 @@ class _QuizPageState extends State<QuizPage> {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.25),
+                            color: Colors.white.withValues(alpha: 0.25),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(Icons.quiz,
@@ -489,6 +564,42 @@ class _QuizPageState extends State<QuizPage> {
 
             const SizedBox(height: 20),
 
+            // ── 生成进度条 ──────────────────────────────────────
+            if (_generating)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _generateStatus,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      value: _generateProgress > 0 ? _generateProgress : null,
+                      backgroundColor: Colors.grey.shade200,
+                    ),
+                  ],
+                ),
+              ),
+
             // ── 快捷操作按钮 ──────────────────────────────────────
             Row(
               children: [
@@ -520,18 +631,10 @@ class _QuizPageState extends State<QuizPage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildActionButton(
-                    icon: Icons.play_arrow,
-                    label: '体验测验',
+                    icon: Icons.auto_awesome,
+                    label: _generating ? '生成中...' : 'AI 生成题目',
                     color: primary,
-                    onTap: () {
-                      if (_chapters.isNotEmpty) {
-                        _showChapterPickerForTeacher();
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('暂无测验题目')),
-                        );
-                      }
-                    },
+                    onTap: _generating ? null : () => _generateQuizQuestions(),
                   ),
                 ),
               ],
@@ -605,10 +708,10 @@ class _QuizPageState extends State<QuizPage> {
     required IconData icon,
     required String label,
     required Color color,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
   }) {
     return Material(
-      color: color.withOpacity(0.1),
+      color: color.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
@@ -662,7 +765,7 @@ class _QuizPageState extends State<QuizPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.06),
+        color: Colors.grey.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -752,7 +855,7 @@ class _QuizPageState extends State<QuizPage> {
                       color: Theme.of(context)
                           .colorScheme
                           .primary
-                          .withOpacity(0.1),
+                          .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -877,7 +980,7 @@ class _QuizPageState extends State<QuizPage> {
       margin: const EdgeInsets.only(bottom: 6),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: scoreColor.withOpacity(0.15),
+          backgroundColor: scoreColor.withValues(alpha: 0.15),
           child: Text(
             '$score',
             style: TextStyle(
@@ -901,44 +1004,6 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   /// 教师选择章节体验测验
-  void _showChapterPickerForTeacher() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '选择章节体验测验',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              '以教师身份体验学生的测验流程',
-              style: TextStyle(fontSize: 13, color: Colors.grey),
-            ),
-            const SizedBox(height: 12),
-            ..._chapters.map((chapter) => ListTile(
-                  leading: const Icon(Icons.quiz, color: Colors.orange),
-                  title: Text(chapter),
-                  trailing: const Icon(Icons.play_arrow),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _startQuiz(chapter);
-                  },
-                )),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
   // ══════════════════════════════════════════════════════════════════════════
   // 学生：章节选择
   // ══════════════════════════════════════════════════════════════════════════
@@ -989,6 +1054,20 @@ class _QuizPageState extends State<QuizPage> {
                     label: const Text('刷新'),
                   ),
                   const SizedBox(width: 12),
+                  if (_isTeacherOrAdmin) ...[
+                    OutlinedButton.icon(
+                      onPressed: _generating ? null : () => _generateQuizQuestions(),
+                      icon: _generating
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.auto_awesome),
+                      label: Text(_generating ? '生成中...' : 'AI 生成题目'),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
                   OutlinedButton.icon(
                     onPressed: () async {
                       final messenger = ScaffoldMessenger.of(context);
@@ -1095,7 +1174,7 @@ class _QuizPageState extends State<QuizPage> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
+                          color: Colors.blue.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text(
@@ -1134,7 +1213,7 @@ class _QuizPageState extends State<QuizPage> {
                     bgColor = Theme.of(context)
                         .colorScheme
                         .primary
-                        .withOpacity(0.3);
+                        .withValues(alpha: 0.3);
                     borderColor = Theme.of(context).colorScheme.primary;
                   }
 
