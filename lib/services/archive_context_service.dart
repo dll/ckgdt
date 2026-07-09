@@ -6,6 +6,8 @@ import '../data/local/achievement_dao.dart';
 import '../data/local/assessment_dao.dart';
 import '../data/local/database_helper.dart';
 import 'auth_service.dart';
+import 'course_context_service.dart';
+import 'course_terminology_service.dart';
 
 /// 归档生成上下文收集器。
 ///
@@ -36,6 +38,8 @@ class ArchiveContextService {
   final _achievementDao = AchievementDao();
   final _assessmentDao = AssessmentDao();
   final _auth = AuthService();
+  final _courseContext = CourseContextService();
+  final _terminology = CourseTerminologyService();
 
   /// 收集全部 6 类事实并打包为 prompt 段。
   ///
@@ -113,15 +117,23 @@ class ArchiveContextService {
   Future<String> _section3Chapters() async {
     try {
       final db = await DatabaseHelper.instance.database;
-      // 章节图谱：course 类型 + level=0 的根节点为章节
+      final courseId = await _courseContext.activeCourseId();
+      // 章节图谱：仅使用当前课程的 course 图谱根节点，避免归档材料混入其他课程。
       final rows = await db.rawQuery('''
         SELECT n.title, n.id, n.graph_id,
-          (SELECT COUNT(*) FROM nodes WHERE graph_id = n.graph_id AND parent_id = n.id) AS sub_count
+          (
+            SELECT COUNT(*)
+            FROM nodes child
+            WHERE child.graph_id = n.graph_id AND child.parent_id = n.id
+          ) AS sub_count
         FROM nodes n
-        WHERE n.parent_id IS NULL OR n.parent_id = ''
+        INNER JOIN graphs g ON g.id = n.graph_id
+        WHERE (n.parent_id IS NULL OR n.parent_id = '')
+          AND g.course_id = ?
+          AND (g.graph_type = 'course' OR g.graph_type IS NULL OR g.graph_type = '')
         ORDER BY n.graph_id, n.level, n.id
         LIMIT 30
-      ''');
+      ''', [courseId]);
       if (rows.isEmpty) return '### 3. 章节（来自图谱根节点）\n[暂无图谱数据]\n';
 
       final b = StringBuffer('### 3. 章节（来自图谱根节点）\n');
@@ -130,7 +142,8 @@ class ArchiveContextService {
         final title = r['title']?.toString() ?? '';
         if (title.isEmpty) continue;
         i++;
-        b.writeln('- 章 ${r['graph_id']}/${r['id']}：$title（子节点 ${r['sub_count']}）');
+        b.writeln(
+            '- 章 ${r['graph_id']}/${r['id']}：$title（子节点 ${r['sub_count']}）');
         if (i >= 12) break; // 防止超长，抓前 12 个根节点足够给 AI 看出结构
       }
       return b.toString();
@@ -141,16 +154,18 @@ class ArchiveContextService {
   }
 
   Future<String> _section4Labs() async {
+    final terms = await _terminology.activeTerms();
+    final taskLabel = terms.taskPluralLabel;
     try {
       final tasks = await _labTaskDao.getTasks();
-      if (tasks.isEmpty) return '### 4. 实验任务\n[暂无实验任务]\n';
-      final b = StringBuffer('### 4. 实验任务\n');
+      if (tasks.isEmpty) return '### 4. $taskLabel\n[暂无$taskLabel]\n';
+      final b = StringBuffer('### 4. $taskLabel\n');
       var i = 0;
       for (final t in tasks) {
         i++;
         if (i > 10) break;
         b.writeln(
-            '- 实验 ${t['chapter'] ?? '?'} | ${t['title'] ?? '未命名'} | 学时 ${t['hours'] ?? t['duration'] ?? '?'}');
+            '- $taskLabel ${t['chapter'] ?? '?'} | ${t['title'] ?? '未命名'} | 学时 ${t['hours'] ?? t['duration'] ?? '?'}');
       }
       if (tasks.length > 10) {
         b.writeln('- …（共 ${tasks.length} 项，仅列出前 10）');
@@ -158,7 +173,7 @@ class ArchiveContextService {
       return b.toString();
     } catch (e, st) {
       _logErr('section4Labs', e, st);
-      return '### 4. 实验任务\n[采集失败：$e]\n';
+      return '### 4. $taskLabel\n[采集失败：$e]\n';
     }
   }
 
@@ -175,7 +190,8 @@ class ArchiveContextService {
     try {
       if (classId == null) return '';
       final members = await _classDao.getClassMembers(classId);
-      final students = members.where((m) => (m['role'] ?? 'student') == 'student');
+      final students =
+          members.where((m) => (m['role'] ?? 'student') == 'student');
       return '### 6. 学生人数\n- 班级 #$classId 学生数：${students.length}\n';
     } catch (e, st) {
       _logErr('section6StudentCount', e, st);
@@ -187,12 +203,17 @@ class ArchiveContextService {
   Future<List<String>> chapterTitlesFromGraphs() async {
     try {
       final db = await DatabaseHelper.instance.database;
+      final courseId = await _courseContext.activeCourseId();
       final rows = await db.rawQuery('''
         SELECT DISTINCT title FROM nodes
         WHERE (parent_id IS NULL OR parent_id = '')
-          AND graph_id IN (SELECT id FROM graphs WHERE graph_type = 'course' OR graph_type IS NULL)
+          AND graph_id IN (
+            SELECT id FROM graphs
+            WHERE course_id = ?
+              AND (graph_type = 'course' OR graph_type IS NULL OR graph_type = '')
+          )
         ORDER BY level, id LIMIT 8
-      ''');
+      ''', [courseId]);
       return rows
           .map((r) => r['title']?.toString() ?? '')
           .where((s) => s.isNotEmpty)
@@ -212,6 +233,9 @@ class ArchiveContextService {
       final avg = await _achievementDao.calculateClassAverage(batchId);
       final b = StringBuffer('### 7. 成绩达成\n');
       b.writeln('- 批次：${latest['batch_name'] ?? '未命名'}');
+      b.writeln('- 大纲版本：${latest['syllabus_version'] ?? '未标注版本'}');
+      b.writeln('- 班级：${latest['class_name'] ?? '[未填]'}');
+      b.writeln('- 学期：${latest['semester'] ?? '[未填]'}');
       final weights = await _achievementDao.resolveObjectiveWeights(batchId);
       final cfg = weights.length >= 4 ? weights : [0.15, 0.25, 0.30, 0.30];
       double weighted = 0;
@@ -219,7 +243,8 @@ class ArchiveContextService {
       for (int i = 0; i < count; i++) {
         final a = avg['课程目标${i + 1}'] ?? 0;
         weighted += a * cfg[i];
-        b.writeln('- 课程目标${i + 1} 班级平均达成度：${a.toStringAsFixed(4)}（权重 ${cfg[i].toStringAsFixed(2)}）');
+        b.writeln(
+            '- 课程目标${i + 1} 班级平均达成度：${a.toStringAsFixed(4)}（权重 ${cfg[i].toStringAsFixed(2)}）');
       }
       b.writeln('- 加权总达成度：${weighted.toStringAsFixed(4)}');
       return b.toString();
@@ -238,7 +263,8 @@ class ArchiveContextService {
       b.writeln('- 考核分组数：${groups.length}');
       b.writeln('- 答辩记录数：${defenses.length}');
       if (defenses.isNotEmpty) {
-        final done = defenses.where((d) => (d['status'] ?? '') == 'completed').length;
+        final done =
+            defenses.where((d) => (d['status'] ?? '') == 'completed').length;
         b.writeln('- 已完成答辩：$done / ${defenses.length}');
       }
       return b.toString();

@@ -16,25 +16,31 @@ class CourseSubgraphService {
     final normalized = text.toLowerCase();
 
     if (_hasAny(normalized, const [
-      '足球',
-      '篮球',
-      '排球',
-      '田径',
-      '体育',
-      '专项',
-      '训练',
-      '体能',
-      '战术',
-      '动作',
-      '比赛',
+      '移动应用',
+      '软件',
+      '程序',
+      '开发',
+      'android',
+      'ios',
+      'flutter',
+      '鸿蒙',
+      '小程序',
+      '前端',
+      '后端',
+      '数据库',
+      '算法',
+      '工程',
+      '实验',
+      '项目',
+      '技术栈',
     ])) {
       return const CourseProfile(
-        discipline: '体育',
-        courseMode: '技能训练型',
-        practiceLabel: '训练实践',
-        graphCategories: ['课程图谱', '技能训练图谱', '战术规则图谱', '评价达成图谱'],
-        evidenceTypes: ['训练记录', '动作视频', '技能测试', '比赛观察', '训练反思'],
-        rubricDimensions: ['动作规范', '技能熟练度', '战术理解', '体能表现', '训练态度'],
+        discipline: '工程',
+        courseMode: '工程实验型',
+        practiceLabel: '实验项目',
+        graphCategories: ['课程图谱', '技术体系图谱', '实践项目图谱', '学习资源图谱', '评价达成图谱'],
+        evidenceTypes: ['测验', '作业', '实验报告', '项目作品', '代码仓库', '答辩记录'],
+        rubricDimensions: ['技术理解', '工程实现', '问题分析', '项目质量', '协作反思'],
       );
     }
 
@@ -59,6 +65,50 @@ class CourseSubgraphService {
         graphCategories: ['课程图谱', '文本研读图谱', '主题流派图谱', '评价达成图谱'],
         evidenceTypes: ['文本批注', '读书报告', '课堂讨论', '赏析论文', '口头表达'],
         rubricDimensions: ['文本理解', '细读证据', '审美判断', '批评方法', '表达质量'],
+      );
+    }
+
+    if (_hasAny(normalized, const [
+      '医学',
+      '护理',
+      '临床',
+      '康复',
+      '药学',
+      '师范',
+      '教学技能',
+      '模拟',
+      '操作规范',
+    ])) {
+      return const CourseProfile(
+        discipline: '技能',
+        courseMode: '技能模拟型',
+        practiceLabel: '技能实践',
+        graphCategories: ['课程图谱', '技能规范图谱', '情境模拟图谱', '评价达成图谱'],
+        evidenceTypes: ['操作记录', '模拟视频', '技能清单', '反思报告', '教师观察'],
+        rubricDimensions: ['操作规范', '情境判断', '安全伦理', '过程记录', '反思改进'],
+      );
+    }
+
+    if (_hasAny(normalized, const [
+      '足球',
+      '篮球',
+      '排球',
+      '田径',
+      '体育',
+      '专项',
+      '训练',
+      '体能',
+      '战术',
+      '动作',
+      '比赛',
+    ])) {
+      return const CourseProfile(
+        discipline: '体育',
+        courseMode: '技能训练型',
+        practiceLabel: '训练实践',
+        graphCategories: ['课程图谱', '技能训练图谱', '战术规则图谱', '评价达成图谱'],
+        evidenceTypes: ['训练记录', '动作视频', '技能测试', '比赛观察', '训练反思'],
+        rubricDimensions: ['动作规范', '技能熟练度', '战术理解', '体能表现', '训练态度'],
       );
     }
 
@@ -103,27 +153,6 @@ class CourseSubgraphService {
         graphCategories: ['课程图谱', '案例情境图谱', '决策论证图谱', '评价达成图谱'],
         evidenceTypes: ['案例分析', '决策方案', '辩论记录', '调研数据', '反思报告'],
         rubricDimensions: ['事实识别', '理论应用', '推理逻辑', '决策质量', '表达辩论'],
-      );
-    }
-
-    if (_hasAny(normalized, const [
-      '医学',
-      '护理',
-      '临床',
-      '康复',
-      '药学',
-      '师范',
-      '教学技能',
-      '模拟',
-      '操作规范',
-    ])) {
-      return const CourseProfile(
-        discipline: '技能',
-        courseMode: '技能模拟型',
-        practiceLabel: '技能实践',
-        graphCategories: ['课程图谱', '技能规范图谱', '情境模拟图谱', '评价达成图谱'],
-        evidenceTypes: ['操作记录', '模拟视频', '技能清单', '反思报告', '教师观察'],
-        rubricDimensions: ['操作规范', '情境判断', '安全伦理', '过程记录', '反思改进'],
       );
     }
 
@@ -191,7 +220,7 @@ class CourseSubgraphService {
       final nodes = graph['nodes'] as List? ?? const [];
       final edges = graph['edges'] as List? ?? const [];
       final category = graph['category']?.toString() ?? '未命名图谱';
-      if (nodes.length < 3) issues.add('$category 节点不足');
+      if (nodes.length < 8) issues.add('$category 节点不足');
       if (edges.isEmpty) issues.add('$category 缺少关系');
     }
     return PlatformReadinessResult(
@@ -236,78 +265,13 @@ class CourseSubgraphService {
     final edges = <Map<String, dynamic>>[];
 
     if (category.contains('课程')) {
-      for (var i = 0; i < chapters.length; i++) {
-        final chapterId = '${slug}_chapter_${i + 1}';
-        nodes.add({
-          'id': chapterId,
-          'label': chapters[i],
-          'type': 'chapter',
-          'level': 1,
-          'parent_id': rootId,
-          'content': '章节节点，可继续编辑知识点、活动和评价关系。',
-        });
-        edges.add({
-          'from': rootId,
-          'to': chapterId,
-          'type': 'contains',
-          'label': '包含',
-        });
-      }
+      _addChapterStructure(nodes, edges, slug, rootId, chapters, profile);
     } else if (category.contains('评价') || category.contains('达成')) {
-      for (var i = 0; i < profile.rubricDimensions.length; i++) {
-        final nodeId = '${slug}_rubric_${i + 1}';
-        nodes.add({
-          'id': nodeId,
-          'label': profile.rubricDimensions[i],
-          'type': 'rubric',
-          'level': 1,
-          'parent_id': rootId,
-          'content': '评价维度，可映射到课程目标、作业、实践任务和达成评价。',
-        });
-        edges.add({
-          'from': rootId,
-          'to': nodeId,
-          'type': 'assesses',
-          'label': '评价',
-        });
-      }
+      _addAssessmentStructure(nodes, edges, slug, rootId, chapters, profile);
     } else if (category.contains('资源')) {
-      for (var i = 0; i < profile.evidenceTypes.length; i++) {
-        final nodeId = '${slug}_evidence_${i + 1}';
-        nodes.add({
-          'id': nodeId,
-          'label': profile.evidenceTypes[i],
-          'type': 'evidence',
-          'level': 1,
-          'parent_id': rootId,
-          'content': '课程证据类型，用于数字孪生画像、达成评价和归档。',
-        });
-        edges.add({
-          'from': rootId,
-          'to': nodeId,
-          'type': 'collects',
-          'label': '采集',
-        });
-      }
+      _addResourceStructure(nodes, edges, slug, rootId, chapters, profile);
     } else {
-      final activities = _activityNodes(profile);
-      for (var i = 0; i < activities.length; i++) {
-        final nodeId = '${slug}_activity_${i + 1}';
-        nodes.add({
-          'id': nodeId,
-          'label': activities[i],
-          'type': 'activity',
-          'level': 1,
-          'parent_id': rootId,
-          'content': '根据课程大纲生成的活动节点，可编辑为具体任务。',
-        });
-        edges.add({
-          'from': rootId,
-          'to': nodeId,
-          'type': 'guides',
-          'label': '组织',
-        });
-      }
+      _addActivityStructure(nodes, edges, slug, rootId, chapters, profile);
     }
 
     return {
@@ -318,6 +282,145 @@ class CourseSubgraphService {
       'nodes': nodes,
       'edges': edges,
     };
+  }
+
+  void _addChapterStructure(
+    List<Map<String, dynamic>> nodes,
+    List<Map<String, dynamic>> edges,
+    String slug,
+    String rootId,
+    List<String> chapters,
+    CourseProfile profile,
+  ) {
+    for (var i = 0; i < chapters.length; i++) {
+      final chapterId = '${slug}_chapter_${i + 1}';
+      final knowledgeId = '${chapterId}_knowledge';
+      final taskId = '${chapterId}_task';
+      final resourceId = '${chapterId}_resource';
+      final assessmentId = '${chapterId}_assessment';
+      nodes.addAll([
+        _node(chapterId, chapters[i], 'chapter', 1, rootId,
+            '来自课程大纲的章节节点，可继续编辑知识点、活动和评价关系。'),
+        _node(knowledgeId, '${chapters[i]}核心知识', 'knowledge', 2, chapterId,
+            '本章核心概念、方法、规则或技术。'),
+        _node(taskId, '${chapters[i]}${profile.practiceLabel}', 'activity', 2,
+            chapterId, '本章实践、研读、训练、创作或案例任务。'),
+        _node(resourceId, '${chapters[i]}学习资源', 'resource', 2, chapterId,
+            '讲义、测验、课件、视频脚本等资源首次使用时生成。'),
+        _node(assessmentId, '${chapters[i]}评价证据', 'assessment', 2, chapterId,
+            '支撑课程目标达成、数字孪生画像和归档审核。'),
+      ]);
+      _edge(edges, rootId, chapterId, 'contains', '包含');
+      _edge(edges, chapterId, knowledgeId, 'contains', '知识');
+      _edge(edges, chapterId, taskId, 'guides', '活动');
+      _edge(edges, chapterId, resourceId, 'uses', '资源');
+      _edge(edges, taskId, assessmentId, 'produces', '证据');
+    }
+  }
+
+  void _addActivityStructure(
+    List<Map<String, dynamic>> nodes,
+    List<Map<String, dynamic>> edges,
+    String slug,
+    String rootId,
+    List<String> chapters,
+    CourseProfile profile,
+  ) {
+    final activities = _activityNodes(profile);
+    for (var i = 0; i < chapters.length; i++) {
+      final chapterId = '${slug}_chapter_${i + 1}';
+      nodes.add(_node(chapterId, chapters[i], 'chapter', 1, rootId,
+          '本章${profile.practiceLabel}组织节点。'));
+      _edge(edges, rootId, chapterId, 'contains', '包含');
+      for (var j = 0; j < activities.length; j++) {
+        final nodeId = '${chapterId}_activity_${j + 1}';
+        nodes.add(_node(nodeId, '${chapters[i]}-${activities[j]}', 'activity',
+            2, chapterId, '可编辑为具体任务、步骤、提交物和评价量规。'));
+        _edge(edges, chapterId, nodeId, 'guides', '组织');
+      }
+    }
+  }
+
+  void _addResourceStructure(
+    List<Map<String, dynamic>> nodes,
+    List<Map<String, dynamic>> edges,
+    String slug,
+    String rootId,
+    List<String> chapters,
+    CourseProfile profile,
+  ) {
+    final resourceTypes = [
+      '讲义',
+      '测验',
+      '课件',
+      '视频脚本',
+      ...profile.evidenceTypes.take(3)
+    ];
+    for (var i = 0; i < chapters.length; i++) {
+      final chapterId = '${slug}_chapter_${i + 1}';
+      nodes.add(_node(chapterId, chapters[i], 'chapter', 1, rootId, '本章资源索引。'));
+      _edge(edges, rootId, chapterId, 'contains', '包含');
+      for (var j = 0; j < resourceTypes.length; j++) {
+        final nodeId = '${chapterId}_resource_${j + 1}';
+        nodes.add(_node(nodeId, '${chapters[i]}${resourceTypes[j]}', 'resource',
+            2, chapterId, '资源采用懒生成策略，首次使用时生成正文。'));
+        _edge(edges, chapterId, nodeId, 'uses', '资源');
+      }
+    }
+  }
+
+  void _addAssessmentStructure(
+    List<Map<String, dynamic>> nodes,
+    List<Map<String, dynamic>> edges,
+    String slug,
+    String rootId,
+    List<String> chapters,
+    CourseProfile profile,
+  ) {
+    for (var i = 0; i < chapters.length; i++) {
+      final chapterId = '${slug}_chapter_${i + 1}';
+      nodes.add(
+          _node(chapterId, chapters[i], 'chapter', 1, rootId, '本章达成评价节点。'));
+      _edge(edges, rootId, chapterId, 'contains', '包含');
+      for (var j = 0; j < profile.rubricDimensions.length; j++) {
+        final nodeId = '${chapterId}_rubric_${j + 1}';
+        nodes.add(_node(nodeId, '${chapters[i]}-${profile.rubricDimensions[j]}',
+            'rubric', 2, chapterId, '评价维度可映射到课程目标、作业、实践任务和达成评价。'));
+        _edge(edges, chapterId, nodeId, 'assesses', '评价');
+      }
+    }
+  }
+
+  Map<String, dynamic> _node(
+    String id,
+    String label,
+    String type,
+    int level,
+    String parentId,
+    String content,
+  ) =>
+      {
+        'id': id,
+        'label': label,
+        'type': type,
+        'level': level,
+        'parent_id': parentId,
+        'content': content,
+      };
+
+  void _edge(
+    List<Map<String, dynamic>> edges,
+    String from,
+    String to,
+    String type,
+    String label,
+  ) {
+    edges.add({
+      'from': from,
+      'to': to,
+      'type': type,
+      'label': label,
+    });
   }
 
   List<String> _activityNodes(CourseProfile profile) {
@@ -332,6 +435,8 @@ class CourseSubgraphService {
         return const ['案例事实', '理论框架', '方案决策', '论证表达', '复盘改进'];
       case '技能':
         return const ['操作规范', '情境模拟', '过程观察', '安全伦理', '反思改进'];
+      case '工程':
+        return const ['概念理解', '技术选型', '工程实现', '测试验证', '项目反思'];
       default:
         return const ['核心概念', '实践活动', '学习资源', '成果证据', '改进建议'];
     }

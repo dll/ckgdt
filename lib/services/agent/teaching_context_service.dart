@@ -3,6 +3,7 @@ import '../../core/build_info.dart';
 import '../../data/local/database_helper.dart';
 import '../auth_service.dart';
 import '../course_context_service.dart';
+import '../course_terminology_service.dart';
 
 /// Builds a compact, live teaching context for agents and AI skills.
 ///
@@ -15,11 +16,13 @@ class AgentTeachingContextService {
       AgentTeachingContextService._();
 
   final CourseContextService _courseContext = CourseContextService();
+  final CourseTerminologyService _terminology = CourseTerminologyService();
 
   Future<String> buildPromptContext({String? userMessage}) async {
     try {
       final course = await _courseContext.getActiveCourse();
       final chapters = await _courseContext.chapterTitles();
+      final terms = await _terminology.activeTerms();
       final db = await DatabaseHelper.instance.database;
       final user = AuthService().currentUser;
 
@@ -59,7 +62,7 @@ $chapterText
 ### 数据概览
 - 知识图谱：$conceptCount 个概念，$relationCount 条关系，$graphCount 个图谱
 - 题库与资源：$questionCount 道题，$resourceCount 个资源
-- 实验与作品：$labTaskCount 个实验任务，$workCount 个学生作品
+- ${terms.practiceLabel}与作品：$labTaskCount 个${terms.taskPluralLabel}，$workCount 个学生作品
 - 考核与达成：$groupCount 个考核分组，$projectCount 个项目，$objectivesCount 个课程目标，$batchCount 个达成批次
 - 教学案例：$caseCount 个
 
@@ -68,8 +71,8 @@ $conceptText
 
 ### 工作原则
 - 所有建议必须服务当前课程，不沿用固定的旧课程内容，除非用户明确要求分析旧课程。
-- 回答教师时优先连接“教学设计、实验任务、考核评价、达成改进、案例演示”。
-- 回答学生时优先连接“知识图谱学习、测验练习、实验提交、作品改进、个人成长”。
+- 回答教师时优先连接“教学设计、${terms.taskPluralLabel}、考核评价、达成改进、案例演示”。
+- 回答学生时优先连接“知识图谱学习、测验练习、${terms.practiceLabel}提交、作品改进、个人成长”。
 - 涉及事实数据时优先使用上面的本地数据；没有数据时明确提示需要先导入或维护。
 ''';
     } catch (e, st) {

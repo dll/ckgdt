@@ -12,6 +12,7 @@ import '../achievement/achievement_audit_context_service.dart';
 import '../ai_service.dart';
 import '../auth_service.dart';
 import '../course_context_service.dart';
+import '../course_terminology_service.dart';
 import '../courseware_service.dart';
 
 /// 发布前专项能力：把智能体的自然语言请求落到本地业务闭环。
@@ -503,9 +504,10 @@ ${chapters.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n')}
   }) async {
     final course = await _courseContext.getActiveCourse();
     final chapters = await _courseContext.chapterTitles();
+    final terms = await CourseTerminologyService().activeTerms();
     final resolvedTopic = _cleanTopic(
       topic?.trim().isNotEmpty == true ? topic! : userRequest,
-      removeWords: const [
+      removeWords: [
         '请',
         '帮我',
         '生成',
@@ -513,6 +515,12 @@ ${chapters.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n')}
         '设计',
         '发布',
         '实验',
+        '研读',
+        '训练',
+        '创作',
+        '案例',
+        '技能',
+        '实践',
         '任务',
       ],
       fallback: course.name,
@@ -520,17 +528,17 @@ ${chapters.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n')}
     final chapter = _extractChapterText(userRequest) ?? _guessChapter(chapters);
 
     final prompt = '''
-请为《${course.name}》课程设计一个 "$resolvedTopic" 实验任务。
+请为《${course.name}》课程设计一个 "$resolvedTopic" ${terms.taskLabel}。
 
 当前课程章节：
 ${chapters.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n')}
 
 只输出合法 JSON 对象，不要 Markdown，不要解释。格式：
 {
-  "title": "实验名称",
+  "title": "${terms.taskLabel}名称",
   "chapter": "$chapter",
-  "description": "实验简介",
-  "requirements": "实验要求，分条写",
+  "description": "${terms.practiceLabel}简介",
+  "requirements": "${terms.practiceLabel}要求，分条写",
   "deliverables": "提交物清单",
   "difficulty": "简单|中等|较难",
   "max_score": 100
@@ -539,21 +547,21 @@ ${chapters.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n')}
 要求：
 1. 任务可课堂直接发布，目标、步骤、验收标准清晰。
 2. 必须体现知识图谱驱动：说明关联知识点与前置概念。
-3. 提交物至少包含实验报告、运行截图或结果说明。
+3. 提交物至少包含${terms.reportLabel}、过程证据或结果说明。
 ''';
 
     final result = await _aiService.chatWithMeta(
       [
         {'role': 'user', 'content': prompt}
       ],
-      systemPrompt: '你是高校课程实验设计专家，输出必须是可解析 JSON。',
+      systemPrompt: '你是高校课程${terms.practiceLabel}设计专家，输出必须是可解析 JSON。',
       temperature: 0.2,
     );
     final parsed = _tryParseJsonMap(result.content);
-    if (parsed == null) return '实验任务生成失败：AI 返回内容不是合法 JSON。';
+    if (parsed == null) return '${terms.taskLabel}生成失败：AI 返回内容不是合法 JSON。';
 
     final title = parsed['title']?.toString().trim() ?? '';
-    if (title.isEmpty) return '实验任务生成失败：缺少实验名称。';
+    if (title.isEmpty) return '${terms.taskLabel}生成失败：缺少任务名称。';
     final id = await LabTaskDao().addTask(
       title: title,
       chapter: parsed['chapter']?.toString().trim().isNotEmpty == true
@@ -568,14 +576,14 @@ ${chapters.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n')}
     );
 
     return '''
-已发布实验任务。
+已发布${terms.taskLabel}。
 
 - 课程：《${course.name}》
-- 实验：$title
+- ${terms.practiceLabel}：$title
 - 章节：${parsed['chapter'] ?? chapter}
 - 任务 ID：$id
 
-请到“实验管理/实验任务”页面刷新查看，并根据班级进度调整截止时间。''';
+请到“${terms.taskPluralLabel}管理”页面刷新查看，并根据班级进度调整截止时间。''';
   }
 
   bool isGraphGenerationIntent(String text) =>
@@ -593,7 +601,8 @@ ${chapters.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n')}
       RegExp(r'生成|创建|出|导入|保存').hasMatch(text);
 
   bool isLabTaskGenerationIntent(String text) =>
-      text.contains('实验') && RegExp(r'生成|创建|设计|发布').hasMatch(text);
+      RegExp(r'实验|实践|研读|训练|创作|案例|技能').hasMatch(text) &&
+      RegExp(r'生成|创建|设计|发布').hasMatch(text);
 
   Map<String, dynamic>? _tryParseJsonMap(String text) {
     final cleaned = text

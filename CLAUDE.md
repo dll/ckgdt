@@ -21,15 +21,32 @@
 1. **不得只服务 CKGDT 或《移动应用开发》**：新功能必须适用于任意高校课程，包括文学鉴赏、足球专项、艺术创作、工程实验、经管法案例、医学/师范技能等。
 2. **从课程大纲出发**：课程类型、实践任务、子图谱、评价量规、数字孪生证据类型，应优先由课程名、章节和大纲内容推断，不得硬编码单一课程形态。
 3. **内部结构统一，外部术语自适应**：数据库可以沿用 `lab_tasks` 等历史表，但页面、资源包和文档必须按课程形态表达为研读、训练、创作、实验、项目或案例分析。
-4. **资源包必须可审计**：一键生课必须输出资源清单、`course_profile.json`、`platform_readiness.json` 和平台化检测报告。
+4. **资源包必须可审计**：一键生课必须输出资源清单、`course_profile.json`、`platform_readiness.json`、`course_template.json` 和平台化检测报告。
 5. **图谱必须可生成、可编辑、可复用**：课程大纲应生成课程总图谱和类型化子图谱；教师必须能在图谱详情中新增、编辑、删除节点。
-6. **测试是交付条件**：新增平台化规则、资源包输出、导入逻辑和关键页面能力必须有对应测试或明确的验证命令。
+6. **模板必须预制且版本化**：所有新课程必须绑定通用数智课程模板及学科画像模板，模板 ID、版本、画像必须写入 `manifest.json`、资源包清单、导入记录和懒生成清单；模板升级不得覆盖教师已审核资源。
+7. **测试是交付条件**：新增平台化规则、资源包输出、导入逻辑和关键页面能力必须有对应测试或明确的验证命令。
+
+### 课程模板版本化（2026-07-09）
+
+- 新增 `CourseTemplateRegistry`：提供 `universal_smart_course@1.0.0` 通用数智课程模板，覆盖大纲、目标、图谱、理论、视频、课件、实验/研读/训练/创作、作业、测验、考核、达成、问卷、归档、数字孪生、推荐、文档。
+- 模板按课程画像适配工程实验、文学研读、体育训练、艺术创作、经管法案例和通用课程，不允许把 CKGDT、MAD、SEB 等具体课程名称写成平台逻辑。
+- 一键生课生成结果必须携带 `courseTemplate`，资源包必须写入 `配置/course_template.json`，并在 `配置/manifest.json`、`课程资源包清单.json/md`、`配置/lazy_generation.json` 中记录模板 ID、版本和画像。
+- 实践任务生成必须由课程画像驱动：工程课可生成实验项目，文学课生成研读实践，体育课生成训练实践，艺术课生成创作实践，经管法课程生成案例实践；资源清单和审核清单必须显示画像术语，不得把所有课程默认写成“实验”。
+- 学科画像模板必须独立版本化：`course_template.json` 应同时记录通用模板 `id/version` 和画像模板 `profile_template_id/profile_template_version`，资源包清单必须展示两层版本，便于以后升级文学、体育、艺术等课程画像而不覆盖已审核课程资源。
+- 运行时术语必须画像驱动：历史表名和路由可继续使用 `lab_tasks` 兼容旧库，但归档上下文、任务列表、任务管理、报告/材料/提交入口必须通过 `CourseTerminologyService` 显示实验、研读、训练、创作、案例或技能实践等当前课程术语。
+- 智能体和审核 prompt 也必须画像术语驱动：归档审核、教学上下文、特殊智能体工具、任务生成提示词不得固定写“实验项目/实验报告/实验任务”，必须使用 `CourseTerminologyService` 或系统事实第 4 段中的当前课程实践术语。
+- 归档模板正文必须平台化：除学校标准材料名和兼容旧模板识别 token 外，期初/期中/期末/结课模板正文应使用“实践任务/实践报告/实践学时/实践成绩”等通用表述，或通过课程术语服务动态生成，不得把所有课程写成工程实验课。
+- `CourseDataService` 和 `CoursePackageLoader` 导入课程包时必须保留模板信息；`course_package_versions` 记录 `template_id`、`template_version`、`template_profile`、`profile_template_id`、`profile_template_name`、`profile_template_version`，用于审计和后续模板升级。
+- `platform_readiness.json` 不只是图谱检测结果，还必须包含 `resource_contract`：必备配置文件、必备模块、归档四阶段、懒生成资源类型、通用模板版本、画像模板版本、达成/考核/人工审核要求，确保新课程资源包可被机器审计和运行器加载。
+- `CoursePackageLoader` 导入本地或远程新课程包时必须把 `图谱/*.json` 落库到 `graphs/nodes/edges`，并保留课程 `course_id`；不得只登记图谱文件到 `resource_files`。归档上下文、智能体和数字孪生必须能从数据库读取当前课程图谱。
+- 旧资源包没有 `course_template.json` 时，应从 `manifest.template` 或 `course_profile.json` 推导；仍缺失时使用通用模板兜底，不得阻断课程导入。
+- 平台化回归测试必须覆盖至少一个非工程课程；当前用例为“文学鉴赏”，验证 `literature_reading` 模板画像、文本研读/主题流派子图谱、研读实践任务，以及资源包中不得出现《移动应用开发》、软件23、移动技术栈等脏数据。
 
 ### 动态课程子图谱（2026-07-05）
 
 - 新增 `CourseSubgraphService`：根据课程名、章节和大纲识别课程画像，支持文学、体育、艺术、经管法、技能、通用课程。
 - 一键生课会生成类型化子图谱，例如文学研读图谱、足球技能训练图谱、艺术创作图谱、案例决策图谱、工程/通用实践图谱。
-- 生成结果包含 `courseProfile` 和 `platformReadiness`，资源包写入 `配置/course_profile.json`、`配置/platform_readiness.json` 和 `文档/平台化检测报告.md`。
+- 生成结果包含 `courseProfile`、`courseTemplate` 和 `platformReadiness`，资源包写入 `配置/course_profile.json`、`配置/course_template.json`、`配置/platform_readiness.json` 和 `文档/平台化检测报告.md`。
 - 图谱详情页支持新增节点、编辑选中节点、删除选中节点，保证 AI 生成图谱可由教师继续修订。
 
 ---

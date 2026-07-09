@@ -129,7 +129,8 @@ class ResourceGenerationService {
     // 检查是否已存在同章节同 source_type 的 PDF
     final existing = await db.query(
       'resource_files',
-      where: "course_id = ? AND file_type = 'pdf' AND chapter = ? AND source_type = ?",
+      where:
+          "course_id = ? AND file_type = 'pdf' AND chapter = ? AND source_type = ?",
       whereArgs: [courseId, chapter, sourceType],
     );
     if (existing.isNotEmpty) {
@@ -146,11 +147,13 @@ class ResourceGenerationService {
 
     // 加载中文字体
     try {
-      final fontData = await rootBundle.load('assets/fonts/NotoSansSC-Regular.ttf');
+      final fontData =
+          await rootBundle.load('assets/fonts/NotoSansSC-Regular.ttf');
       font = pw.Font.ttf(fontData);
     } catch (_) {}
     try {
-      final boldData = await rootBundle.load('assets/fonts/NotoSansSC-Bold.ttf');
+      final boldData =
+          await rootBundle.load('assets/fonts/NotoSansSC-Bold.ttf');
       boldFont = pw.Font.ttf(boldData);
     } catch (_) {
       boldFont = font;
@@ -185,7 +188,8 @@ class ResourceGenerationService {
           children.add(pw.SizedBox(height: 8));
           children.add(pw.Text(
             chapter,
-            style: pw.TextStyle(font: font, fontSize: 16, color: PdfColors.grey600),
+            style: pw.TextStyle(
+                font: font, fontSize: 16, color: PdfColors.grey600),
           ));
           children.add(pw.SizedBox(height: 20));
           firstHeading = false;
@@ -205,13 +209,15 @@ class ResourceGenerationService {
         children.add(pw.SizedBox(height: 12));
         children.add(pw.Text(
           trimmed.substring(3),
-          style: pw.TextStyle(font: font, fontSize: 15, fontWeight: pw.FontWeight.bold),
+          style: pw.TextStyle(
+              font: font, fontSize: 15, fontWeight: pw.FontWeight.bold),
         ));
       } else if (trimmed.startsWith('### ')) {
         children.add(pw.SizedBox(height: 8));
         children.add(pw.Text(
           trimmed.substring(4),
-          style: pw.TextStyle(font: font, fontSize: 13, fontWeight: pw.FontWeight.bold),
+          style: pw.TextStyle(
+              font: font, fontSize: 13, fontWeight: pw.FontWeight.bold),
         ));
       } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
         children.add(pw.Padding(
@@ -283,7 +289,8 @@ class ResourceGenerationService {
     // 检查已存在
     final existing = await db.query(
       'resource_files',
-      where: "course_id = ? AND file_type = 'ppt' AND chapter = ? AND source_type = ?",
+      where:
+          "course_id = ? AND file_type = 'ppt' AND chapter = ? AND source_type = ?",
       whereArgs: [courseId, chapter, sourceType],
     );
     if (existing.isNotEmpty) {
@@ -386,7 +393,8 @@ class ResourceGenerationService {
     // 检查已存在
     final existing = await db.query(
       'resource_files',
-      where: "course_id = ? AND file_type = 'video' AND chapter = ? AND source_type = ?",
+      where:
+          "course_id = ? AND file_type = 'video' AND chapter = ? AND source_type = ?",
       whereArgs: [courseId, chapter, sourceType],
     );
     if (existing.isNotEmpty) {
@@ -407,7 +415,8 @@ class ResourceGenerationService {
         'file_path': scriptPath,
         'file_type': 'video',
         'chapter': chapter,
-        'description': '[${sourceType == 'preset' ? '预制' : 'AI生成'}] $title 视频脚本',
+        'description':
+            '[${sourceType == 'preset' ? '预制' : 'AI生成'}] $title 视频脚本',
         'source_type': sourceType,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
@@ -427,8 +436,32 @@ class ResourceGenerationService {
   }) async {
     final results = <GenerationResult>[];
 
-    // 查找课程包的理论目录
     final dir = await _getCourseDir(courseId);
+    final planned = await _loadPlannedChapters(dir);
+    if (planned.isNotEmpty) {
+      await _clearGeneratedResources(courseId, sourceType);
+      for (var i = 0; i < planned.length; i++) {
+        final chapter = planned[i];
+        final title = chapter.title;
+        onProgress?.call(title, 'plan', i / planned.length);
+        final mdContent = _teachingResourceMarkdown(chapter);
+        final chapterMdPath =
+            '$dir${Platform.pathSeparator}理论${Platform.pathSeparator}${_safeFileName(title)}-教学资源.md';
+        await File(chapterMdPath).parent.create(recursive: true);
+        await File(chapterMdPath).writeAsString(mdContent);
+        final r = await generateForChapter(
+          courseId: courseId,
+          chapterTitle: title,
+          chapterMdPath: chapterMdPath,
+          sourceType: sourceType,
+        );
+        results.add(r);
+      }
+      onProgress?.call('', 'done', 1.0);
+      return results;
+    }
+
+    // 查找课程包的理论目录
     final theoryDir = Directory('$dir${Platform.pathSeparator}理论');
     if (!await theoryDir.exists()) {
       // 尝试 courses/{courseId}/ 目录下的 MD 文件
@@ -439,7 +472,9 @@ class ResourceGenerationService {
             .where((f) => f.path.endsWith('.md'))
             .toList();
         for (final mdFile in mdFiles) {
-          final name = mdFile.path.split(Platform.pathSeparator).last
+          final name = mdFile.path
+              .split(Platform.pathSeparator)
+              .last
               .replaceAll(RegExp(r'\.md$'), '');
           final r = await generateForChapter(
             courseId: courseId,
@@ -454,13 +489,17 @@ class ResourceGenerationService {
     }
 
     // 遍历理论目录下的 MD 文件
-    final mdFiles = await theoryDir
+    final mdFiles = (await theoryDir
         .list()
         .where((f) => f.path.endsWith('.md'))
-        .toList();
+        .toList())
+      ..sort(
+          (a, b) => _chapterSortKey(a.path).compareTo(_chapterSortKey(b.path)));
 
     for (final mdFile in mdFiles) {
-      final name = mdFile.path.split(Platform.pathSeparator).last
+      final name = mdFile.path
+          .split(Platform.pathSeparator)
+          .last
           .replaceAll(RegExp(r'\.md$'), '');
       final r = await generateForChapter(
         courseId: courseId,
@@ -472,6 +511,161 @@ class ResourceGenerationService {
     }
 
     return results;
+  }
+
+  Future<void> _clearGeneratedResources(
+      String courseId, String sourceType) async {
+    final db = await DatabaseHelper.instance.database;
+    final rows = await db.query(
+      'resource_files',
+      columns: ['file_path'],
+      where:
+          "course_id = ? AND source_type = ? AND file_type IN ('pdf', 'ppt', 'video')",
+      whereArgs: [courseId, sourceType],
+    );
+    for (final row in rows) {
+      final path = row['file_path']?.toString() ?? '';
+      if (path.isEmpty) continue;
+      try {
+        final file = File(path);
+        if (await file.exists()) await file.delete();
+      } catch (e) {
+        swallowDebug(e, tag: 'ResourceGen.clearFile');
+      }
+    }
+    await db.delete(
+      'resource_files',
+      where:
+          "course_id = ? AND source_type = ? AND file_type IN ('pdf', 'ppt', 'video')",
+      whereArgs: [courseId, sourceType],
+    );
+  }
+
+  Future<List<_PlannedChapter>> _loadPlannedChapters(String courseDir) async {
+    final lazyFile = File(
+      '$courseDir${Platform.pathSeparator}配置${Platform.pathSeparator}lazy_generation.json',
+    );
+    final chaptersFile = File(
+      '$courseDir${Platform.pathSeparator}配置${Platform.pathSeparator}chapters.json',
+    );
+    final chapterDetails = <int, Map<String, dynamic>>{};
+    if (await chaptersFile.exists()) {
+      try {
+        final list = jsonDecode(await chaptersFile.readAsString()) as List;
+        for (final item in list.whereType<Map>()) {
+          final map = Map<String, dynamic>.from(item);
+          final number = int.tryParse(map['number']?.toString() ?? '') ?? 0;
+          if (number > 0) chapterDetails[number] = map;
+        }
+      } catch (e, st) {
+        swallowDebug(e, tag: 'ResourceGen.loadChapters', stack: st);
+      }
+    }
+    if (await lazyFile.exists()) {
+      try {
+        final json =
+            jsonDecode(await lazyFile.readAsString()) as Map<String, dynamic>;
+        final chapters = (json['chapters'] as List? ?? const [])
+            .whereType<Map>()
+            .map(Map<String, dynamic>.from)
+            .toList();
+        final result = <_PlannedChapter>[];
+        for (final chapter in chapters) {
+          final number =
+              int.tryParse(chapter['chapter_number']?.toString() ?? '') ?? 0;
+          if (number <= 0) continue;
+          final detail = chapterDetails[number] ?? const {};
+          final titleText =
+              chapter['chapter_title']?.toString().trim().isNotEmpty == true
+                  ? chapter['chapter_title'].toString().trim()
+                  : detail['title']?.toString().trim() ?? '第$number章';
+          result.add(_PlannedChapter(
+            number: number,
+            title: _normalizeChapterTitle(number, titleText),
+            description: detail['description']?.toString() ?? '',
+            objectives: _stringList(detail['objectives']),
+            keyPoints: _stringList(detail['key_points']),
+            difficultPoints: _stringList(detail['difficult_points']),
+          ));
+        }
+        result.sort((a, b) => a.number.compareTo(b.number));
+        if (result.isNotEmpty) return result;
+      } catch (e, st) {
+        swallowDebug(e, tag: 'ResourceGen.loadLazyPlan', stack: st);
+      }
+    }
+    final chapterDetailsList = chapterDetails.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    return chapterDetailsList
+        .map((entry) => _PlannedChapter(
+              number: entry.key,
+              title: _normalizeChapterTitle(
+                entry.key,
+                entry.value['title']?.toString() ?? '第${entry.key}章',
+              ),
+              description: entry.value['description']?.toString() ?? '',
+              objectives: _stringList(entry.value['objectives']),
+              keyPoints: _stringList(entry.value['key_points']),
+              difficultPoints: _stringList(entry.value['difficult_points']),
+            ))
+        .toList();
+  }
+
+  String _teachingResourceMarkdown(_PlannedChapter chapter) {
+    final objectives = chapter.objectives.isEmpty
+        ? ['理解${chapter.shortTitle}的核心概念', '能够完成${chapter.shortTitle}相关学习任务']
+        : chapter.objectives;
+    final keyPoints =
+        chapter.keyPoints.isEmpty ? [chapter.shortTitle] : chapter.keyPoints;
+    final difficultPoints = chapter.difficultPoints.isEmpty
+        ? ['知识应用与实践迁移']
+        : chapter.difficultPoints;
+    final buffer = StringBuffer()
+      ..writeln('# ${chapter.title} 教学资源')
+      ..writeln()
+      ..writeln('## 教学目标')
+      ..writeln()
+      ..writeln(objectives.map((item) => '- $item').join('\n'))
+      ..writeln()
+      ..writeln('## 教学内容')
+      ..writeln()
+      ..writeln(chapter.description.isNotEmpty
+          ? chapter.description
+          : '${chapter.shortTitle}的概念体系、方法步骤、典型应用和学习证据。')
+      ..writeln()
+      ..writeln('## 教学重点')
+      ..writeln()
+      ..writeln(keyPoints.map((item) => '- $item').join('\n'))
+      ..writeln()
+      ..writeln('## 教学难点')
+      ..writeln()
+      ..writeln(difficultPoints.map((item) => '- $item').join('\n'))
+      ..writeln()
+      ..writeln('## PPT结构')
+      ..writeln()
+      ..writeln('- 章节导入：学习目标与知识图谱定位')
+      ..writeln('- 核心讲解：概念、流程、方法与示例')
+      ..writeln('- 课堂活动：讨论、演示、训练或案例分析')
+      ..writeln('- 评价反馈：测验、作业、实践证据和达成要求')
+      ..writeln()
+      ..writeln('## PDF讲义')
+      ..writeln()
+      ..writeln('本讲义用于课前预习、课堂讲解和课后复习，内容与本章视频、PPT保持同一章节顺序，但侧重完整说明和可打印阅读。')
+      ..writeln()
+      ..writeln('## 视频脚本')
+      ..writeln()
+      ..writeln('### 00:00-01:00 导入')
+      ..writeln('说明${chapter.shortTitle}在课程知识图谱中的位置，明确本节学习目标。')
+      ..writeln()
+      ..writeln('### 01:00-06:00 核心讲解')
+      ..writeln('围绕教学重点展开讲解，并结合大纲要求说明概念、流程和应用场景。')
+      ..writeln()
+      ..writeln('### 06:00-09:00 示例与任务')
+      ..writeln('通过案例、操作、训练或文本分析展示知识应用过程。')
+      ..writeln()
+      ..writeln('### 09:00-10:00 小结')
+      ..writeln('总结本章关键知识点，说明测验、作业和实践证据要求。');
+    return buffer.toString();
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -522,12 +716,86 @@ class ResourceGenerationService {
 
   Future<String> _getCourseDir(String courseId) async {
     try {
-      final appDir = await getApplicationSupportDirectory();
+      final appDir = await getApplicationDocumentsDirectory();
       return '${appDir.path}${Platform.pathSeparator}courses${Platform.pathSeparator}$courseId';
     } catch (_) {
       return 'courses${Platform.pathSeparator}$courseId';
     }
   }
+
+  String _normalizeChapterTitle(int number, String value) {
+    var title = value.trim();
+    if (title.startsWith('第$number章')) return title;
+    title =
+        title.replaceFirst(RegExp(r'^第\s*[一二三四五六七八九十\d]+\s*章\s*'), '').trim();
+    return '第$number章 $title'.trim();
+  }
+
+  List<String> _stringList(Object? value) {
+    if (value is List) {
+      return value
+          .map((item) => item.toString())
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
+    final text = value?.toString().trim() ?? '';
+    return text.isEmpty ? <String>[] : <String>[text];
+  }
+
+  String _safeFileName(String value) =>
+      value.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_').trim();
+
+  int _chapterSortKey(String path) {
+    final name = path.split(Platform.pathSeparator).last;
+    final m = RegExp(r'第\s*([一二三四五六七八九十\d]+)\s*章').firstMatch(name);
+    if (m == null) return 9999;
+    return _chapterNumber(m.group(1)!) ?? 9999;
+  }
+
+  int? _chapterNumber(String value) {
+    final arabic = int.tryParse(value);
+    if (arabic != null) return arabic;
+    const digits = {
+      '一': 1,
+      '二': 2,
+      '三': 3,
+      '四': 4,
+      '五': 5,
+      '六': 6,
+      '七': 7,
+      '八': 8,
+      '九': 9,
+    };
+    if (value == '十') return 10;
+    if (value.startsWith('十')) return 10 + (digits[value.substring(1)] ?? 0);
+    if (value.endsWith('十')) return (digits[value.substring(0, 1)] ?? 0) * 10;
+    if (value.contains('十')) {
+      final parts = value.split('十');
+      return (digits[parts[0]] ?? 0) * 10 + (digits[parts[1]] ?? 0);
+    }
+    return digits[value];
+  }
+}
+
+class _PlannedChapter {
+  final int number;
+  final String title;
+  final String description;
+  final List<String> objectives;
+  final List<String> keyPoints;
+  final List<String> difficultPoints;
+
+  const _PlannedChapter({
+    required this.number,
+    required this.title,
+    required this.description,
+    required this.objectives,
+    required this.keyPoints,
+    required this.difficultPoints,
+  });
+
+  String get shortTitle =>
+      title.replaceFirst(RegExp(r'^第\s*[一二三四五六七八九十\d]+\s*章\s*'), '').trim();
 }
 
 /// 单章节生成结果

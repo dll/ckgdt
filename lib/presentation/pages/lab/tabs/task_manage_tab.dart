@@ -12,6 +12,7 @@ class _TaskManageTab extends StatefulWidget {
 class _TaskManageTabState extends State<_TaskManageTab> {
   List<Map<String, dynamic>> _tasks = [];
   Map<int, Map<String, dynamic>> _statsCache = {};
+  CourseTerms _terms = CourseTerms.fromPracticeLabel('实验项目');
   bool _isLoading = true;
 
   @override
@@ -23,6 +24,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
   Future<void> _loadTasks() async {
     setState(() => _isLoading = true);
     try {
+      final terms = await CourseTerminologyService().activeTerms();
       final tasks = await widget.labTaskDao.getTasks();
       final statsCache = <int, Map<String, dynamic>>{};
       for (final task in tasks) {
@@ -33,6 +35,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
         setState(() {
           _tasks = tasks;
           _statsCache = statsCache;
+          _terms = terms;
           _isLoading = false;
         });
       }
@@ -59,7 +62,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                               Icon(Icons.science_outlined,
                                   size: 56, color: Colors.grey[300]),
                               const SizedBox(height: 12),
-                              Text('暂无实验任务',
+                              Text('暂无${_terms.taskPluralLabel}',
                                   style: TextStyle(color: Colors.grey[500])),
                               const SizedBox(height: 8),
                               Text('点击右下角按钮创建新任务',
@@ -352,7 +355,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(isEditing ? '编辑任务' : '新建实验任务'),
+          title: Text(isEditing ? '编辑任务' : '新建${_terms.taskLabel}'),
           content: SizedBox(
             width: double.maxFinite,
             child: SingleChildScrollView(
@@ -363,7 +366,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                     controller: titleCtrl,
                     decoration: InputDecoration(
                       labelText: '任务标题 *',
-                      hintText: '如：实验1：环境搭建',
+                      hintText: '如：${_terms.taskLabel}1：主题任务',
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10)),
                       contentPadding: const EdgeInsets.symmetric(
@@ -451,7 +454,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                     maxLines: 3,
                     decoration: InputDecoration(
                       labelText: '任务描述',
-                      hintText: '请简要描述实验任务的背景和目标...',
+                      hintText: '请简要描述${_terms.taskLabel}的背景和目标...',
                       alignLabelWithHint: true,
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10)),
@@ -464,8 +467,8 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                     controller: reqCtrl,
                     maxLines: 3,
                     decoration: InputDecoration(
-                      labelText: '实验要求',
-                      hintText: '列出具体的实验步骤要求...',
+                      labelText: '${_terms.practiceLabel}要求',
+                      hintText: '列出具体的${_terms.practiceLabel}过程要求...',
                       alignLabelWithHint: true,
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10)),

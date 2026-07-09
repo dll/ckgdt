@@ -7,6 +7,7 @@ import '../../data/models/archive_document_model.dart';
 import '../ai_service.dart';
 import '../archive_context_service.dart';
 import '../archive_template_loader.dart';
+import '../course_terminology_service.dart';
 import 'base_document_processor.dart';
 import 'document_processor.dart';
 import 'review_result.dart';
@@ -23,7 +24,7 @@ import 'review_result.dart';
 ///      （由 LLM 一次性扫读全文给出结构性 finding）
 ///
 ///   2. **细审 numerical**——所有数字相互一致：
-///      - 学时加和（每章学时 + 实验学时 = 总学时）
+///      - 学时加和（每章学时 + 实践学时 = 总学时）
 ///      - 权重加和（平时+实验+期末 = 100%）
 ///      - 课程目标 vs 评价方式 vs 毕业要求映射 三方对账
 ///      - 每个章节的"学习预期成果"是否真支撑某条课程目标
@@ -55,6 +56,7 @@ class AiAuditProcessor extends BaseDocumentProcessor {
   final _ai = AiService();
   final _ctx = ArchiveContextService();
   final _dao = ArchiveDao();
+  final _terminology = CourseTerminologyService();
 
   @override
   String get docType => auditDocType;
@@ -122,12 +124,14 @@ class AiAuditProcessor extends BaseDocumentProcessor {
       periodZh: periods.periodLabel(target.period),
       docType: targetDocType,
     );
+    final terms = await _terminology.activeTerms();
 
     final prompt = _buildAuditPrompt(
       target: target,
       systemFacts: systemFacts,
       referenceMd: referenceMd,
       ignoredKeys: ignoredKeys,
+      terms: terms,
     );
 
     final messages = [
@@ -251,6 +255,7 @@ class AiAuditProcessor extends BaseDocumentProcessor {
     required String systemFacts,
     required String? referenceMd,
     required List<String> ignoredKeys,
+    required CourseTerms terms,
   }) {
     final buf = StringBuffer();
 
@@ -260,19 +265,19 @@ class AiAuditProcessor extends BaseDocumentProcessor {
     buf.writeln();
     buf.writeln('## 第一层：粗审（structural）');
     buf.writeln('- 文档必备段落是否齐全（如教学大纲必含：基本信息 / 课程简介 / '
-        '课程目标 / 教学内容 / 实验项目 / 考核方式 / 参考教材）');
+        '课程目标 / 教学内容 / ${terms.taskPluralLabel} / 考核方式 / 参考教材）');
     buf.writeln('- OBE 框架完整性（课程目标 → 毕业要求映射 → 评价方式三角是否闭环）');
     buf.writeln('- 章节是否与系统事实第 3 段的根节点对齐');
     buf.writeln('- 思政元素 / 教学重难点 / 学习预期成果是否每章都有');
     buf.writeln();
     buf.writeln('## 第二层：细审（numerical）★ 这是教师肉眼最易忽略的');
-    buf.writeln('- **学时加和**：每章学时之和 + 实验学时之和 是否等于总学时');
-    buf.writeln('- **权重加和**：平时 + 实验 + 期末 三项 = 100%？');
+    buf.writeln('- **学时加和**：每章学时之和 + ${terms.practiceLabel}学时之和 是否等于总学时');
+    buf.writeln('- **权重加和**：平时 + ${terms.practiceLabel} + 期末 三项 = 100%？');
     buf.writeln('- **课程目标 vs 权重映射**：N 个目标必须每个都在评价方式表中有权重，'
         '不能漏不能重');
     buf.writeln('- **章节学习成果 vs 课程目标支撑**：每章末尾的"学习预期成果支撑课程目标 X"，'
         '所有目标都被覆盖至少 1 次了吗');
-    buf.writeln('- **实验项目编号** 是否与系统事实第 4 段一致');
+    buf.writeln('- **${terms.taskLabel}编号** 是否与系统事实第 4 段一致');
     buf.writeln('- **基本身份字段**：教师 / 班级 / 专业 / 学期 / 学时 / 学分 是否与'
         '系统事实第 1、2、5 段完全一致（否则属 ❌ 错误）');
     buf.writeln();

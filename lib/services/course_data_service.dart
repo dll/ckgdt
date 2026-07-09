@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import '../core/error_handler.dart';
+import 'course_template_registry.dart';
 import 'resource_persistence_service.dart';
 
 /// 课程数据统一入口 — 从 data/{courseId}/ 或 Gitee 仓库动态加载所有课程资源
@@ -60,16 +61,31 @@ class CourseDataService {
         exclude: r'第.*章.*\d+\.md$');
     final graphDirs = await _scanGraphDirs(courseId);
     final usersManifest = await _loadJson('data/$courseId/配置/mock_data.json');
+    final courseTemplate = await _loadJson(
+      'data/$courseId/配置/course_template.json',
+    );
+    final courseProfile = await _loadJson(
+      'data/$courseId/配置/course_profile.json',
+    );
 
     return CourseDataPackage(
       courseId: courseId,
-      manifest: manifest,
+      manifest: _manifestWithTemplate(
+        manifest: manifest,
+        courseTemplate: courseTemplate,
+        courseProfile: courseProfile,
+      ),
       chapters: chapters,
       quizFiles: quizFiles,
       videoFiles: videoFiles,
       pptFiles: pptFiles,
       graphDirs: graphDirs,
       extraConfig: usersManifest,
+      courseTemplate: _resolveCourseTemplate(
+        manifest: manifest,
+        courseTemplate: courseTemplate,
+        courseProfile: courseProfile,
+      ),
     );
   }
 
@@ -86,14 +102,31 @@ class CourseDataService {
           await _loadJsonListFromFile('$courseDir/配置/chapters.json');
       final chapters =
           chaptersRaw?.map((e) => ChapterDef.fromMap(e)).toList() ?? [];
+      final courseTemplate =
+          await _loadJsonFromFile('$courseDir/配置/course_template.json');
+      final courseProfile =
+          await _loadJsonFromFile('$courseDir/配置/course_profile.json');
 
       return CourseDataPackage(
         courseId: courseId,
-        manifest: manifestFile,
+        manifest: _manifestWithTemplate(
+          manifest: manifestFile,
+          courseTemplate: courseTemplate,
+          courseProfile: courseProfile,
+        ),
         chapters: chapters,
+        courseTemplate: _resolveCourseTemplate(
+          manifest: manifestFile,
+          courseTemplate: courseTemplate,
+          courseProfile: courseProfile,
+        ),
+        packageRootPath: courseDir,
         source: CourseSource.localDir,
       );
-    } catch (e, st) { swallowDebug(e, tag: 'CourseDataService', stack: st);  }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CourseDataService', stack: st);
+    }
+    return null;
   }
 
   /// 从 Gitee 远程仓库加载
@@ -107,9 +140,25 @@ class CourseDataService {
         courseId: courseId,
         manifest: result.config,
         chapters: result.chapters.map((e) => ChapterDef.fromMap(e)).toList(),
+        courseTemplate: result.courseTemplate,
+        configFiles: {
+          'config.json': result.config,
+          'assessment.json': result.assessmentConfig,
+          'achievement_calc.json': result.achievementConfig,
+          'report_templates.json': result.reportTemplates,
+          'lab_tasks.json': result.labTasks,
+          'homework.json': result.homeworks,
+          'course_profile.json': result.courseProfile,
+          'platform_readiness.json': result.platformReadiness,
+          'course_template.json': result.courseTemplate,
+          'graphs': result.graphs,
+        },
         source: CourseSource.gitee,
       );
-    } catch (e, st) { swallowDebug(e, tag: 'CourseDataService', stack: st);  }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CourseDataService', stack: st);
+    }
+    return null;
   }
 
   /// 加载单个 JSON 文件
@@ -167,7 +216,9 @@ class CourseDataService {
           fileName: fileName,
           title: _extractTitle(content),
         ));
-      } catch (e, st) { swallowDebug(e, tag: 'CourseDataService', stack: st);  }
+      } catch (e, st) {
+        swallowDebug(e, tag: 'CourseDataService', stack: st);
+      }
     }
     return files;
   }
@@ -179,7 +230,9 @@ class CourseDataService {
       if (decoded is Map) {
         return decoded.keys.map((e) => e.toString()).toList();
       }
-    } catch (e, st) { swallowDebug(e, tag: 'CourseDataService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CourseDataService', stack: st);
+    }
     return const [];
   }
 
@@ -257,7 +310,10 @@ class CourseDataService {
   String _safeDecode(String value) {
     try {
       return Uri.decodeFull(value);
-    } catch (e, st) { swallowDebug(e, tag: 'CourseDataService', stack: st);  }
+    } catch (_) {
+      // AssetManifest keys are paths, not guaranteed URI strings. A literal
+      // percent sign in a file name is valid and should not flood logs.
+    }
     return value;
   }
 
@@ -279,7 +335,10 @@ class CourseDataService {
       if (!await file.exists()) return null;
       final content = await file.readAsString(encoding: utf8);
       return jsonDecode(content) as Map<String, dynamic>;
-    } catch (e, st) { swallowDebug(e, tag: 'CourseDataService', stack: st);  }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CourseDataService', stack: st);
+    }
+    return null;
   }
 
   /// 从文件系统加载 JSON 数组
@@ -290,7 +349,42 @@ class CourseDataService {
       final content = await file.readAsString(encoding: utf8);
       final list = jsonDecode(content) as List;
       return list.cast<Map<String, dynamic>>();
-    } catch (e, st) { swallowDebug(e, tag: 'CourseDataService', stack: st);  }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CourseDataService', stack: st);
+    }
+    return null;
+  }
+
+  Map<String, dynamic> _manifestWithTemplate({
+    required Map<String, dynamic> manifest,
+    Map<String, dynamic>? courseTemplate,
+    Map<String, dynamic>? courseProfile,
+  }) {
+    final template = _resolveCourseTemplate(
+      manifest: manifest,
+      courseTemplate: courseTemplate,
+      courseProfile: courseProfile,
+    );
+    return {
+      ...manifest,
+      'template': template,
+      'template_version': template['version'],
+    };
+  }
+
+  Map<String, dynamic> _resolveCourseTemplate({
+    required Map<String, dynamic> manifest,
+    Map<String, dynamic>? courseTemplate,
+    Map<String, dynamic>? courseProfile,
+  }) {
+    if (courseTemplate != null && courseTemplate.isNotEmpty) {
+      return courseTemplate;
+    }
+    final manifestTemplate = manifest['template'];
+    if (manifestTemplate is Map && manifestTemplate.isNotEmpty) {
+      return Map<String, dynamic>.from(manifestTemplate);
+    }
+    return CourseTemplateRegistry.resolve(courseProfile: courseProfile).toMap();
   }
 }
 
@@ -307,6 +401,9 @@ class CourseDataPackage {
   final List<QuizFileInfo> pptFiles;
   final List<GraphDirInfo> graphDirs;
   final Map<String, dynamic>? extraConfig;
+  final Map<String, dynamic> courseTemplate;
+  final Map<String, dynamic> configFiles;
+  final String? packageRootPath;
   final CourseSource source;
 
   const CourseDataPackage({
@@ -318,6 +415,9 @@ class CourseDataPackage {
     this.pptFiles = const [],
     this.graphDirs = const [],
     this.extraConfig,
+    this.courseTemplate = const {},
+    this.configFiles = const {},
+    this.packageRootPath,
     this.source = CourseSource.assets,
   });
 

@@ -1,4 +1,4 @@
-﻿import 'package:fl_chart/fl_chart.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import 'achievement_config.dart';
@@ -218,7 +218,7 @@ class ScoreColumn {
     this.get, {
     this.isAchievement = false,
     this.bold = false,
-    this.digits = 1,
+    this.digits = 0,
     this.headerColor,
   });
 }

@@ -338,6 +338,30 @@ void main() {
     }
   });
 
+  test('新建达成批次不再回落到旧软件23班级', () async {
+    await db.insert('classes', {
+      'name': '软件23',
+      'is_archived': 1,
+    });
+    await db.insert('classes', {
+      'name': '文学鉴赏2026春季班',
+      'is_archived': 0,
+    });
+
+    final batchId = await dao.addBatch(
+      batchName: '文学鉴赏-自动批次',
+      courseName: '文学鉴赏',
+      semester: '2025-2026年第2学期',
+      teacherId: 'teacher_lit',
+    );
+
+    final batch = await dao.getBatch(batchId);
+    expect(batch, isNotNull);
+    expect(batch!['class_name'], '文学鉴赏2026春季班');
+    expect(batch['class_name'], isNot('软件23'));
+    expect(batch['course_name'], '文学鉴赏');
+  });
+
   test('达成批次固化当前课程目标的大纲版本', () async {
     await dao.saveCourseObjectives(
       '移动应用开发',
@@ -473,6 +497,61 @@ void main() {
     expect(pingshi['obj1'], closeTo(0.8, 0.0001));
     expect(exam['obj1'], closeTo(0.9, 0.0001));
     expect(aggregate['obj1'], closeTo(0.86, 0.0001));
+  });
+
+  test('五目标课程动态成绩导入后目标5参与班级平均和加权达成', () async {
+    const courseName = '课程知识图谱与数字孪生平台';
+    final objectiveRows = [
+      for (var i = 1; i <= 5; i++)
+        {
+          'idx': i,
+          'name': '课程目标$i',
+          'indicator': '$i.1',
+          'weight': i == 5 ? 0.20 : 0.20,
+          'full_mark': 20.0,
+          'pingshi_ratio': 0.0,
+          'experiment_ratio': 0.0,
+          'exam_ratio': 1.0,
+        }
+    ];
+    await dao.saveCourseObjectives(courseName, objectiveRows);
+    final batchId = await dao.addBatch(
+      batchName: 'CKGDT五目标达成',
+      courseName: courseName,
+      className: '软件23',
+      semester: '2025-2026-2',
+      teacherId: 't1',
+    );
+
+    await AchievementExcelService.instance.importToDatabase(batchId, [
+      {
+        'student_id': '2023001',
+        'student_name': '张三',
+        'obj1_score': 16.0,
+        'obj2_score': 16.0,
+        'obj3_score': 16.0,
+        'obj4_score': 16.0,
+        'total_score': 80.0,
+        '_components': [
+          for (var i = 1; i <= 5; i++)
+            {
+              'kind': 'exam',
+              'objective': i,
+              'label': '目标$i考核',
+              'score': i == 5 ? 18.0 : 16.0,
+              'achievement': i == 5 ? 0.9 : 0.8,
+              'ratio': 1.0,
+            }
+        ],
+      }
+    ]);
+
+    final avg = await dao.calculateClassAverage(batchId);
+    expect(avg['课程目标5'], closeTo(0.9, 0.0001));
+
+    final recalculated = await dao.recalculateAndSaveBatch(batchId);
+    expect(recalculated['课程目标5'], closeTo(0.9, 0.0001));
+    expect(recalculated['weighted'], closeTo(0.82, 0.0001));
   });
 
   test('课程目标配置兼容旧库字符串数字和百分号', () {

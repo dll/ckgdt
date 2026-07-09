@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
@@ -116,7 +116,8 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.assignment_outlined, size: 64, color: Colors.grey[300]),
+              Icon(Icons.assignment_outlined,
+                  size: 64, color: Colors.grey[300]),
               const SizedBox(height: 16),
               Text('暂无问卷', style: TextStyle(color: Colors.grey[500])),
               const SizedBox(height: 12),
@@ -152,8 +153,7 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
               ),
               const SizedBox(width: 6),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
@@ -218,8 +218,7 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
     );
   }
 
-  Widget _overviewCard(
-      String label, String value, IconData icon, Color color) {
+  Widget _overviewCard(String label, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
@@ -303,8 +302,7 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
           ),
           title: Text(
             title,
-            style:
-                const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -315,8 +313,8 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 1),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                     decoration: BoxDecoration(
                       color: statusColor.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(6),
@@ -331,8 +329,7 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Icon(Icons.people_outline,
-                      size: 12, color: Colors.grey[500]),
+                  Icon(Icons.people_outline, size: 12, color: Colors.grey[500]),
                   const SizedBox(width: 2),
                   Text(
                     '$totalResponses 份回收',
@@ -351,7 +348,8 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
                 color: Colors.red.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Icon(Icons.delete_outline, size: 18, color: Colors.red[400]),
+              child:
+                  Icon(Icons.delete_outline, size: 18, color: Colors.red[400]),
             ),
           ),
           children: [
@@ -362,14 +360,12 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.info_outline,
-                        size: 14, color: Colors.grey[400]),
+                    Icon(Icons.info_outline, size: 14, color: Colors.grey[400]),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         description,
-                        style:
-                            TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ),
                   ],
@@ -388,8 +384,7 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
                       const SizedBox(width: 4),
                       Text(
                         '创建: ${_formatDate(createdAt)}',
-                        style:
-                            TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                       ),
                     ],
                     if (deadline.isNotEmpty) ...[
@@ -399,8 +394,7 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
                       const SizedBox(width: 4),
                       Text(
                         '截止: $deadline',
-                        style:
-                            TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                       ),
                     ],
                   ],
@@ -479,6 +473,13 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
           onTap: () => _importSurveyDesign(id),
         ),
 
+        _actionChip(
+          icon: Icons.cloud_upload_outlined,
+          label: '泛雅导入',
+          color: Colors.brown,
+          onTap: () => _importFanyaResponses(id),
+        ),
+
         // 导出数据
         _actionChip(
           icon: Icons.table_chart_outlined,
@@ -541,8 +542,8 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
     final isNew = existing == null;
     final titleCtrl =
         TextEditingController(text: existing?['title'] as String? ?? '');
-    final descCtrl = TextEditingController(
-        text: existing?['description'] as String? ?? '');
+    final descCtrl =
+        TextEditingController(text: existing?['description'] as String? ?? '');
     final deadlineCtrl =
         TextEditingController(text: existing?['deadline'] as String? ?? '');
     int? selectedClassId = existing?['class_id'] as int?;
@@ -551,7 +552,9 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
     List<Map<String, dynamic>> classes = [];
     try {
       classes = await _classDao.getAllClasses();
-    } catch (e) { swallowDebug(e, tag: 'survey_manage_page'); }
+    } catch (e) {
+      swallowDebug(e, tag: 'survey_manage_page');
+    }
 
     if (!mounted) return;
 
@@ -598,7 +601,8 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
                   const SizedBox(height: 12),
 
                   // 关联班级
-                  DropdownButtonFormField<int?>(value: selectedClassId,
+                  DropdownButtonFormField<int?>(
+                    value: selectedClassId,
                     decoration: InputDecoration(
                       labelText: '关联班级（可选）',
                       border: OutlineInputBorder(
@@ -620,8 +624,7 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
                             ),
                           )),
                     ],
-                    onChanged: (v) =>
-                        setDialogState(() => selectedClassId = v),
+                    onChanged: (v) => setDialogState(() => selectedClassId = v),
                   ),
                   const SizedBox(height: 12),
 
@@ -642,11 +645,10 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
                     onTap: () async {
                       final date = await showDatePicker(
                         context: ctx,
-                        initialDate: DateTime.now().add(
-                            const Duration(days: 7)),
+                        initialDate:
+                            DateTime.now().add(const Duration(days: 7)),
                         firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(
-                            const Duration(days: 365)),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
                       );
                       if (date != null) {
                         setDialogState(() {
@@ -676,22 +678,19 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
                 }
 
                 try {
-                  final currentUser =
-                      _authService.currentUser;
+                  final currentUser = _authService.currentUser;
 
                   if (isNew) {
                     await _surveyDao.createSurvey(
                       title: title,
-                      description:
-                          descCtrl.text.trim().isNotEmpty
-                              ? descCtrl.text.trim()
-                              : null,
+                      description: descCtrl.text.trim().isNotEmpty
+                          ? descCtrl.text.trim()
+                          : null,
                       classId: selectedClassId,
                       creatorId: currentUser?.userId,
-                      deadline:
-                          deadlineCtrl.text.trim().isNotEmpty
-                              ? deadlineCtrl.text.trim()
-                              : null,
+                      deadline: deadlineCtrl.text.trim().isNotEmpty
+                          ? deadlineCtrl.text.trim()
+                          : null,
                     );
                   } else {
                     await _surveyDao.updateSurvey(
@@ -754,10 +753,8 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child:
-                const Text('发布', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('发布', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -798,10 +795,8 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-            child: const Text('关闭',
-                style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('关闭', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -845,8 +840,7 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('删除',
-                style: TextStyle(color: Colors.white)),
+            child: const Text('删除', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -1022,6 +1016,34 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
     }
   }
 
+  Future<void> _importFanyaResponses(int surveyId) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'xls'],
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) return;
+      final bytes = result.files.first.bytes;
+      if (bytes == null) throw StateError('无法读取文件内容');
+      final count = await _surveyDao.importFanyaResponses(surveyId, bytes);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('泛雅问卷导入完成：$count 份回答'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      _loadData();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SurveyManage.importFanya', stack: st);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('泛雅导入失败：$e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
   Future<void> _exportSurveyData(int surveyId) async {
     try {
       final bytes = await _surveyDao.exportSurveyData(surveyId);
@@ -1135,8 +1157,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
               borderRadius: BorderRadius.circular(6),
               onTap: () => _showQuestionDialog(null),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
@@ -1224,7 +1245,9 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
     if (optionsJson != null && optionsJson.isNotEmpty) {
       try {
         options = List<String>.from(json.decode(optionsJson));
-      } catch (e) { swallowDebug(e, tag: 'survey_manage_page'); }
+      } catch (e) {
+        swallowDebug(e, tag: 'survey_manage_page');
+      }
     }
 
     return Container(
@@ -1286,8 +1309,8 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                               const SizedBox(width: 2),
                               Text(
                                 typeLabel,
-                                style: TextStyle(
-                                    fontSize: 10, color: typeColor),
+                                style:
+                                    TextStyle(fontSize: 10, color: typeColor),
                               ),
                             ],
                           ),
@@ -1303,8 +1326,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                             ),
                             child: const Text(
                               '必答',
-                              style: TextStyle(
-                                  fontSize: 10, color: Colors.red),
+                              style: TextStyle(fontSize: 10, color: Colors.red),
                             ),
                           ),
                         ],
@@ -1323,8 +1345,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
               ),
               // 操作按钮
               PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert,
-                    size: 16, color: Colors.grey[400]),
+                icon: Icon(Icons.more_vert, size: 16, color: Colors.grey[400]),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 onSelected: (v) {
@@ -1379,8 +1400,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                         Icon(Icons.delete, size: 16, color: Colors.red),
                         SizedBox(width: 8),
                         Text('删除',
-                            style: TextStyle(
-                                fontSize: 13, color: Colors.red)),
+                            style: TextStyle(fontSize: 13, color: Colors.red)),
                       ],
                     ),
                   ),
@@ -1399,8 +1419,8 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                 runSpacing: 4,
                 children: options.map((opt) {
                   return Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(4),
@@ -1408,8 +1428,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                     ),
                     child: Text(
                       opt,
-                      style: TextStyle(
-                          fontSize: 10, color: Colors.grey[700]),
+                      style: TextStyle(fontSize: 10, color: Colors.grey[700]),
                     ),
                   );
                 }).toList(),
@@ -1444,13 +1463,14 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
           for (final opt in opts) {
             optionControllers.add(TextEditingController(text: opt));
           }
-        } catch (e) { swallowDebug(e, tag: 'survey_manage_page'); }
+        } catch (e) {
+          swallowDebug(e, tag: 'survey_manage_page');
+        }
       }
     }
     // 默认至少 2 个选项（选择题）
     if (optionControllers.isEmpty &&
-        (selectedType == 'single_choice' ||
-            selectedType == 'multi_choice')) {
+        (selectedType == 'single_choice' || selectedType == 'multi_choice')) {
       optionControllers = [
         TextEditingController(),
         TextEditingController(),
@@ -1464,8 +1484,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           final needOptions =
-              selectedType == 'single_choice' ||
-                  selectedType == 'multi_choice';
+              selectedType == 'single_choice' || selectedType == 'multi_choice';
 
           return AlertDialog(
             title: Text(isNew ? '添加题目' : '编辑题目'),
@@ -1493,7 +1512,8 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                     const SizedBox(height: 12),
 
                     // 题型选择
-                    DropdownButtonFormField<String>(value: selectedType,
+                    DropdownButtonFormField<String>(
+                      value: selectedType,
                       decoration: InputDecoration(
                         labelText: '题目类型 *',
                         border: OutlineInputBorder(
@@ -1504,22 +1524,17 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                       ),
                       items: const [
                         DropdownMenuItem(
-                            value: 'single_choice',
-                            child: Text('单选题')),
+                            value: 'single_choice', child: Text('单选题')),
                         DropdownMenuItem(
-                            value: 'multi_choice',
-                            child: Text('多选题')),
-                        DropdownMenuItem(
-                            value: 'rating', child: Text('评分题')),
-                        DropdownMenuItem(
-                            value: 'text', child: Text('文本题')),
+                            value: 'multi_choice', child: Text('多选题')),
+                        DropdownMenuItem(value: 'rating', child: Text('评分题')),
+                        DropdownMenuItem(value: 'text', child: Text('文本题')),
                       ],
                       onChanged: (v) {
                         if (v == null) return;
                         setDialogState(() {
                           selectedType = v;
-                          if ((v == 'single_choice' ||
-                                  v == 'multi_choice') &&
+                          if ((v == 'single_choice' || v == 'multi_choice') &&
                               optionControllers.isEmpty) {
                             optionControllers = [
                               TextEditingController(),
@@ -1543,20 +1558,16 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 12),
                       ),
-                      controller:
-                          TextEditingController(text: '$seq'),
-                      onChanged: (v) =>
-                          seq = int.tryParse(v) ?? seq,
+                      controller: TextEditingController(text: '$seq'),
+                      onChanged: (v) => seq = int.tryParse(v) ?? seq,
                     ),
                     const SizedBox(height: 12),
 
                     // 是否必答
                     SwitchListTile(
-                      title: const Text('是否必答',
-                          style: TextStyle(fontSize: 14)),
+                      title: const Text('是否必答', style: TextStyle(fontSize: 14)),
                       value: isRequired,
-                      onChanged: (v) =>
-                          setDialogState(() => isRequired = v),
+                      onChanged: (v) => setDialogState(() => isRequired = v),
                       contentPadding: EdgeInsets.zero,
                       dense: true,
                     ),
@@ -1577,51 +1588,38 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                           TextButton.icon(
                             onPressed: () {
                               setDialogState(() {
-                                optionControllers
-                                    .add(TextEditingController());
+                                optionControllers.add(TextEditingController());
                               });
                             },
-                            icon:
-                                const Icon(Icons.add, size: 16),
+                            icon: const Icon(Icons.add, size: 16),
                             label: const Text('添加选项',
                                 style: TextStyle(fontSize: 12)),
                             style: TextButton.styleFrom(
                               padding:
-                                  const EdgeInsets.symmetric(
-                                      horizontal: 8),
+                                  const EdgeInsets.symmetric(horizontal: 8),
                               minimumSize: Size.zero,
-                              tapTargetSize:
-                                  MaterialTapTargetSize
-                                      .shrinkWrap,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
-                      ...optionControllers
-                          .asMap()
-                          .entries
-                          .map((entry) {
+                      ...optionControllers.asMap().entries.map((entry) {
                         final optIndex = entry.key;
                         final ctrl = entry.value;
                         return Padding(
-                          padding:
-                              const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.only(bottom: 8),
                           child: Row(
                             children: [
                               CircleAvatar(
                                 radius: 12,
-                                backgroundColor: Colors
-                                    .grey[200],
+                                backgroundColor: Colors.grey[200],
                                 child: Text(
-                                  String.fromCharCode(
-                                      65 + optIndex),
+                                  String.fromCharCode(65 + optIndex),
                                   style: TextStyle(
                                     fontSize: 11,
-                                    fontWeight:
-                                        FontWeight.bold,
-                                    color:
-                                        Colors.grey[700],
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[700],
                                   ),
                                 ),
                               ),
@@ -1629,50 +1627,33 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                               Expanded(
                                 child: TextField(
                                   controller: ctrl,
-                                  decoration:
-                                      InputDecoration(
+                                  decoration: InputDecoration(
                                     hintText:
                                         '选项 ${String.fromCharCode(65 + optIndex)}',
-                                    border:
-                                        OutlineInputBorder(
-                                      borderRadius:
-                                          BorderRadius
-                                              .circular(
-                                                  8),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                    contentPadding:
-                                        const EdgeInsets
-                                            .symmetric(
+                                    contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 10,
                                       vertical: 8,
                                     ),
                                     isDense: true,
                                   ),
-                                  style:
-                                      const TextStyle(
-                                          fontSize: 13),
+                                  style: const TextStyle(fontSize: 13),
                                 ),
                               ),
-                              if (optionControllers
-                                      .length >
-                                  2)
+                              if (optionControllers.length > 2)
                                 IconButton(
                                   icon: Icon(
-                                    Icons
-                                        .remove_circle_outline,
+                                    Icons.remove_circle_outline,
                                     size: 18,
-                                    color:
-                                        Colors.red[300],
+                                    color: Colors.red[300],
                                   ),
-                                  padding:
-                                      EdgeInsets.zero,
-                                  constraints:
-                                      const BoxConstraints(),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
                                   onPressed: () {
                                     setDialogState(() {
-                                      optionControllers
-                                          .removeAt(
-                                              optIndex);
+                                      optionControllers.removeAt(optIndex);
                                     });
                                   },
                                 ),
@@ -1709,8 +1690,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                         .toList();
                     if (options.length < 2) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('选择题至少需要2个选项')),
+                        const SnackBar(content: Text('选择题至少需要2个选项')),
                       );
                       return;
                     }
@@ -1732,9 +1712,8 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                         'question_type': selectedType,
                         'is_required': isRequired ? 1 : 0,
                         'seq': seq,
-                        'options_json': options != null
-                            ? json.encode(options)
-                            : null,
+                        'options_json':
+                            options != null ? json.encode(options) : null,
                       };
                       await widget.surveyDao.updateQuestion(
                         existing['id'] as int,
@@ -1746,8 +1725,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(
-                              isNew ? '题目添加成功' : '题目更新成功'),
+                          content: Text(isNew ? '题目添加成功' : '题目更新成功'),
                           backgroundColor: Colors.green,
                         ),
                       );
@@ -1797,8 +1775,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child:
-                const Text('删除', style: TextStyle(color: Colors.white)),
+            child: const Text('删除', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

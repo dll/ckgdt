@@ -22,8 +22,15 @@ class AssessmentDao {
 
   Future<Map<String, dynamic>?> getGroup(int id) async {
     final db = await DatabaseHelper.instance.database;
-    final list =
-        await db.query('assessment_groups', where: 'id = ?', whereArgs: [id]);
+    final scope = await _courseContext.scopedWhere(
+      extraWhere: 'id = ?',
+      extraArgs: [id],
+    );
+    final list = await db.query(
+      'assessment_groups',
+      where: scope.where,
+      whereArgs: scope.args,
+    );
     return list.isNotEmpty ? list.first : null;
   }
 
@@ -63,7 +70,12 @@ class AssessmentDao {
   /// 获取分组统计
   Future<Map<String, dynamic>> getGroupStats() async {
     final db = await DatabaseHelper.instance.database;
-    final groups = await db.query('assessment_groups');
+    final scope = await _courseContext.scopedWhere();
+    final groups = await db.query(
+      'assessment_groups',
+      where: scope.where,
+      whereArgs: scope.args,
+    );
     int totalMembers = 0;
     for (final g in groups) {
       final names = g['member_names'] as String?;
@@ -140,6 +152,7 @@ class AssessmentDao {
 
   Future<List<Map<String, dynamic>>> getScores({int? projectId}) async {
     final db = await DatabaseHelper.instance.database;
+    final scope = await _courseContext.scopedWhere(column: 'p.course_id');
     if (projectId != null) {
       return db.rawQuery('''
         SELECT s.*, p.name as project_name, g.name as group_name,
@@ -147,9 +160,9 @@ class AssessmentDao {
         FROM project_scores s
         LEFT JOIN assessment_projects p ON s.project_id = p.id
         LEFT JOIN assessment_groups g ON s.group_id = g.id
-        WHERE s.project_id = ?
+        WHERE s.project_id = ? AND ${scope.where}
         ORDER BY s.scored_at DESC
-      ''', [projectId]);
+      ''', [projectId, ...scope.args]);
     }
     return db.rawQuery('''
       SELECT s.*, p.name as project_name, g.name as group_name,
@@ -157,8 +170,9 @@ class AssessmentDao {
       FROM project_scores s
       LEFT JOIN assessment_projects p ON s.project_id = p.id
       LEFT JOIN assessment_groups g ON s.group_id = g.id
+      WHERE ${scope.where}
       ORDER BY s.total_score DESC
-    ''');
+    ''', scope.args);
   }
 
   Future<int> addScore({
@@ -193,27 +207,32 @@ class AssessmentDao {
   /// 获取成绩排行
   Future<List<Map<String, dynamic>>> getScoreRanking() async {
     final db = await DatabaseHelper.instance.database;
+    final scope = await _courseContext.scopedWhere(column: 'p.course_id');
     return db.rawQuery('''
       SELECT s.*, p.name as project_name, g.name as group_name,
              g.member_ids, g.member_names
       FROM project_scores s
       LEFT JOIN assessment_projects p ON s.project_id = p.id
       LEFT JOIN assessment_groups g ON s.group_id = g.id
+      WHERE ${scope.where}
       ORDER BY s.total_score DESC
-    ''');
+    ''', scope.args);
   }
 
   /// 获取成绩统计概览
   Future<Map<String, dynamic>> getScoreOverview() async {
     final db = await DatabaseHelper.instance.database;
+    final scope = await _courseContext.scopedWhere(column: 'p.course_id');
     final result = await db.rawQuery('''
       SELECT
         COUNT(*) as count,
-        AVG(total_score) as avg_score,
-        MAX(total_score) as max_score,
-        MIN(total_score) as min_score
-      FROM project_scores
-    ''');
+        AVG(s.total_score) as avg_score,
+        MAX(s.total_score) as max_score,
+        MIN(s.total_score) as min_score
+      FROM project_scores s
+      JOIN assessment_projects p ON s.project_id = p.id
+      WHERE ${scope.where}
+    ''', scope.args);
     if (result.isNotEmpty) {
       final r = result.first;
       final count = (r['count'] as int?) ?? 0;
@@ -241,13 +260,15 @@ class AssessmentDao {
 
   Future<List<Map<String, dynamic>>> getDefenseRecords() async {
     final db = await DatabaseHelper.instance.database;
+    final scope = await _courseContext.scopedWhere(column: 'g.course_id');
     return db.rawQuery('''
       SELECT d.*, g.name as group_name, p.name as project_name
       FROM defense_records d
       LEFT JOIN assessment_groups g ON d.group_id = g.id
       LEFT JOIN assessment_projects p ON d.project_id = p.id
+      WHERE ${scope.where}
       ORDER BY d.scheduled_time ASC
-    ''');
+    ''', scope.args);
   }
 
   Future<int> addDefenseRecord({
@@ -301,6 +322,7 @@ class AssessmentDao {
     final db = await DatabaseHelper.instance.database;
     final reasons = <String>[];
     final unmetConditions = <int>[];
+    final labScope = await _courseContext.scopedWhere(column: 't.course_id');
 
     // 条件1：所有实验得分 ≥ 95
     final labRows = await db.rawQuery('''
@@ -308,7 +330,8 @@ class AssessmentDao {
       FROM lab_submissions s
       LEFT JOIN lab_tasks t ON t.id = s.task_id
       WHERE s.user_id = ?
-    ''', [userId]);
+        AND ${labScope.where}
+    ''', [userId, ...labScope.args]);
 
     final labScores = <Map<String, dynamic>>[];
     var allLabsAbove95 = true;
@@ -332,8 +355,16 @@ class AssessmentDao {
     }
 
     // 条件2：过程报告 + 最终报告均 ≥ 95
-    final reportRows = await db
-        .query('assessment_reports', where: 'user_id = ?', whereArgs: [userId]);
+    await _ensureAssessmentReportReviewColumns();
+    final reportScope = await _courseContext.scopedWhere(
+      extraWhere: 'user_id = ?',
+      extraArgs: [userId],
+    );
+    final reportRows = await db.query(
+      'assessment_reports',
+      where: reportScope.where,
+      whereArgs: reportScope.args,
+    );
     final reportScores = <String, dynamic>{};
     for (final t in ['过程报告', '最终报告']) {
       final match = reportRows.where((r) => r['title'] == t).toList();
@@ -408,13 +439,18 @@ class AssessmentDao {
       List<Map<String, dynamic>> students) async {
     if (students.isEmpty) return;
     final db = await DatabaseHelper.instance.database;
+    final courseId = await _courseContext.activeCourseId();
 
     // ── 1. 清理不属于真实 repo 的旧数据 ─────────────────────────
     final validRepos = students
         .map((s) => s['repo'] as String?)
         .where((r) => r != null && r.isNotEmpty)
         .toSet();
-    final oldGroups = await db.query('assessment_groups');
+    final oldGroups = await db.query(
+      'assessment_groups',
+      where: 'course_id = ?',
+      whereArgs: [courseId],
+    );
     for (final g in oldGroups) {
       final groupName = g['name'] as String? ?? '';
       if (!validRepos.contains(groupName)) {
@@ -453,8 +489,11 @@ class AssessmentDao {
       final members = entry.value;
 
       // 已存在则跳过
-      final existing = await db
-          .query('assessment_groups', where: 'name = ?', whereArgs: [repo]);
+      final existing = await db.query(
+        'assessment_groups',
+        where: 'course_id = ? AND name = ?',
+        whereArgs: [courseId, repo],
+      );
       if (existing.isNotEmpty) continue;
 
       final leader = members.first;
@@ -514,13 +553,16 @@ class AssessmentDao {
       {String? userId}) async {
     final db = await DatabaseHelper.instance.database;
     await _ensureAssessmentReportReviewColumns();
-    if (userId != null) {
-      return db.query('assessment_reports',
-          where: 'user_id = ?',
-          whereArgs: [userId],
-          orderBy: 'created_at DESC');
-    }
-    return db.query('assessment_reports', orderBy: 'created_at DESC');
+    final scope = await _courseContext.scopedWhere(
+      extraWhere: userId == null ? null : 'user_id = ?',
+      extraArgs: userId == null ? const [] : [userId],
+    );
+    return db.query(
+      'assessment_reports',
+      where: scope.where,
+      whereArgs: scope.args,
+      orderBy: 'created_at DESC',
+    );
   }
 
   Future<int> submitReport({
@@ -535,6 +577,7 @@ class AssessmentDao {
     await _ensureAssessmentReportReviewColumns();
     final now = DateTime.now().toIso8601String();
     return db.insert('assessment_reports', {
+      'course_id': await _courseContext.activeCourseId(),
       'user_id': userId,
       'title': reportType ?? '考核报告',
       'content_json': fileName ?? '',
@@ -577,14 +620,16 @@ class AssessmentDao {
       {String? userId}) async {
     final db = await DatabaseHelper.instance.database;
     await _ensureAssessmentReportReviewColumns();
-    final where = userId == null ? 'title = ?' : 'title = ? AND user_id = ?';
-    final args = userId == null
-        ? <Object?>[finalAssessmentReportType]
-        : <Object?>[finalAssessmentReportType, userId];
+    final scope = await _courseContext.scopedWhere(
+      extraWhere: userId == null ? 'title = ?' : 'title = ? AND user_id = ?',
+      extraArgs: userId == null
+          ? <Object?>[finalAssessmentReportType]
+          : <Object?>[finalAssessmentReportType, userId],
+    );
     return db.query(
       'assessment_reports',
-      where: where,
-      whereArgs: args,
+      where: scope.where,
+      whereArgs: scope.args,
       orderBy: 'created_at DESC',
     );
   }
@@ -663,6 +708,7 @@ class AssessmentDao {
       }
     }
 
+    await addText('course_id');
     await addText('review_json');
     await addText('reviewed_at');
     await addText('reviewer_id');
@@ -673,6 +719,15 @@ class AssessmentDao {
           'ALTER TABLE assessment_reports ADD COLUMN print_count INTEGER DEFAULT 0');
     } catch (e) {
       swallow(e, tag: 'assessment_reports.add_print_count');
+    }
+    try {
+      await db.update(
+        'assessment_reports',
+        {'course_id': CourseContextService.defaultCourseId},
+        where: "course_id IS NULL OR course_id = ''",
+      );
+    } catch (e) {
+      swallow(e, tag: 'assessment_reports.repair_course_id');
     }
   }
 

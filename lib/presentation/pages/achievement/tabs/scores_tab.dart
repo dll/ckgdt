@@ -725,6 +725,25 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
         return;
       }
 
+      final dynamicComponentCount = await _dynamicComponentRowCount();
+      if (dynamicComponentCount > 0) {
+        final aggregate =
+            await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
+        sortScoresInPlace(aggregate, _sort);
+        if (mounted) {
+          setState(() {
+            _activeObjectiveIndexes = activeObjectives;
+            _setActiveEnvs(['aggregate']);
+            _agg = aggregate;
+            _ps = [];
+            _es = [];
+            _xs = [];
+            _loadingComponents = false;
+          });
+        }
+        return;
+      }
+
       final active = <String>[];
       bool uses(String env) => weights.any((w) => (w[env] ?? 0) > 0.0001);
       if (uses('pingshi')) active.add('pingshi');
@@ -1077,11 +1096,13 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
   }
 
   Future<void> _createBatch() async {
-    final courseName = AchievementContext.instance.courseName;
+    final activeCourse = await CourseContextService().getActiveCourse();
+    final courseName = activeCourse.name.trim().isNotEmpty
+        ? activeCourse.name.trim()
+        : AchievementContext.instance.courseName;
     final today = DateTime.now();
     final classes = await ClassDao().getActiveClasses();
-    final selectedClass =
-        classes.isNotEmpty ? (classes.first['name']?.toString() ?? '') : '';
+    final selectedClass = _selectClassForBatch(classes);
 
     if (selectedClass.isEmpty) {
       if (mounted) {
@@ -1098,13 +1119,18 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
     final semester = _semesterForClass(classes, selectedClass, today);
     final syllabusVersion =
         await widget.achievementDao.currentSyllabusVersion(courseName);
-    final batchName = '$courseName+$selectedClass+$semester+$syllabusVersion';
+    final rawTeacherName =
+        widget.authService.currentUser?.realName?.trim() ?? '';
+    final teacherName = rawTeacherName.isNotEmpty ? rawTeacherName : '任课教师';
+    final teacherId = widget.authService.getCurrentUserId() ?? '';
+    final batchName = '$courseName-$selectedClass-$semester-$teacherName';
     try {
       final id = await widget.achievementDao.addBatch(
         batchName: batchName,
         courseName: courseName,
         className: selectedClass,
         semester: semester,
+        teacherId: teacherId.isNotEmpty ? teacherId : teacherName,
         syllabusVersion: syllabusVersion,
       );
       await _loadBatches();
@@ -1126,6 +1152,36 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
         );
       }
     }
+  }
+
+  Future<int> _dynamicComponentRowCount() async {
+    final db = await DatabaseHelper.instance.database;
+    try {
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) AS c FROM achievement_component_scores WHERE batch_id = ?',
+        [_selectedBatchId],
+      );
+      return (result.first['c'] as int?) ?? 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  String _selectClassForBatch(List<Map<String, dynamic>> classes) {
+    if (classes.isEmpty) return '';
+    final nonDemo = classes.where((c) {
+      final name = (c['name'] ?? '').toString();
+      return !name.toUpperCase().contains('CKGDT') &&
+          !name.contains('春季') &&
+          !name.contains('演示');
+    }).toList();
+    final source = nonDemo.isNotEmpty ? nonDemo : classes;
+    final software = source.where((c) {
+      final name = (c['name'] ?? '').toString();
+      return name.contains('软件') || RegExp(r'软[工件]?\d+').hasMatch(name);
+    }).toList();
+    final selected = software.isNotEmpty ? software.first : source.first;
+    return selected['name']?.toString() ?? '';
   }
 
   String _semesterForClass(

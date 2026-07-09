@@ -13,6 +13,7 @@ class _TaskListTabState extends State<_TaskListTab> {
   List<Map<String, dynamic>> _tasks = [];
   Map<int, Map<String, dynamic>?> _submissionCache = {};
   Map<int, Map<String, dynamic>> _statsCache = {};
+  CourseTerms _terms = CourseTerms.fromPracticeLabel('实验项目');
   bool _isLoading = true;
   String _selectedChapter = '全部';
   int _totalStudents = 0;
@@ -29,6 +30,7 @@ class _TaskListTabState extends State<_TaskListTab> {
   Future<void> _loadTasks() async {
     setState(() => _isLoading = true);
     try {
+      final terms = await CourseTerminologyService().activeTerms();
       final tasks = await widget.labTaskDao.getTasks(status: 'active');
       final userId = widget.authService.getCurrentUserId();
 
@@ -54,6 +56,7 @@ class _TaskListTabState extends State<_TaskListTab> {
           _submissionCache = subCache;
           _statsCache = statsCache;
           _totalStudents = totalStudents;
+          _terms = terms;
           _isLoading = false;
         });
       }
@@ -125,7 +128,7 @@ class _TaskListTabState extends State<_TaskListTab> {
                           Icon(Icons.science_outlined,
                               size: 56, color: Colors.grey[300]),
                           const SizedBox(height: 12),
-                          Text('暂无实验任务',
+                          Text('暂无${_terms.taskPluralLabel}',
                               style: TextStyle(color: Colors.grey[500])),
                         ],
                       ),
@@ -420,7 +423,7 @@ class _TaskListTabState extends State<_TaskListTab> {
               Text(description,
                   style: TextStyle(fontSize: 14, color: Colors.grey[700])),
               const SizedBox(height: 16),
-              _sectionHeader('实验要求', Icons.checklist, primary),
+              _sectionHeader('${_terms.practiceLabel}要求', Icons.checklist, primary),
               const SizedBox(height: 8),
               Text(requirements,
                   style: TextStyle(fontSize: 14, color: Colors.grey[700])),
@@ -491,7 +494,9 @@ class _TaskListTabState extends State<_TaskListTab> {
                     },
                     icon: Icon(
                         submission == null ? Icons.upload_file : Icons.edit),
-                    label: Text(submission == null ? '提交实验' : '修改提交'),
+                    label: Text(submission == null
+                        ? _terms.submitVerbLabel
+                        : '修改提交'),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -562,7 +567,7 @@ class _TaskListTabState extends State<_TaskListTab> {
               const Icon(Icons.upload_file, size: 20),
               const SizedBox(width: 8),
               Expanded(
-                child: Text('提交实验 - ${task['title']}',
+                child: Text('${_terms.submitVerbLabel} - ${task['title']}',
                     style: const TextStyle(fontSize: 16),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis),
@@ -595,7 +600,7 @@ class _TaskListTabState extends State<_TaskListTab> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '文件名格式：学号+姓名+任务名称.pdf\n示例：2023001+张三+实验一 环境搭建.pdf',
+                            '文件名格式：学号+姓名+任务名称.pdf\n示例：2023001+张三+${_terms.taskLabel}.pdf',
                             style: TextStyle(
                               fontSize: 12,
                               height: 1.4,
@@ -612,7 +617,7 @@ class _TaskListTabState extends State<_TaskListTab> {
                       final result = await FilePicker.platform.pickFiles(
                         type: FileType.custom,
                         allowedExtensions: ['pdf'],
-                        dialogTitle: '选择 PDF 实验报告',
+                        dialogTitle: '选择 PDF ${_terms.reportLabel}',
                       );
                       if (result == null || result.files.single.path == null) {
                         return;
@@ -676,7 +681,7 @@ class _TaskListTabState extends State<_TaskListTab> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              selectedFileName ?? '选择 PDF 实验报告',
+                              selectedFileName ?? '选择 PDF ${_terms.reportLabel}',
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontSize: 13),
@@ -691,7 +696,7 @@ class _TaskListTabState extends State<_TaskListTab> {
                     maxLines: 3,
                     decoration: InputDecoration(
                       labelText: '补充说明（可选）',
-                      hintText: '可补充说明实验完成情况、遇到的问题及解决方案...',
+                      hintText: '可补充说明${_terms.practiceLabel}完成情况、遇到的问题及解决方案...',
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10)),
                       contentPadding: const EdgeInsets.symmetric(
@@ -714,7 +719,7 @@ class _TaskListTabState extends State<_TaskListTab> {
                       if (selectedFilePath == null ||
                           selectedFileName == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('请选择符合命名规范的 PDF 实验报告')),
+                          SnackBar(content: Text('请选择符合命名规范的 PDF ${_terms.reportLabel}')),
                         );
                         return;
                       }
@@ -772,7 +777,7 @@ class _TaskListTabState extends State<_TaskListTab> {
                                   widget.authService.currentUser?.realName ??
                                       userId,
                               taskId: taskId,
-                              taskTitle: task['title'] as String? ?? '实验任务',
+                              taskTitle: task['title'] as String? ?? _terms.taskLabel,
                               content: content.toString(),
                               requirements: task['requirements'] as String?,
                               maxScore: (task['max_score'] as int?) ?? 100,
@@ -787,7 +792,7 @@ class _TaskListTabState extends State<_TaskListTab> {
                           studentName:
                               widget.authService.currentUser?.realName ??
                                   userId,
-                          taskTitle: task['title'] as String? ?? '实验任务',
+                          taskTitle: task['title'] as String? ?? _terms.taskLabel,
                           taskId: taskId,
                         ));
                         // 立即触发同步上传

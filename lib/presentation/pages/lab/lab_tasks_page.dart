@@ -17,6 +17,7 @@ import '../../../services/agent/agents/grading_agent.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/course_resource_service.dart';
 import '../../../services/course_context_service.dart';
+import '../../../services/course_terminology_service.dart';
 import '../../../services/pdf_text_service.dart';
 import '../../../services/lab_report_validation_service.dart';
 import '../../../core/constants/app_theme.dart';
@@ -357,6 +358,7 @@ class _LabTasksPageState extends State<LabTasksPage>
   late TabController _tabController;
   final _authService = AuthService();
   final _labTaskDao = LabTaskDao();
+  CourseTerms _terms = CourseTerms.fromPracticeLabel('实验项目');
   bool _initialized = false;
 
   bool get _isTeacherOrAdmin => _authService.isTeacher || _authService.isAdmin;
@@ -369,8 +371,23 @@ class _LabTasksPageState extends State<LabTasksPage>
   TabController get innerTabController => _tabController;
   @override
   List<String> innerTabLabels() => _isTeacherOrAdmin
-      ? const ['任务列表', '提交管理', '实验报告', '实验材料', '任务管理', 'AI批阅', '仓库报表']
-      : const ['任务列表', '我的提交', '成绩', '实验报告', '实验材料', '仓库报表'];
+      ? [
+          '任务列表',
+          '提交管理',
+          _terms.reportLabel,
+          _terms.materialLabel,
+          '任务管理',
+          'AI批阅',
+          '仓库报表',
+        ]
+      : [
+          '任务列表',
+          '我的提交',
+          '成绩',
+          _terms.reportLabel,
+          _terms.materialLabel,
+          '仓库报表',
+        ];
 
   @override
   void initState() {
@@ -383,7 +400,11 @@ class _LabTasksPageState extends State<LabTasksPage>
 
   Future<void> _initData() async {
     try {
+      final terms = await CourseTerminologyService().activeTerms();
       await _labTaskDao.initDemoDataIfEmpty();
+      if (mounted) {
+        setState(() => _terms = terms);
+      }
     } catch (e, st) {
       swallowDebug(e, tag: 'LabPage._initData', stack: st);
     }
@@ -406,6 +427,7 @@ class _LabTasksPageState extends State<LabTasksPage>
       context: context,
       builder: (_) => ScorePreviewDialog.lab(
         data,
+        terms: _terms,
         onExport: data.isNotEmpty
             ? () async {
                 Navigator.pop(context);
@@ -418,9 +440,9 @@ class _LabTasksPageState extends State<LabTasksPage>
 
   Future<void> _exportLabScores() async {
     final messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(const SnackBar(
-      content: Text('正在导出实验成绩…'),
-      duration: Duration(seconds: 1),
+    messenger.showSnackBar(SnackBar(
+      content: Text('正在导出${_terms.practiceLabel}成绩…'),
+      duration: const Duration(seconds: 1),
     ));
     final path = await ScoreExportService.instance.exportLabScores();
     messenger.hideCurrentSnackBar();
@@ -451,7 +473,7 @@ class _LabTasksPageState extends State<LabTasksPage>
     final primary = Theme.of(context).colorScheme.primary;
     return PopupMenuButton<String>(
       icon: Icon(Icons.assessment, size: 20, color: primary),
-      tooltip: '实验成绩',
+      tooltip: '${_terms.practiceLabel}成绩',
       onSelected: (v) {
         if (v == 'view') _showLabScorePreview();
         if (v == 'export') _exportLabScores();
@@ -511,10 +533,12 @@ class _LabTasksPageState extends State<LabTasksPage>
                     if (!_isTeacherOrAdmin)
                       const Tab(
                           icon: Icon(Icons.leaderboard, size: 20), text: '成绩'),
-                    const Tab(
-                        icon: Icon(Icons.description, size: 20), text: '实验报告'),
-                    const Tab(
-                        icon: Icon(Icons.menu_book, size: 20), text: '实验材料'),
+                    Tab(
+                        icon: const Icon(Icons.description, size: 20),
+                        text: _terms.reportLabel),
+                    Tab(
+                        icon: const Icon(Icons.menu_book, size: 20),
+                        text: _terms.materialLabel),
                     if (!_isTeacherOrAdmin)
                       const Tab(
                           icon: Icon(Icons.analytics, size: 20), text: '仓库报表'),

@@ -14,7 +14,6 @@ import '../../data/models/edge_model.dart';
 import '../../data/models/graph_model.dart';
 import '../../data/models/node_model.dart';
 import '../../services/achievement/achievement_excel_service.dart';
-import '../../services/ai_service.dart';
 import '../../services/course_generation_service.dart';
 import '../../services/resource_persistence_service.dart';
 import 'package:knowledge_graph_app/core/error_handler.dart';
@@ -84,7 +83,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
             ),
             const SizedBox(height: 8),
             Text(
-              '上传课程大纲，AI 自动生成完整课程体系',
+              '上传课程大纲，自动识别课程名称并快速创建资源包',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
@@ -92,19 +91,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
             ),
             const SizedBox(height: 24),
 
-            // 课程名称
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: '课程名称',
-                hintText: '例如：Web 前端开发',
-                prefixIcon: const Icon(Icons.school),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              enabled: !_isGenerating,
-            ),
+            _buildDetectedCourseName(theme),
             const SizedBox(height: 16),
 
             // 上传大纲
@@ -261,6 +248,49 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
     );
   }
 
+  Widget _buildDetectedCourseName(ThemeData theme) {
+    final name = _nameController.text.trim();
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.school, color: theme.colorScheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '课程名称',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  name.isEmpty ? '上传大纲后自动识别' : name,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: name.isEmpty
+                        ? theme.colorScheme.onSurface.withValues(alpha: 0.5)
+                        : theme.colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _pickOutline() async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -290,6 +320,8 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
         _outlineFileName = file.name;
         _outlineText = text;
         _outlineError = null;
+        _nameController.text =
+            CourseGenerationService.extractCourseNameFromSyllabus(text) ?? '';
       });
     } catch (e) {
       setState(() {
@@ -315,17 +347,19 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
 
   /// 增强版课程生成 — 从大纲生成完整课程资源包
   Future<void> _generateCourseEnhanced() async {
-    final name = _nameController.text.trim();
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入课程名称')),
-      );
-      return;
-    }
-
     if (_outlineText == null || _outlineText!.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('请上传课程大纲')),
+      );
+      return;
+    }
+    final name =
+        CourseGenerationService.extractCourseNameFromSyllabus(_outlineText!) ??
+            _nameController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('未能从大纲识别课程名称，请检查大纲是否包含“课程名称”或“《课程名》教学大纲”')),
       );
       return;
     }
@@ -336,44 +370,11 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
     });
 
     try {
-      // 从大纲解析章节
-      final outlineLines = _outlineText!
-          .split('\n')
-          .map((l) => l.trim())
-          .where((l) => l.isNotEmpty)
-          .toList();
+      final chapters =
+          CourseGenerationService.extractChaptersFromSyllabus(_outlineText!);
+      final finalChapters = chapters.isNotEmpty ? chapters : ['课程导论'];
 
-      // 提取章节标题（以"第X章"、数字序号、或 ## 标记开头的行）
-      final chapters = <String>[];
-      final chapterPattern = RegExp(
-          r'^(第[一二三四五六七八九十\d]+章|[一二三四五六七八九十]+[、.]|\d+[.、)]]\s|#{1,3}\s+)');
-
-      for (final line in outlineLines) {
-        if (chapterPattern.hasMatch(line)) {
-          // 去掉 Markdown 标记
-          final cleaned = line.replaceFirst(RegExp(r'^#{1,3}\s+'), '').trim();
-          if (cleaned.isNotEmpty && cleaned.length > 2) {
-            chapters.add(cleaned);
-          }
-        }
-      }
-
-      // 如果没解析出章节，用 AI 从大纲生成
-      List<String> finalChapters;
-      if (chapters.isNotEmpty) {
-        finalChapters = chapters;
-      } else {
-        _log('从大纲提取章节中...');
-        final aiService = AiService();
-        final prompt =
-            '根据以下课程大纲，提取章节标题列表，返回 JSON: {"chapters": ["第1章 标题", ...]}\n\n大纲：\n${_outlineText!.length > 3000 ? _outlineText!.substring(0, 3000) : _outlineText}';
-        final response = await aiService.chat([
-          {'role': 'user', 'content': prompt}
-        ]);
-        finalChapters = _parseChapters(response, 8);
-      }
-
-      _log('开始生成完整课程资源包...');
+      _log('开始快速创建课程资源包...');
       _log('共 ${finalChapters.length} 个章节');
 
       // 使用 CourseGenerationService 生成所有资源
@@ -387,6 +388,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
         courseName: name,
         chapters: finalChapters,
         syllabusContent: _outlineText,
+        lazy: true,
       );
 
       if (!result.isSuccess) {
@@ -420,11 +422,13 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
       await _saveCourseObjectivesFromSyllabus(result);
 
       _log('课程《$name》创建成功！');
-      _log('包含 ${result.quizzes.length} 道测验题');
-      _log('包含 ${result.videoScripts.length} 个视频脚本');
-      _log('包含 ${result.courseware.length} 个课件');
+      _log('已建立懒生成资源包：测验、课件、视频脚本将在首次使用时生成');
+      _log('登记 ${result.videoScripts.length} 个视频脚本待生成项');
+      _log('登记 ${result.courseware.length} 个课件待生成项');
       _log('包含 ${result.graphs.length} 个图谱');
-      _log('包含 ${result.labTasks.length} 个实验任务');
+      final practiceLabel =
+          result.courseProfile['practice_label']?.toString() ?? '实践任务';
+      _log('包含 ${result.labTasks.length} 个$practiceLabel');
       _log('包含 ${result.homeworks.length} 章作业');
       _log('包含 ${result.reportTemplates.length} 个报告模板');
       if (result.courseProfile.isNotEmpty) {
@@ -528,14 +532,32 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
       });
     }
 
-    // 保存实验任务
+    // 保存实践任务。数据库表名沿用 lab_tasks 兼容旧数据。
     final labDao = LabTaskDao();
+    await db.delete(
+      'lab_tasks',
+      where: '''
+        course_id = ?
+        AND id NOT IN (SELECT DISTINCT task_id FROM lab_submissions WHERE task_id IS NOT NULL)
+      ''',
+      whereArgs: [result.courseId],
+    );
     for (final lab in result.labTasks) {
+      final chapterNumber = lab['chapter_number'];
+      final chapter = lab['chapter']?.toString().trim().isNotEmpty == true
+          ? lab['chapter'].toString().trim()
+          : chapterNumber == null
+              ? null
+              : '第$chapterNumber章';
       await labDao.addTask(
         title: lab['title'] ?? '',
+        chapter: chapter,
         description: lab['description'] ?? '',
         requirements: (lab['requirements'] as List?)?.join('\n'),
         deliverables: (lab['deliverables'] as List?)?.join('\n'),
+        difficulty: lab['difficulty']?.toString() == 'hard' ? '较难' : '中等',
+        maxScore: int.tryParse(lab['max_score']?.toString() ?? '') ?? 100,
+        creatorId: 'course_generator',
       );
     }
 
@@ -608,26 +630,32 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
     for (final item in result.courseware) {
       final chapterNum = item['chapter_number'] ?? 0;
       final title = item['title']?.toString() ?? '课件';
+      final lazy = item['lazy_generation'] == true;
       await db.insert('resource_files', {
         'course_id': result.courseId,
-        'file_name': '$title.json',
-        'file_path': 'courses/${result.courseId}/课件/$title.json',
+        'file_name': lazy ? '$title-课件.lazy.json' : '$title.json',
+        'file_path': lazy
+            ? 'courses/${result.courseId}/课件/$title-课件.lazy.json'
+            : 'courses/${result.courseId}/课件/$title.json',
         'file_type': 'ppt',
         'chapter': chapterNum == 0 ? '课程资源' : '第$chapterNum章',
-        'description': '$title 课件',
+        'description': lazy ? '$title 课件（首次使用时生成）' : '$title 课件',
         'source_type': 'course_package',
       });
     }
     for (final item in result.videoScripts) {
       final chapterNum = item['chapter_number'] ?? 0;
       final title = item['title']?.toString() ?? '视频脚本';
+      final lazy = item['lazy_generation'] == true;
       await db.insert('resource_files', {
         'course_id': result.courseId,
-        'file_name': '$title-视频脚本.json',
-        'file_path': 'courses/${result.courseId}/视频/$title-视频脚本.json',
+        'file_name': lazy ? '$title-视频脚本.lazy.json' : '$title-视频脚本.json',
+        'file_path': lazy
+            ? 'courses/${result.courseId}/视频/$title-视频脚本.lazy.json'
+            : 'courses/${result.courseId}/视频/$title-视频脚本.json',
         'file_type': 'video',
         'chapter': chapterNum == 0 ? '课程资源' : '第$chapterNum章',
-        'description': '$title 视频脚本',
+        'description': lazy ? '$title 视频脚本（首次使用时生成）' : '$title 视频脚本',
         'source_type': 'course_package',
       });
     }
@@ -736,54 +764,5 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
         ));
       }
     }
-  }
-
-  /// 从 AI 响应中解析章节列表
-  List<String> _parseChapters(String response, int expected) {
-    // 尝试解析 JSON
-    try {
-      final cleaned = response
-          .replaceAll(RegExp(r'```json\s*'), '')
-          .replaceAll(RegExp(r'```\s*'), '')
-          .trim();
-
-      // 查找 JSON 对象
-      final jsonStart = cleaned.indexOf('{');
-      final jsonEnd = cleaned.lastIndexOf('}');
-      if (jsonStart >= 0 && jsonEnd > jsonStart) {
-        final jsonStr = cleaned.substring(jsonStart, jsonEnd + 1);
-        // 简易解析 chapters 数组
-        final chaptersMatch =
-            RegExp(r'"chapters"\s*:\s*\[(.*?)\]', dotAll: true)
-                .firstMatch(jsonStr);
-        if (chaptersMatch != null) {
-          final arrContent = chaptersMatch.group(1)!;
-          final items = RegExp(r'"([^"]+)"')
-              .allMatches(arrContent)
-              .map((m) => m.group(1)!)
-              .toList();
-          if (items.isNotEmpty) return items;
-        }
-      }
-    } catch (e) {
-      swallowDebug(e, tag: 'course_generator_sheet');
-    }
-
-    // 回退：按行解析
-    final lines = response
-        .split('\n')
-        .map((l) => l.trim())
-        .where((l) => l.isNotEmpty && !l.startsWith('{') && !l.startsWith('}'))
-        .map((l) => l
-            .replaceAll(RegExp(r'^[\d]+[.、)\]]\s*'), '')
-            .replaceAll('"', '')
-            .trim())
-        .where((l) => l.isNotEmpty && l.length > 2)
-        .toList();
-
-    if (lines.isNotEmpty) return lines.take(expected).toList();
-
-    // 最终回退：生成默认章节名
-    return List.generate(expected, (i) => '第${i + 1}章');
   }
 }

@@ -72,7 +72,7 @@ class MidtermCheckDraftService {
     final suggestion = switch (data.progressStatus) {
       MidtermProgressStatus.aligned => '当前教学进度与期初教学进度表基本对齐，继续按原计划执行。',
       MidtermProgressStatus.delayed => '当前教学进度滞后（延时），需记录原因并明确补课、调课或内容压缩安排。',
-      MidtermProgressStatus.ahead => '当前教学进度超前，需确认未跳过实验、实践或关键知识点。',
+      MidtermProgressStatus.ahead => '当前教学进度超前，需确认未跳过实践任务或关键知识点。',
     };
     return '''
 # 课程进度执行检查
@@ -87,8 +87,8 @@ class MidtermCheckDraftService {
 | 期中进度状态 | $status |
 | 计划进度 | ${_text(data.plannedProgress)} |
 | 实际进度 | ${_text(data.actualProgress)} |
-| 理论/实验学时 | ${_yes(data.hoursMatched)} |
-| 实验/实践安排 | ${_yes(data.labMatched)} |
+| 理论/实践学时 | ${_yes(data.hoursMatched)} |
+| 实践任务安排 | ${_yes(data.labMatched)} |
 | 调课/补课记录 | ${_yes(data.adjustmentRecorded)} |
 
 ## 二、教师核查
@@ -96,8 +96,8 @@ class MidtermCheckDraftService {
 | 核查项 | 勾选结果 | 说明 |
 |--------|----------|------|
 | 教学内容与期初进度表一致 | ${_check(data.progressStatus == MidtermProgressStatus.aligned)} | 若为滞后或超前，应写明原因 |
-| 理论、实验、实践学时已核对 | ${_check(data.hoursMatched)} | 与教学任务书、课表、实验安排一致 |
-| 实验或实践任务按进度实施 | ${_check(data.labMatched)} | 未实施项目需写明补做安排 |
+| 理论、实践学时已核对 | ${_check(data.hoursMatched)} | 与教学任务书、课表、实践安排一致 |
+| 实践任务按进度实施 | ${_check(data.labMatched)} | 未实施项目需写明补做安排 |
 | 调课、停课、补课有记录 | ${_check(data.adjustmentRecorded)} | 作为期中检查依据 |
 
 ## 三、检查结论与整改

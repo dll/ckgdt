@@ -12,6 +12,7 @@ class ArchiveDao {
     String? courseType,
     String? documentType,
     bool filterByCourse = true,
+    bool includeUnboundLegacy = false,
   }) async {
     final db = await DatabaseHelper.instance.database;
     final where = <String>[];
@@ -23,8 +24,13 @@ class ArchiveDao {
     if (filterByCourse) {
       final resolvedCourseId = await _resolveCourseId(courseId);
       if (resolvedCourseId != null && resolvedCourseId.isNotEmpty) {
-        where.add("(course_id = ? OR course_id IS NULL OR course_id = '')");
-        args.add(resolvedCourseId);
+        if (includeUnboundLegacy) {
+          where.add("(course_id = ? OR course_id IS NULL OR course_id = '')");
+          args.add(resolvedCourseId);
+        } else {
+          where.add('course_id = ?');
+          args.add(resolvedCourseId);
+        }
       }
     }
     if (courseType != null) {
@@ -52,7 +58,10 @@ class ArchiveDao {
   Future<int> saveDocument(ArchiveDocument doc) async {
     final db = await DatabaseHelper.instance.database;
     final map = doc.toMap();
-    map['course_id'] ??= await _resolveCourseId(doc.courseId);
+    final resolvedCourseId = await _resolveCourseId(doc.courseId);
+    if ((map['course_id']?.toString().trim() ?? '').isEmpty) {
+      map['course_id'] = resolvedCourseId;
+    }
     if (doc.id != null) {
       await db.update('archive_documents', map,
           where: 'id = ?', whereArgs: [doc.id]);
@@ -86,7 +95,7 @@ class ArchiveDao {
                 period
               ])
         : await db.rawQuery(
-            "SELECT COUNT(*) as c FROM archive_documents WHERE period = ? AND status = 'archived' AND (course_id = ? OR course_id IS NULL OR course_id = '')",
+            "SELECT COUNT(*) as c FROM archive_documents WHERE period = ? AND status = 'archived' AND course_id = ?",
             [period, courseId]);
     return (result.first['c'] as int?) ?? 0;
   }

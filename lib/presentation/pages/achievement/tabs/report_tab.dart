@@ -36,6 +36,11 @@ int _asInt(Object? value, [int fallback = 0]) {
   return fallback;
 }
 
+String _nonEmpty(Object? value, String fallback) {
+  final text = value?.toString().trim() ?? '';
+  return text.isEmpty ? fallback : text;
+}
+
 List<Map<String, dynamic>> _asMapList(Object? value) {
   if (value is! List) return const [];
   return [
@@ -94,13 +99,20 @@ class _ReportTabState extends State<ReportTab> {
     List<double>? weights,
   ]) {
     final resolvedWeights = weights ?? _objectiveWeights;
+    final count = max(
+      4,
+      max(
+        resolvedWeights.length,
+        max(config.fullMarks.length, _objectiveAchievements.length),
+      ),
+    );
     final indexes = [
-      for (var i = 0; i < 4; i++)
+      for (var i = 0; i < count; i++)
         if ((i < resolvedWeights.length && resolvedWeights[i] > 0) ||
             (i < config.fullMarks.length && config.fullMarks[i] > 0))
           i
     ];
-    return indexes.isEmpty ? [0, 1, 2, 3] : indexes;
+    return indexes.isEmpty ? List<int>.generate(count, (i) => i) : indexes;
   }
 
   List<int> get _activeObjectiveIndexes => _activeObjectiveIndexesFor(_config);
@@ -161,7 +173,6 @@ class _ReportTabState extends State<ReportTab> {
     });
 
     try {
-      // 获取该批次所有成绩
       final scores =
           await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
       if (scores.isEmpty) {
@@ -177,34 +188,64 @@ class _ReportTabState extends State<ReportTab> {
         return;
       }
 
-      // 计算每个目标的达成度（满分：目标1=15, 目标2=25, 目标3=30, 目标4=30）
-      final objScores = List<List<double>>.generate(4, (i) {
+      final recalculated = await widget.achievementDao
+          .recalculateAndSaveBatch(_selectedBatchId!);
+      final avgAchievements =
+          await widget.achievementDao.calculateClassAverage(_selectedBatchId!);
+      final objWeights = await widget.achievementDao
+          .resolveObjectiveWeights(_selectedBatchId!);
+      final fullMarks = await widget.achievementDao
+          .resolveObjectiveFullMarks(_selectedBatchId!);
+      final objectiveCount = max(
+        4,
+        max(
+          objWeights.length,
+          max(
+            fullMarks.where((m) => m > 0).length,
+            avgAchievements.keys
+                .map((k) => RegExp(r'课程目标(\d+)').firstMatch(k)?.group(1))
+                .whereType<String>()
+                .map((v) => int.tryParse(v) ?? 0)
+                .fold<int>(0, max),
+          ),
+        ),
+      );
+      final objAchievements = List<double>.generate(objectiveCount, (i) {
+        return avgAchievements['课程目标${i + 1}'] ??
+            recalculated['课程目标${i + 1}'] ??
+            0.0;
+      });
+      final activeObjectiveIndexes = _activeObjectiveIndexesFor(
+        _config,
+        objWeights,
+      );
+      double weighted = recalculated['weighted'] ?? 0;
+      if (weighted <= 0) {
+        var weightSum = 0.0;
+        for (final i in activeObjectiveIndexes) {
+          final w = i < objWeights.length ? objWeights[i] : 0.0;
+          weighted += objAchievements[i] * w;
+          weightSum += w;
+        }
+        if (weightSum > 0 && (weightSum - 1.0).abs() > 0.0001) {
+          weighted /= weightSum;
+        }
+      }
+
+      final objScores = List<List<double>>.generate(objectiveCount, (i) {
         return scores.map<double>((s) {
-          return (s['obj${i + 1}_score'] ?? 0).toDouble();
+          final ach = (s['obj${i + 1}_achievement'] as num?)?.toDouble();
+          final fullMark = i < fullMarks.length ? fullMarks[i] : 0.0;
+          if (ach != null && fullMark > 0) return ach * fullMark;
+          return (s['obj${i + 1}_score'] as num?)?.toDouble() ?? 0;
         }).toList();
       });
 
-      // 使用与 DAO addScore() 一致的满分比计算达成度（满分取大纲/SSOT 配置）
-      final fullMarks = _config.fullMarks;
-      final objAchievements = List<double>.generate(4, (i) {
-        final values = objScores[i];
-        final mean = values.reduce((a, b) => a + b) / values.length;
-        final fullMark = i < fullMarks.length ? fullMarks[i] : 0.0;
-        return fullMark > 0 ? (mean / fullMark).clamp(0.0, 1.0) : 0.0;
-      });
-
-      // 加权达成度（权重优先取大纲导入的 course_objectives，回退默认）
-      final objWeights = await widget.achievementDao
-          .resolveObjectiveWeights(_selectedBatchId!);
-      double weighted = 0;
-      for (int i = 0; i < 4; i++) {
-        weighted += objAchievements[i] * objWeights[i];
-      }
-
       // 统计数据：mean, max, min, std
       final stats = <String, List<double>>{};
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < objectiveCount; i++) {
         final List<double> values = objScores[i];
+        if (values.isEmpty) continue;
         final mean = values.reduce((a, b) => a + b) / values.length;
         final maxVal = values.reduce(max<double>);
         final minVal = values.reduce(min<double>);
@@ -219,10 +260,10 @@ class _ReportTabState extends State<ReportTab> {
       try {
         await widget.achievementDao.saveCalculationResults(
           batchId: _selectedBatchId!,
-          objective1Achievement: objAchievements[0],
-          objective2Achievement: objAchievements[1],
-          objective3Achievement: objAchievements[2],
-          objective4Achievement: objAchievements[3],
+          objectiveAchievements: {
+            for (var i = 0; i < objAchievements.length; i++)
+              i + 1: objAchievements[i],
+          },
           weightedAchievement: weighted,
         );
       } catch (e) {
@@ -289,7 +330,7 @@ class _ReportTabState extends State<ReportTab> {
       final dateStr =
           '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
       final courseName = batch['course_name'] ?? _fallbackCourseName;
-      final className = batch['class_name'] ?? '软件23';
+      final className = _nonEmpty(batch['class_name'], '未绑定班级');
       final semester = batch['semester'] ?? '-';
       final syllabusVersion = (batch['syllabus_version'] ?? '未标注版本').toString();
       final teacherId = batch['teacher_id'] ?? '';
@@ -747,9 +788,53 @@ class _ReportTabState extends State<ReportTab> {
     }
   }
 
+  Future<void> _syncCalculationSnapshot() async {
+    if (_selectedBatchId == null) return;
+    final recalculated =
+        await widget.achievementDao.recalculateAndSaveBatch(_selectedBatchId!);
+    final weights =
+        await widget.achievementDao.resolveObjectiveWeights(_selectedBatchId!);
+    final fullMarks = await widget.achievementDao
+        .resolveObjectiveFullMarks(_selectedBatchId!);
+    final objectiveCount = max(
+      4,
+      max(
+        weights.length,
+        max(
+          fullMarks.where((m) => m > 0).length,
+          recalculated.keys
+              .map((k) => RegExp(r'课程目标(\d+)').firstMatch(k)?.group(1))
+              .whereType<String>()
+              .map((v) => int.tryParse(v) ?? 0)
+              .fold<int>(0, max),
+        ),
+      ),
+    );
+    final achievements = List<double>.generate(
+      objectiveCount,
+      (i) => recalculated['课程目标${i + 1}'] ?? 0.0,
+    );
+    var weighted = recalculated['weighted'] ?? 0.0;
+    if (weighted <= 0) {
+      weighted = List<double>.generate(
+        4,
+        (i) => achievements[i] * (i < weights.length ? weights[i] : 0.0),
+      ).fold<double>(0, (sum, value) => sum + value);
+    }
+    if (!mounted) return;
+    setState(() {
+      _objectiveAchievements = achievements;
+      _objectiveWeights = weights;
+      _weightedAchievement = weighted;
+      _calcResults ??= <String, dynamic>{};
+      _calcResults!['weighted_achievement'] = weighted;
+    });
+  }
+
   Future<void> _exportDocx() async {
     if (_calcResults == null || _selectedBatchId == null) return;
     try {
+      await _syncCalculationSnapshot();
       final batch = _batches.firstWhere((b) => b['id'] == _selectedBatchId,
           orElse: () => <String, dynamic>{});
       final teacherName = widget.authService.currentUser?.realName ?? '教师';
@@ -906,6 +991,7 @@ class _ReportTabState extends State<ReportTab> {
   Future<void> _exportExcel() async {
     if (_calcResults == null || _selectedBatchId == null) return;
     try {
+      await _syncCalculationSnapshot();
       final batch = _batches.firstWhere((b) => b['id'] == _selectedBatchId,
           orElse: () => <String, dynamic>{});
       final courseName =
@@ -955,10 +1041,12 @@ class _ReportTabState extends State<ReportTab> {
       final dir = await OutputPathService.getOutputDirectory();
       final safeName = '$className《$courseName》课程达成度评价表格.xlsx';
       final file = File('${dir.path}/$safeName');
-      final templateFile =
-          await AchievementTemplateExcelService.instance.findTemplateForCourse(
-        courseName,
-      );
+      final templateFile = standardThreePart
+          ? await AchievementTemplateExcelService.instance
+              .findTemplateForCourse(
+              courseName,
+            )
+          : null;
       if (templateFile != null) {
         final payload = AchievementExcelTemplatePayload(
           courseName: courseName,
@@ -994,7 +1082,7 @@ class _ReportTabState extends State<ReportTab> {
         }
         return;
       }
-      if (!standardThreePart) {
+      if (!standardThreePart || templateFile == null) {
         await _exportDynamicExcelReport(
           file: file,
           courseName: courseName,
@@ -1069,16 +1157,16 @@ class _ReportTabState extends State<ReportTab> {
         final extraLearning = val(row, 'extra_learning_score');
         r[0] = t(row['student_id']);
         r[1] = t(row['student_name']);
-        r[2] = n(classActivity, 1);
-        r[13] = n(classActivity, 1);
+        r[2] = n(classActivity, 0);
+        r[13] = n(classActivity, 0);
         r[14] = n(val(row, 'class_activity_achievement'), 4);
-        r[15] = n(quizHomework, 1);
-        r[25] = n(quizHomework, 1);
+        r[15] = n(quizHomework, 0);
+        r[25] = n(quizHomework, 0);
         r[26] = n(val(row, 'quiz_homework_achievement'), 4);
-        r[27] = n(extraLearning, 1);
-        r[36] = n(extraLearning, 1);
+        r[27] = n(extraLearning, 0);
+        r[36] = n(extraLearning, 0);
         r[37] = n(val(row, 'extra_learning_achievement'), 4);
-        r[38] = n(val(row, 'total_score'), 1);
+        r[38] = n(val(row, 'total_score'), 0);
         s1.appendRow(r);
       }
 
@@ -1123,18 +1211,18 @@ class _ReportTabState extends State<ReportTab> {
         r = rowOf(14);
         r[0] = t(row['student_id']);
         r[1] = t(row['student_name']);
-        r[2] = n(val(row, 'exp1_score'), 1);
-        r[3] = n(val(row, 'exp2_score'), 1);
+        r[2] = n(val(row, 'exp1_score'), 0);
+        r[3] = n(val(row, 'exp2_score'), 0);
         r[4] = n(val(row, 'obj1_achievement'), 4);
-        r[5] = n(val(row, 'exp3_score'), 1);
-        r[6] = n(val(row, 'exp4_score'), 1);
+        r[5] = n(val(row, 'exp3_score'), 0);
+        r[6] = n(val(row, 'exp4_score'), 0);
         r[7] = n(val(row, 'obj2_achievement'), 4);
-        r[8] = n(val(row, 'exp5_score'), 1);
-        r[9] = n(val(row, 'exp6_score'), 1);
+        r[8] = n(val(row, 'exp5_score'), 0);
+        r[9] = n(val(row, 'exp6_score'), 0);
         r[10] = n(val(row, 'obj3_achievement'), 4);
-        r[11] = n(experimentTarget4Score(row), 1);
+        r[11] = n(experimentTarget4Score(row), 0);
         r[12] = n(val(row, 'obj4_achievement'), 4);
-        r[13] = n(val(row, 'total_score'), 1);
+        r[13] = n(val(row, 'total_score'), 0);
         s2.appendRow(r);
       }
 
@@ -1176,15 +1264,15 @@ class _ReportTabState extends State<ReportTab> {
         r = rowOf(11);
         r[0] = t(row['student_id']);
         r[1] = t(row['student_name']);
-        r[2] = n(val(row, 'project_score'), 1);
+        r[2] = n(val(row, 'project_score'), 0);
         r[3] = n(val(row, 'obj1_achievement'), 4);
-        r[4] = n(val(row, 'group_score'), 1);
+        r[4] = n(val(row, 'group_score'), 0);
         r[5] = n(val(row, 'obj2_achievement'), 4);
-        r[6] = n(val(row, 'individual_score'), 1);
+        r[6] = n(val(row, 'individual_score'), 0);
         r[7] = n(val(row, 'obj3_achievement'), 4);
-        r[8] = n(val(row, 'defense_score'), 1);
+        r[8] = n(val(row, 'defense_score'), 0);
         r[9] = n(val(row, 'obj4_achievement'), 4);
-        r[10] = n(val(row, 'total_score'), 1);
+        r[10] = n(val(row, 'total_score'), 0);
         s3.appendRow(r);
       }
 
@@ -1567,7 +1655,7 @@ class _ReportTabState extends State<ReportTab> {
       final scores =
           await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
       final courseName = batch['course_name'] ?? _fallbackCourseName;
-      final className = batch['class_name'] ?? '软件23';
+      final className = _nonEmpty(batch['class_name'], '未绑定班级');
       final semester = batch['semester'] ?? '-';
       final syllabusVersion = (batch['syllabus_version'] ?? '未标注版本').toString();
       final teacherId = batch['teacher_id'] ?? '';

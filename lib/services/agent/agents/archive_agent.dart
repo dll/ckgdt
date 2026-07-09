@@ -5,6 +5,7 @@ import '../agent_model.dart';
 import '../../ai_service.dart';
 import '../../archive_template_loader.dart';
 import '../../archive_context_service.dart';
+import '../../course_context_service.dart';
 import '../../../core/constants/archive_periods.dart' as periods;
 import '../../../data/local/archive_dao.dart';
 import '../../../data/local/database_helper.dart';
@@ -14,6 +15,7 @@ class ArchiveAgent extends BaseAgent {
   final _dao = ArchiveDao();
   final _ai = AiService();
   final _ctx = ArchiveContextService();
+  final _courseContext = CourseContextService();
 
   @override
   AgentConfig get config => const AgentConfig(
@@ -103,11 +105,29 @@ class ArchiveAgent extends BaseAgent {
       {String courseType = 'assess'}) async {
     final context = <String, dynamic>{};
     try {
+      final course = await _courseContext.getActiveCourse();
+      final courseId = course.id;
+      final courseName =
+          course.name.trim().isNotEmpty ? course.name.trim() : '当前课程';
+      const courseNameWhere = '(course_name = ? OR course_name = ?)';
+      final courseNameArgs = [courseName, courseId];
       if (documentType == 'syllabus') {
-        final rows = await db.query('syllabus_items', limit: 50);
+        final rows = await _safeQuery(
+          db,
+          'syllabus_items',
+          where: courseNameWhere,
+          whereArgs: courseNameArgs,
+          limit: 50,
+        );
         context['syllabus_items'] = rows;
       } else if (documentType == 'lesson_plan') {
-        final rows = await db.query('lesson_plans', limit: 50);
+        final rows = await _safeQuery(
+          db,
+          'lesson_plans',
+          where: courseNameWhere,
+          whereArgs: courseNameArgs,
+          limit: 50,
+        );
         context['lesson_plans'] = rows;
         final teachingDocs = await _dao.getDocuments(
           period: 'beginning',
@@ -123,7 +143,13 @@ class ArchiveAgent extends BaseAgent {
         context['students'] = students;
         context['scores'] = scores;
       } else if (documentType == 'teaching_schedule') {
-        final syllabusRows = await db.query('syllabus_items', limit: 50);
+        final syllabusRows = await _safeQuery(
+          db,
+          'syllabus_items',
+          where: courseNameWhere,
+          whereArgs: courseNameArgs,
+          limit: 50,
+        );
         context['syllabus_items'] = syllabusRows;
         final taskDocs = await _dao.getDocuments(
           period: 'beginning',
@@ -140,7 +166,13 @@ class ArchiveAgent extends BaseAgent {
           context['course_schedule_content'] = scheduleDocs.first.content ?? '';
         }
       } else if (documentType == 'courseware') {
-        final rows = await db.query('resource_files', limit: 100);
+        final rows = await _safeQuery(
+          db,
+          'resource_files',
+          where: 'course_id = ?',
+          whereArgs: [courseId],
+          limit: 100,
+        );
         context['resource_files'] = rows;
       } else if (documentType.startsWith('final_') ||
           documentType == 'archive_form' ||
@@ -167,34 +199,49 @@ class ArchiveAgent extends BaseAgent {
             'assessment_weights_json',
             'status',
           ],
+          where: courseNameWhere,
+          whereArgs: courseNameArgs,
           limit: 10,
           orderBy: 'created_at DESC',
         );
-        context['achievement_score_count'] = await _safeRawQuery(db, '''
-SELECT COUNT(*) AS score_count FROM achievement_scores
-''');
+        context['achievement_score_count'] = await _safeRawQuery(
+            db,
+            '''
+SELECT COUNT(*) AS score_count
+FROM achievement_scores s
+INNER JOIN achievement_batches b ON b.id = s.batch_id
+WHERE $courseNameWhere
+''',
+            courseNameArgs);
         context['lab_submission_stats'] = await _safeRawQuery(db, '''
 SELECT
   COUNT(*) AS submission_count,
   SUM(CASE WHEN score IS NOT NULL THEN 1 ELSE 0 END) AS reviewed_count
 FROM lab_submissions
-''');
+INNER JOIN lab_tasks t ON t.id = lab_submissions.task_id
+WHERE t.course_id = ?
+''', [courseId]);
         context['quiz_stats'] = await _safeRawQuery(db, '''
 SELECT
   COUNT(*) AS quiz_count,
   ROUND(AVG(score), 1) AS average_score
 FROM quiz_results
-''');
+WHERE course_id = ?
+''', [courseId]);
       } else if (documentType == 'midterm_progress_check') {
         context['syllabus_items'] = await _safeQuery(
           db,
           'syllabus_items',
+          where: courseNameWhere,
+          whereArgs: courseNameArgs,
           limit: 50,
           orderBy: 'chapter_number ASC',
         );
         context['teaching_progress'] = await _safeQuery(
           db,
           'teaching_progress',
+          where: courseNameWhere,
+          whereArgs: courseNameArgs,
           limit: 80,
           orderBy: 'chapter ASC, planned_date ASC',
         );
@@ -211,7 +258,9 @@ FROM quiz_results
           db,
           'lesson_plans',
           columns: ['chapter', 'title', 'homework', 'status'],
-          where: "homework IS NOT NULL AND TRIM(homework) <> ''",
+          where:
+              "$courseNameWhere AND homework IS NOT NULL AND TRIM(homework) <> ''",
+          whereArgs: courseNameArgs,
           limit: 100,
           orderBy: 'chapter ASC, id ASC',
         );
@@ -226,6 +275,8 @@ FROM quiz_results
             'status',
             'homework_completion',
           ],
+          where: courseNameWhere,
+          whereArgs: courseNameArgs,
           limit: 80,
           orderBy: 'chapter ASC, planned_date ASC',
         );
@@ -236,24 +287,29 @@ SELECT
   SUM(CASE WHEN s.score IS NOT NULL THEN 1 ELSE 0 END) AS reviewed_count
 FROM lab_tasks t
 LEFT JOIN lab_submissions s ON s.task_id = t.id
-''');
+WHERE t.course_id = ?
+''', [courseId]);
         context['quiz_stats'] = await _safeRawQuery(db, '''
 SELECT
   COUNT(*) AS quiz_count,
   ROUND(AVG(score), 1) AS average_score,
   SUM(num_total) AS total_questions
 FROM quiz_results
-''');
+WHERE course_id = ?
+''', [courseId]);
         context['wrong_answer_stats'] = await _safeRawQuery(db, '''
 SELECT
   COUNT(*) AS wrong_answer_count,
   COUNT(DISTINCT user_id) AS affected_students
 FROM wrong_answers
-''');
+WHERE course_id = ?
+''', [courseId]);
       } else if (documentType == 'midterm_exam') {
         context['syllabus_items'] = await _safeQuery(
           db,
           'syllabus_items',
+          where: courseNameWhere,
+          whereArgs: courseNameArgs,
           limit: 50,
           orderBy: 'chapter_number ASC',
         );
@@ -264,7 +320,8 @@ SELECT
   SUM(num_correct) AS total_correct,
   SUM(num_total) AS total_questions
 FROM quiz_results
-''');
+WHERE course_id = ?
+''', [courseId]);
         context['achievement_batches'] = await _safeQuery(
           db,
           'achievement_batches',
@@ -276,6 +333,8 @@ FROM quiz_results
             'assessment_weights_json',
             'status',
           ],
+          where: courseNameWhere,
+          whereArgs: courseNameArgs,
           limit: 5,
           orderBy: 'created_at DESC',
         );
@@ -299,6 +358,7 @@ FROM quiz_results
     String table, {
     List<String>? columns,
     String? where,
+    List<Object?>? whereArgs,
     int? limit,
     String? orderBy,
   }) async {
@@ -307,6 +367,7 @@ FROM quiz_results
         table,
         columns: columns,
         where: where,
+        whereArgs: whereArgs,
         limit: limit,
         orderBy: orderBy,
       );
@@ -317,12 +378,10 @@ FROM quiz_results
     }
   }
 
-  Future<List<Map<String, dynamic>>> _safeRawQuery(
-    Database db,
-    String sql,
-  ) async {
+  Future<List<Map<String, dynamic>>> _safeRawQuery(Database db, String sql,
+      [List<Object?> args = const []]) async {
     try {
-      final rows = await db.rawQuery(sql);
+      final rows = await db.rawQuery(sql, args);
       return rows.map((row) => Map<String, dynamic>.from(row)).toList();
     } catch (e, st) {
       swallowDebug(e, tag: 'ArchiveAgent._safeRawQuery', stack: st);
@@ -689,10 +748,10 @@ ${doc.content ?? '（文档无内容）'}''';
 **统计阶段：** 期中前
 
 ## 一、统计口径
-说明作业、阶段测验、实验报告、项目阶段材料的统计范围。
+说明作业、阶段测验、实践报告、项目阶段材料的统计范围。
 
 ## 二、作业与批阅统计表
-| 序号 | 作业/测验/实验名称 | 布置周次 | 应提交人数 | 实交人数 | 应批阅份数 | 已批阅份数 | 反馈方式 | 备注 |
+| 序号 | 作业/测验/实践任务名称 | 布置周次 | 应提交人数 | 实交人数 | 应批阅份数 | 已批阅份数 | 反馈方式 | 备注 |
 |------|--------------------|----------|------------|----------|------------|------------|----------|------|
 
 ## 三、批阅质量检查
@@ -792,7 +851,7 @@ ${doc.content ?? '（文档无内容）'}''';
     buf.writeln(
         '2. **教师姓名 / 班级 / 专业 / 学期 / 学时 / 学分 / 课程类型** —— 必须使用 [SYSTEM_FACTS] 段的真实数据，与 [REFERENCE] 不一致时**优先用 [SYSTEM_FACTS]**，禁止照抄历届模板里的旧值。');
     buf.writeln(
-        '3. **章节标题 / 章节数 / 实验项目编号** —— 必须使用 [SYSTEM_FACTS] 第 3、4 段的真实数据，禁止编造。');
+        '3. **章节标题 / 章节数 / 第 4 段实践任务编号** —— 必须使用 [SYSTEM_FACTS] 第 3、4 段的真实数据，禁止编造或沿用旧课程术语。');
     buf.writeln(
         '4. **课程目标条数 / 毕业要求映射** —— 沿用 [REFERENCE] 模板的 OBE 框架（教育部规范），不可改条数。');
     buf.writeln(

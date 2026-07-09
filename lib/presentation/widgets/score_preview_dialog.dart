@@ -1,5 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 
+import '../../services/course_terminology_service.dart';
+
 /// 成绩预览对话框：以 DataTable 形式展示成绩列表。
 ///
 /// [title] — 对话框标题
@@ -24,12 +26,13 @@ class ScorePreviewDialog extends StatelessWidget {
 
   /// 工厂：实验成绩
   factory ScorePreviewDialog.lab(List<Map<String, dynamic>> data,
-      {VoidCallback? onExport}) {
+      {VoidCallback? onExport, CourseTerms? terms}) {
+    final resolvedTerms = terms ?? CourseTerms.fromPracticeLabel('实验项目');
     final columns = [
       const ScoreColumn('学号', flex: 2),
       const ScoreColumn('姓名', flex: 2),
       const ScoreColumn('章节', flex: 2),
-      const ScoreColumn('实验任务', flex: 3),
+      ScoreColumn(resolvedTerms.taskLabel, flex: 3),
       const ScoreColumn('满分', flex: 1),
       const ScoreColumn('得分', flex: 1),
       const ScoreColumn('状态', flex: 1),
@@ -44,7 +47,7 @@ class ScorePreviewDialog extends StatelessWidget {
       r['status'] ?? '',
     ]).toList();
     return ScorePreviewDialog(
-      title: '实验成绩预览',
+      title: '${resolvedTerms.practiceLabel}成绩预览',
       subtitle: '共 ${data.length} 条记录',
       columns: columns,
       rows: rows,

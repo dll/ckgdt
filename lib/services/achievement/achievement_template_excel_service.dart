@@ -161,8 +161,9 @@ class AchievementTemplateExcelService {
         }
       }
     }
-    // 优先课程专用模板，找不到则用任意模板
-    final candidates = courseFiles.isNotEmpty ? courseFiles : anyFiles;
+    // 只使用课程专用模板。找不到时交给动态导出生成当前课程工作簿，
+    // 避免新课程误套用旧课程模板后残留学生、目标、图表缓存等脏数据。
+    final candidates = courseName.trim().isEmpty ? anyFiles : courseFiles;
     final templates = <File>[];
     for (final file in candidates) {
       if (await _isSupportedTemplate(file, profile)) {

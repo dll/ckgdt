@@ -2219,7 +2219,7 @@ $rawText
               final kind = (map['kind'] ?? '').toString();
               final objective = (map['objective'] as num?)?.toInt() ?? 0;
               final label = (map['label'] ?? '').toString();
-              if (kind.isEmpty || objective < 1 || objective > 4) continue;
+              if (kind.isEmpty || objective < 1 || objective > 10) continue;
               await txn.insert(
                 'achievement_component_scores',
                 {

@@ -15,6 +15,24 @@ import 'importers/archive_importers.dart';
 class ArchiveTemplateSourceService {
   ArchiveTemplateSourceService._();
 
+  static final Map<String, String> _courseArchiveRoots = {};
+  static String? _preferredCourseId;
+
+  static void registerCourseArchiveRoot({
+    required String courseId,
+    required String archiveRoot,
+    bool prefer = true,
+  }) {
+    if (courseId.trim().isEmpty || archiveRoot.trim().isEmpty) return;
+    _courseArchiveRoots[courseId] = archiveRoot;
+    if (prefer) _preferredCourseId = courseId;
+  }
+
+  static void clearRegisteredCourseArchiveRoots() {
+    _courseArchiveRoots.clear();
+    _preferredCourseId = null;
+  }
+
   static bool supportsDocument(String documentType) =>
       _specs.containsKey(documentType);
 
@@ -100,15 +118,19 @@ class ArchiveTemplateSourceService {
   }) {
     final spec = _specs[documentType];
     if (spec == null) return const [];
-    final dir = _templateDirectory(periodKey);
-    if (dir == null || !dir.existsSync()) return const [];
-
     final matches = <ArchiveTemplateMatch>[];
-    for (final entity in dir.listSync(recursive: false)) {
-      final match = _score(entity, spec);
-      if (match != null) matches.add(match);
+    for (final dir in _templateDirectories(periodKey)) {
+      if (!dir.existsSync()) continue;
+      for (final entity in dir.listSync(recursive: false)) {
+        final match = _score(entity, spec);
+        if (match != null) matches.add(match);
+      }
     }
+    if (matches.isEmpty) return const [];
     matches.sort((a, b) {
+      final rootOrder = _sourceRootPriority(a.entity.path)
+          .compareTo(_sourceRootPriority(b.entity.path));
+      if (rootOrder != 0) return rootOrder;
       final numberOrder = _compareLeadingNumbers(a.name, b.name);
       if (numberOrder != 0) return numberOrder;
       final scoreOrder = b.score.compareTo(a.score);
@@ -218,7 +240,7 @@ class ArchiveTemplateSourceService {
     final source = _trimSource(sourceText);
     final normalized = _normalize(sourceText);
     final hasWeeks = _containsAny(normalized, ['周次', '第一周', '第1周']);
-    final hasHours = _containsAny(normalized, ['学时', '讲课', '实验课']);
+    final hasHours = _containsAny(normalized, ['学时', '讲课', '实验课', '实践课']);
     final hasCourse = _containsAny(normalized, ['课程名称', '授课教师', '班级']);
     final conclusion = hasWeeks && hasHours
         ? '已识别进度表要素，需由教师结合实际授课记录确认是否一致'
@@ -235,8 +257,8 @@ class ArchiveTemplateSourceService {
 | 项目 | 内容 |
 |------|------|
 | 检查对象 | 期中前课程教学进度执行情况 |
-| 核对依据 | 期初教学进度表、实际授课记录、实验/实践安排 |
-| 核对重点 | 周次覆盖、章节内容、理论/实验学时、调课补课说明 |
+| 核对依据 | 期初教学进度表、实际授课记录、实践任务安排 |
+| 核对重点 | 周次覆盖、章节内容、理论/实践学时、调课补课说明 |
 | 初步结论 | $conclusion |
 
 ## 02 自动核对摘要
@@ -244,7 +266,7 @@ class ArchiveTemplateSourceService {
 | 核对项 | 自动识别 | 检查结论 | 处理要求 |
 |--------|----------|----------|----------|
 | 周次覆盖 | ${hasWeeks ? '已识别周次信息' : '未识别明确周次'} | ${hasWeeks ? '基本具备核对条件' : '需补充'} | 核对期中前已到教学周 |
-| 学时执行 | ${hasHours ? '已识别学时或讲课/实验课信息' : '未识别学时信息'} | ${hasHours ? '基本具备核对条件' : '需补充'} | 理论、实验/实践学时分别确认 |
+| 学时执行 | ${hasHours ? '已识别学时或讲课/实践课信息' : '未识别学时信息'} | ${hasHours ? '基本具备核对条件' : '需补充'} | 理论、实践学时分别确认 |
 | 课程信息 | ${hasCourse ? '已识别课程/教师/班级信息' : '未识别完整课程信息'} | ${hasCourse ? '基本具备归档条件' : '需补充'} | 与教学任务书、课表保持一致 |
 | 偏差说明 | 需教师填写实际执行偏差 | 待确认 | 若有调课、补课、滞后或超前，必须说明原因和整改安排 |
 
@@ -252,14 +274,14 @@ class ArchiveTemplateSourceService {
 
 | 进度状态 | 勾选 | 说明 |
 |----------|------|------|
-| 对齐 | [ ] | 实际完成周次、章节、实验/实践项目与期初教学进度表一致 |
+| 对齐 | [ ] | 实际完成周次、章节、实践任务与期初教学进度表一致 |
 | 滞后（延时） | [ ] | 已写明滞后原因、补课或调整安排 |
-| 超前 | [ ] | 已确认未跳过核心知识点、实验或实践环节 |
+| 超前 | [ ] | 已确认未跳过核心知识点或实践环节 |
 
 | 核查项 | 勾选 | 说明 |
 |--------|------|------|
-| 教学内容与期初进度表一致 | [ ] | 核对已授章节、知识点、实验项目 |
-| 理论、实验、实践学时已核对 | [ ] | 与教学任务书和课程课表一致 |
+| 教学内容与期初进度表一致 | [ ] | 核对已授章节、知识点、实践任务 |
+| 理论、实践学时已核对 | [ ] | 与教学任务书和课程课表一致 |
 | 调课、停课、补课有记录 | [ ] | 如有偏差必须说明原因和整改措施 |
 
 ## 04 审核结论
@@ -283,7 +305,7 @@ $source
     final normalized = _normalize(sourceText);
     final hasHomeworkEvidence = _containsAny(
       normalized,
-      ['作业', '批阅', '评分', '反馈', '提交', '测验', '实验报告'],
+      ['作业', '批阅', '评分', '反馈', '提交', '测验', '实践报告', '实验报告'],
     );
     final looksLikeProgress = _containsAny(normalized, ['教学进度表']) &&
         _containsAny(normalized, ['周次', '教学内容摘要']);
@@ -303,7 +325,7 @@ $source
 
 | 项目 | 内容 |
 |------|------|
-| 统计对象 | 期中前布置的作业、测验、实验报告、项目阶段材料 |
+| 统计对象 | 期中前布置的作业、测验、实践报告、项目阶段材料 |
 | 统计口径 | 应提交人数、实交人数、应批阅份数、已批阅份数、反馈方式 |
 | 审核重点 | 作业次数是否达标、批阅是否及时、反馈是否覆盖主要问题 |
 | 源文件初判 | $sourceConclusion |
@@ -321,9 +343,9 @@ $source
 
 | 项目 | 教师填写/勾选 | 说明 |
 |------|---------------|------|
-| 期中前布置作业次数 | ____ 次 | 含课后作业、阶段测验、实验报告、项目阶段材料 |
+| 期中前布置作业次数 | ____ 次 | 含课后作业、阶段测验、实践报告、项目阶段材料 |
 | 已批阅次数 | ____ 次 | 可为分数、评语、课堂讲评或平台反馈 |
-| 作业布置与教学进度对齐 | [ ] | 作业内容对应已授章节、实验或阶段项目 |
+| 作业布置与教学进度对齐 | [ ] | 作业内容对应已授章节、实践任务或阶段项目 |
 | 已完成批阅与反馈 | [ ] | 未批阅或迟批应说明原因和补批计划 |
 
 ## 04 审核结论
@@ -365,7 +387,7 @@ $source
 
 | 项目 | 内容 |
 |------|------|
-| 适用场景 | 期中考试、阶段测验、项目阶段检查、作业/实验阶段考核 |
+| 适用场景 | 期中考试、阶段测验、项目阶段检查、作业/实践阶段考核 |
 | 必备材料 | 题目或任务书、参考答案或评分标准、成绩/结果记录、质量分析 |
 | 目标对应 | 应覆盖期中前核心知识点和课程目标 |
 | 源文件初判 | $conclusion |
@@ -526,10 +548,50 @@ $imagePreview
 ''';
   }
 
-  static Directory? _templateDirectory(String periodKey) {
+  static List<Directory> _templateDirectories(String periodKey) {
+    final dirs = <Directory>[];
+    final preferredRoot = _preferredCourseId == null
+        ? null
+        : _courseArchiveRoots[_preferredCourseId];
+    if (preferredRoot != null) {
+      dirs.add(Directory(p.join(preferredRoot, periodLabel(periodKey), '模板')));
+    }
+    for (final entry in _courseArchiveRoots.entries) {
+      if (entry.key == _preferredCourseId) continue;
+      dirs.add(Directory(p.join(entry.value, periodLabel(periodKey), '模板')));
+    }
     final root = BaseDocumentProcessor.archiveDataRoot;
-    if (root == null) return null;
-    return Directory(p.join(root, periodLabel(periodKey), '模板'));
+    if (root != null) {
+      dirs.add(Directory(p.join(root, periodLabel(periodKey), '模板')));
+    }
+    return dirs;
+  }
+
+  static int _sourceRootPriority(String path) {
+    final normalized = p.normalize(path);
+    var index = 0;
+    for (final dir in _templateDirectoriesForPriority()) {
+      if (p.isWithin(dir.path, normalized) || p.equals(dir.path, normalized)) {
+        return index;
+      }
+      index++;
+    }
+    return index;
+  }
+
+  static List<Directory> _templateDirectoriesForPriority() {
+    final dirs = <Directory>[];
+    final preferredRoot = _preferredCourseId == null
+        ? null
+        : _courseArchiveRoots[_preferredCourseId];
+    if (preferredRoot != null) dirs.add(Directory(preferredRoot));
+    for (final entry in _courseArchiveRoots.entries) {
+      if (entry.key == _preferredCourseId) continue;
+      dirs.add(Directory(entry.value));
+    }
+    final root = BaseDocumentProcessor.archiveDataRoot;
+    if (root != null) dirs.add(Directory(root));
+    return dirs;
   }
 
   static bool _isTextLike(String ext) =>

@@ -63,10 +63,9 @@ class WorksDao {
       } // 列已存在则静默跳过
     }
     try {
-      final courseId = await _courseContext.activeCourseId();
       await db.update(
         'student_works',
-        {'course_id': courseId},
+        {'course_id': CourseContextService.defaultCourseId},
         where: "course_id IS NULL OR course_id = ''",
       );
     } catch (e) {
@@ -906,11 +905,13 @@ class WorksDao {
   Future<void> syncFromAssessmentProjects() async {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
+    final scope = await _courseContext.scopedWhere(column: 'p.course_id');
     final projects = await db.rawQuery('''
       SELECT p.*, g.name as group_name, g.leader as leader_name
       FROM assessment_projects p
       LEFT JOIN assessment_groups g ON p.group_id = g.id
-    ''');
+      WHERE ${scope.where}
+    ''', scope.args);
     for (final p in projects) {
       final projectId = p['id'] as int;
       final existingScope = await _studentWorksScope(
@@ -932,7 +933,7 @@ class WorksDao {
           leaderName: p['leader_name'] as String?,
           projectId: projectId,
           groupId: p['group_id'] as int?,
-          status: '已提交',
+          status: '待提交',
         );
       }
     }

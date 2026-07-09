@@ -13,6 +13,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
   List<Map<String, dynamic>> _submissions = [];
   Map<int, List<Map<String, dynamic>>> _unsubmittedByTask = {};
   Map<String, dynamic> _classOverview = {};
+  CourseTerms _terms = CourseTerms.fromPracticeLabel('实验项目');
   bool _isLoading = true;
   // Cached stats (computed once in _loadSubmissions, used in build)
   double _avgScore = 0;
@@ -42,6 +43,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
       }
       List<Map<String, dynamic>> submissions;
       final passScore = await SettingsService.getEvaluationPassScore();
+      final terms = await CourseTerminologyService().activeTerms();
       if (_isTeacherOrAdmin) {
         submissions = await widget.labTaskDao.getSubmissions();
       } else {
@@ -71,6 +73,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
         setState(() {
           _submissions = submissions;
           _unsubmittedByTask = unsub;
+          _terms = terms;
           _passScore = passScore;
           _avgScore = avg;
           _excellentCount =
@@ -160,7 +163,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
             Icon(Icons.analytics_outlined,
                 size: 18, color: theme.colorScheme.primary),
             const SizedBox(width: 8),
-            Text('实验成绩总览',
+            Text('${_terms.practiceLabel}成绩总览',
                 style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
@@ -241,7 +244,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
               child: Row(children: [
                 Icon(Icons.emoji_events, size: 16, color: Colors.amber[700]),
                 const SizedBox(width: 6),
-                Text('全部实验达标！满足答辩条件①',
+                Text('全部${_terms.practiceLabel}达标！满足答辩条件①',
                     style: TextStyle(
                         fontSize: 12,
                         color: Colors.amber[800],
@@ -426,8 +429,8 @@ class _SubmissionTabState extends State<_SubmissionTab> {
               controller: contentCtrl,
               maxLines: 6,
               decoration: InputDecoration(
-                labelText: '实验总结 *',
-                hintText: '请简要描述实验完成情况...',
+                labelText: '${_terms.practiceLabel}总结 *',
+                hintText: '请简要描述${_terms.practiceLabel}完成情况...',
                 border:
                     OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 contentPadding:
@@ -446,7 +449,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                   : () async {
                       if (contentCtrl.text.trim().isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('请填写实验总结')),
+                          SnackBar(content: Text('请填写${_terms.practiceLabel}总结')),
                         );
                         return;
                       }
@@ -672,7 +675,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                   Expanded(
                     child: Text(
                       '${[
-                        if (failCount > 0) '$failCount人实验不及格',
+                        if (failCount > 0) '$failCount人${_terms.practiceLabel}不及格',
                         if (ungradedCount > 0) '$ungradedCount份未批改',
                       ].join('，')} — 部分学生不满足答辩条件①',
                       style: TextStyle(fontSize: 12, color: Colors.orange[800]),
@@ -947,7 +950,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                 '提交时间: ${submitTime.isNotEmpty ? submitTime.substring(0, 16).replaceAll('T', ' ') : ""}',
                 style: TextStyle(fontSize: 12, color: Colors.grey[500])),
             const Divider(height: 24),
-            Text('实验总结',
+            Text('${_terms.practiceLabel}总结',
                 style: TextStyle(
                     fontSize: 15, fontWeight: FontWeight.bold, color: primary)),
             const SizedBox(height: 8),
@@ -1014,7 +1017,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
     final maxScore = submission['max_score'] as int? ?? 100;
     final existingScore = submission['score'] as int?;
     final existingFeedback = submission['feedback'] as String?;
-    final taskTitle = submission['task_title'] as String? ?? '实验任务';
+    final taskTitle = submission['task_title'] as String? ?? _terms.taskLabel;
     final filePaths = submission['file_paths'] as String? ?? '';
     final fileNames = submission['file_names'] as String? ?? '';
 
@@ -1075,7 +1078,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            fileNames.isNotEmpty ? fileNames : '实验报告.pdf',
+                            fileNames.isNotEmpty ? fileNames : '${_terms.reportLabel}.pdf',
                             style: const TextStyle(fontSize: 12),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1409,7 +1412,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
       fileNames: fileNames,
     );
     if (!prepared.hasBody) {
-      reasons.add('内容审核不通过：无法读取 PDF 正文，不能确认报告内容与实验任务一致。');
+      reasons.add('内容审核不通过：无法读取 PDF 正文，不能确认报告内容与${_terms.taskLabel}一致。');
     } else if (await SettingsService.isTeacherAiGradingEnabled()) {
       final result = await GradingAgent().gradeSubmission(
         taskTitle: taskTitle,

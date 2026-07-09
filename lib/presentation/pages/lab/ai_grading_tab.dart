@@ -10,6 +10,7 @@ import '../../../services/notification_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/agent/agents/grading_agent.dart';
 import '../../../services/settings_service.dart';
+import '../../../services/course_terminology_service.dart';
 import 'lab_tasks_page.dart';
 import '../../../core/error_handler.dart';
 
@@ -41,6 +42,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
 
   // ── 当前大模型名称（显示用）──
   String _modelLabel = '';
+  CourseTerms _terms = CourseTerms.fromPracticeLabel('实验项目');
 
   // ── 单份批阅进行中的提交 id（行内 spinner）──
   int? _singleGradingId;
@@ -89,10 +91,12 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
   }
 
   Future<void> _loadTasks() async {
+    final terms = await CourseTerminologyService().activeTerms();
     final tasks = await widget.labTaskDao.getTasks();
     final total = await widget.labTaskDao.getActiveStudentCount();
     if (mounted) {
       setState(() {
+        _terms = terms;
         _tasks = tasks;
         _totalStudents = total;
       });
@@ -850,8 +854,8 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
             const SizedBox(height: 12),
             // 任务下拉选择
             DropdownButtonFormField<int>(value: _selectedTaskId,
-              decoration: const InputDecoration(
-                labelText: '选择实验任务',
+              decoration: InputDecoration(
+                labelText: '选择${_terms.taskLabel}',
                 border: OutlineInputBorder(),
                 isDense: true,
               ),

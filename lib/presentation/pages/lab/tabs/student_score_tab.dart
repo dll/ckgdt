@@ -16,6 +16,7 @@ class _StudentLabScoreTab extends StatefulWidget {
 class _StudentLabScoreTabState extends State<_StudentLabScoreTab> {
   Map<String, dynamic> _stats = {};
   List<Map<String, dynamic>> _details = [];
+  CourseTerms _terms = CourseTerms.fromPracticeLabel('实验项目');
   bool _loading = true;
   int _passScore = SettingsService.defaultEvaluationPassScore;
 
@@ -30,11 +31,13 @@ class _StudentLabScoreTabState extends State<_StudentLabScoreTab> {
     try {
       final userId = widget.authService.getCurrentUserId();
       final passScore = await SettingsService.getEvaluationPassScore();
+      final terms = await CourseTerminologyService().activeTerms();
       if (userId == null) {
         if (!mounted) return;
         setState(() {
           _stats = {};
           _details = [];
+          _terms = terms;
           _passScore = passScore;
           _loading = false;
         });
@@ -53,6 +56,7 @@ class _StudentLabScoreTabState extends State<_StudentLabScoreTab> {
       setState(() {
         _stats = stats;
         _details = details;
+        _terms = terms;
         _passScore = passScore;
         _loading = false;
       });
@@ -94,8 +98,8 @@ class _StudentLabScoreTabState extends State<_StudentLabScoreTab> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        '我的实验成绩',
+                      Text(
+                        '我的${_terms.practiceLabel}成绩',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -141,7 +145,7 @@ class _StudentLabScoreTabState extends State<_StudentLabScoreTab> {
             ],
           ),
           const SizedBox(height: 16),
-          _sectionTitle('实验成绩明细', Icons.list_alt, primary),
+          _sectionTitle('${_terms.practiceLabel}成绩明细', Icons.list_alt, primary),
           if (_details.isEmpty)
             _emptyScoreHint()
           else
@@ -189,7 +193,7 @@ class _StudentLabScoreTabState extends State<_StudentLabScoreTab> {
   }
 
   Widget _detailCard(Map<String, dynamic> detail) {
-    final title = detail['task_title'] as String? ?? '实验任务';
+    final title = detail['task_title'] as String? ?? _terms.taskLabel;
     final chapter = detail['chapter'] as String? ?? '';
     final score = (detail['score'] as num?)?.toDouble();
     final maxScore = (detail['max_score'] as num?)?.toDouble() ?? 100;
@@ -293,7 +297,8 @@ class _StudentLabScoreTabState extends State<_StudentLabScoreTab> {
         children: [
           Icon(Icons.inbox_outlined, size: 48, color: Colors.grey[300]),
           const SizedBox(height: 12),
-          Text('暂无实验成绩', style: TextStyle(color: Colors.grey[500])),
+          Text('暂无${_terms.practiceLabel}成绩',
+              style: TextStyle(color: Colors.grey[500])),
         ],
       ),
     );

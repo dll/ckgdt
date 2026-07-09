@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:math' show sqrt;
+import 'dart:math' show max, sqrt;
 import 'package:sqflite/sqflite.dart';
 import 'active_student_scope.dart';
 import 'database_helper.dart';
@@ -31,6 +31,11 @@ class AchievementDao {
       return double.tryParse(text) ?? fallback;
     }
     return fallback;
+  }
+
+  static String _nonEmpty(Object? value, {required String fallback}) {
+    final text = value?.toString().trim() ?? '';
+    return text.isEmpty ? fallback : text;
   }
 
   static double _asRatio(Object? value, [double fallback = 0]) {
@@ -300,33 +305,40 @@ class AchievementDao {
   /// 计算批次的班级平均达成度
   Future<Map<String, double>> calculateClassAverage(int batchId) async {
     final scores = await getScores(batchId);
-    if (scores.isEmpty) return {};
     final weights = await resolveObjectiveWeights(batchId);
     final fullMarks = await resolveObjectiveFullMarks(batchId);
+    final dynamicAvg = await _dynamicAggregateClassAverage(batchId);
+    if (scores.isEmpty && dynamicAvg.isEmpty) return {};
+    final objectiveCount = _objectiveCount(
+      weights: weights,
+      fullMarks: fullMarks,
+      dynamicObjectives: dynamicAvg.keys,
+    );
     final activeIndexes = [
-      for (var i = 0; i < 4; i++)
+      for (var i = 0; i < objectiveCount; i++)
         if ((i < weights.length && weights[i] > 0) ||
-            (i < fullMarks.length && fullMarks[i] > 0))
+            (i < fullMarks.length && fullMarks[i] > 0) ||
+            dynamicAvg.containsKey(i + 1))
           i
     ];
-    if (activeIndexes.isEmpty) activeIndexes.addAll([0, 1, 2, 3]);
+    if (activeIndexes.isEmpty) {
+      activeIndexes.addAll(List<int>.generate(objectiveCount, (i) => i));
+    }
 
-    double sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, sumTotal = 0;
+    final sums = List<double>.filled(objectiveCount, 0);
+    double sumTotal = 0;
     for (final s in scores) {
-      sum1 += (s['obj1_achievement'] as num?)?.toDouble() ?? 0;
-      sum2 += (s['obj2_achievement'] as num?)?.toDouble() ?? 0;
-      sum3 += (s['obj3_achievement'] as num?)?.toDouble() ?? 0;
-      sum4 += (s['obj4_achievement'] as num?)?.toDouble() ?? 0;
+      for (final i in activeIndexes) {
+        sums[i] += (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
+      }
       sumTotal += (s['total_score'] as num?)?.toDouble() ?? 0;
     }
 
-    final n = scores.length.toDouble();
+    final n = scores.isEmpty ? 1.0 : scores.length.toDouble();
     return {
-      if (activeIndexes.contains(0)) '课程目标1': sum1 / n,
-      if (activeIndexes.contains(1)) '课程目标2': sum2 / n,
-      if (activeIndexes.contains(2)) '课程目标3': sum3 / n,
-      if (activeIndexes.contains(3)) '课程目标4': sum4 / n,
-      '总评': sumTotal / n / 100,
+      for (final i in activeIndexes)
+        '课程目标${i + 1}': dynamicAvg[i + 1] ?? sums[i] / n,
+      if (scores.isNotEmpty) '总评': sumTotal / n / 100,
     };
   }
 
@@ -344,36 +356,54 @@ class AchievementDao {
   /// 获取学生统计数据（最大/最小/标准差）
   Future<Map<String, Map<String, double>>> getStudentStats(int batchId) async {
     final scores = await getScores(batchId);
-    if (scores.isEmpty) return {};
     final weights = await resolveObjectiveWeights(batchId);
     final fullMarks = await resolveObjectiveFullMarks(batchId);
+    final dynamicValues = await _dynamicAggregateStudentAchievements(batchId);
+    if (scores.isEmpty && dynamicValues.isEmpty) return {};
+    final objectiveCount = _objectiveCount(
+      weights: weights,
+      fullMarks: fullMarks,
+      dynamicObjectives: dynamicValues.keys,
+    );
     final activeIndexes = [
-      for (var i = 0; i < 4; i++)
+      for (var i = 0; i < objectiveCount; i++)
         if ((i < weights.length && weights[i] > 0) ||
-            (i < fullMarks.length && fullMarks[i] > 0))
+            (i < fullMarks.length && fullMarks[i] > 0) ||
+            dynamicValues.containsKey(i + 1))
           i
     ];
-    if (activeIndexes.isEmpty) activeIndexes.addAll([0, 1, 2, 3]);
-
-    final obj1 = scores
-        .map((s) => (s['obj1_achievement'] as num?)?.toDouble() ?? 0)
-        .toList();
-    final obj2 = scores
-        .map((s) => (s['obj2_achievement'] as num?)?.toDouble() ?? 0)
-        .toList();
-    final obj3 = scores
-        .map((s) => (s['obj3_achievement'] as num?)?.toDouble() ?? 0)
-        .toList();
-    final obj4 = scores
-        .map((s) => (s['obj4_achievement'] as num?)?.toDouble() ?? 0)
-        .toList();
+    if (activeIndexes.isEmpty) {
+      activeIndexes.addAll(List<int>.generate(objectiveCount, (i) => i));
+    }
 
     return {
-      if (activeIndexes.contains(0)) '课程目标1': _calcStats(obj1),
-      if (activeIndexes.contains(1)) '课程目标2': _calcStats(obj2),
-      if (activeIndexes.contains(2)) '课程目标3': _calcStats(obj3),
-      if (activeIndexes.contains(3)) '课程目标4': _calcStats(obj4),
+      for (final i in activeIndexes)
+        '课程目标${i + 1}': _calcStats(
+          dynamicValues[i + 1] ??
+              scores
+                  .map((s) =>
+                      (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0)
+                  .toList(),
+        ),
     };
+  }
+
+  int _objectiveCount({
+    required List<double> weights,
+    required List<double> fullMarks,
+    Iterable<int> dynamicObjectives = const [],
+  }) {
+    var count = 4;
+    for (var i = 0; i < weights.length; i++) {
+      if (weights[i] > 0) count = max(count, i + 1);
+    }
+    for (var i = 0; i < fullMarks.length; i++) {
+      if (fullMarks[i] > 0) count = max(count, i + 1);
+    }
+    for (final idx in dynamicObjectives) {
+      if (idx > 0) count = max(count, idx);
+    }
+    return count.clamp(1, 10).toInt();
   }
 
   Map<String, double> _calcStats(List<double> values) {
@@ -402,7 +432,7 @@ class AchievementDao {
     if (batch == null) return '批次不存在';
 
     final courseName = batch['course_name'] ?? '当前课程';
-    final className = batch['class_name'] ?? '软件23';
+    final className = _nonEmpty(batch['class_name'], fallback: '未绑定班级');
     final scores = await getScores(batchId);
     final avgAchievements = await calculateClassAverage(batchId);
     final stats = await getStudentStats(batchId);
@@ -551,7 +581,7 @@ class AchievementDao {
   Future<int> addBatch({
     required String batchName,
     String courseName = '',
-    String className = '软件23',
+    String className = '',
     String semester = '',
     String teacherId = '',
     String? syllabusVersion,
@@ -559,18 +589,39 @@ class AchievementDao {
     final effectiveCourseName = courseName.isNotEmpty
         ? courseName
         : await _courseContext.activeCourseName();
+    final effectiveClassName = className.trim().isNotEmpty
+        ? className.trim()
+        : await _defaultActiveClassName();
     final effectiveVersion = syllabusVersion?.trim().isNotEmpty == true
         ? syllabusVersion!.trim()
         : await currentSyllabusVersion(effectiveCourseName);
     return createBatch({
       'batch_name': batchName,
       'course_name': effectiveCourseName,
-      'class_name': className,
+      'class_name': effectiveClassName,
       'semester': semester,
       'teacher_id': teacherId,
       'syllabus_version': effectiveVersion,
       'status': 'draft',
     });
+  }
+
+  Future<String> _defaultActiveClassName() async {
+    try {
+      final db = await DatabaseHelper.instance.database;
+      final rows = await db.query(
+        'classes',
+        columns: ['name'],
+        where: 'COALESCE(is_archived, 0) = 0',
+        orderBy: 'id ASC',
+        limit: 1,
+      );
+      final name = rows.isEmpty ? '' : rows.first['name']?.toString().trim();
+      if (name != null && name.isNotEmpty) return name;
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementDao.defaultActiveClassName', stack: st);
+    }
+    return '未绑定班级';
   }
 
   Future<String> currentSyllabusVersion(String courseName) async {
@@ -645,14 +696,18 @@ class AchievementDao {
       'weighted_achievement': weightedAchievement,
     };
     // 兼容旧的4参数调用
-    if (objective1Achievement != null)
+    if (objective1Achievement != null) {
       results['objective1_achievement'] = objective1Achievement;
-    if (objective2Achievement != null)
+    }
+    if (objective2Achievement != null) {
       results['objective2_achievement'] = objective2Achievement;
-    if (objective3Achievement != null)
+    }
+    if (objective3Achievement != null) {
       results['objective3_achievement'] = objective3Achievement;
-    if (objective4Achievement != null)
+    }
+    if (objective4Achievement != null) {
       results['objective4_achievement'] = objective4Achievement;
+    }
     // 新的动态数量支持
     if (objectiveAchievements != null) {
       for (final entry in objectiveAchievements.entries) {
@@ -1691,7 +1746,7 @@ class AchievementDao {
               final answers = jsonDecode(answersJson) as Map<String, dynamic>;
               final answer = answers[qId];
               if (answer != null) {
-                final val = int.tryParse(answer.toString()) ?? 0;
+                final val = _surveyLikertScore(answer);
                 if (val > 0) {
                   sum += val;
                   count++;
@@ -1725,18 +1780,24 @@ class AchievementDao {
               }
             }
 
-            // 如果选项包含满意度关键词，计算满意度指数
-            final satisfactionKeywords = ['非常满意', '满意'];
-            int satisfiedCount = 0;
-            int totalCount = 0;
+            // 满意度/达成度题统一按 1-5 量表转换为 0-1。
+            double likertSum = 0;
+            int likertCount = 0;
             for (final entry in optionCounts.entries) {
-              totalCount += entry.value;
-              if (satisfactionKeywords.any((k) => entry.key.contains(k))) {
-                satisfiedCount += entry.value;
+              final score = _surveyLikertScore(entry.key);
+              if (score > 0 && entry.value > 0) {
+                likertSum += score * entry.value;
+                likertCount += entry.value;
               }
             }
-            if (totalCount > 0 && options.any((o) => o.contains('满意'))) {
-              satisfactionSum += satisfiedCount / totalCount;
+            if (likertCount > 0 &&
+                (options.any((o) =>
+                        o.contains('满意') ||
+                        o.contains('符合') ||
+                        o.contains('达成')) ||
+                    (q['question']?.toString().contains('达成') ?? false) ||
+                    (q['question']?.toString().contains('毕业要求') ?? false))) {
+              satisfactionSum += likertSum / likertCount / 5.0;
               satisfactionCount++;
             }
 
@@ -1757,8 +1818,11 @@ class AchievementDao {
               'options': options,
               'counts': optionCounts,
               'total': responses.length,
-              'achievementRate':
-                  totalSelected > 0 ? achieved / totalSelected : 0.0,
+              'achievementRate': likertCount > 0
+                  ? likertSum / likertCount / 5.0
+                  : totalSelected > 0
+                      ? achieved / totalSelected
+                      : 0.0,
               'surveyTitle': survey['title'],
             });
           } else if (qType == 'text') {
@@ -1803,6 +1867,29 @@ class AchievementDao {
         'error': e.toString(),
       };
     }
+  }
+
+  int _surveyLikertScore(Object? value) {
+    final text = value?.toString().trim().toUpperCase() ?? '';
+    if (text.isEmpty) return 0;
+    if (text == 'E' || text.contains('完全符合') || text.contains('非常满意')) {
+      return 5;
+    }
+    if (text == 'D' || text.contains('比较符合') || text.contains('较好达成')) {
+      return 4;
+    }
+    if (text == 'C' || text.contains('一般符合') || text.contains('基本达成')) {
+      return 3;
+    }
+    if (text == 'B' || text.contains('不太符合') || text.contains('部分达成')) {
+      return 2;
+    }
+    if (text == 'A' || text.contains('完全不符合') || text.contains('未达成')) {
+      return 1;
+    }
+    final numeric = int.tryParse(text.replaceAll(RegExp(r'[^0-9]'), ''));
+    if (numeric != null && numeric >= 1 && numeric <= 5) return numeric;
+    return 0;
   }
 
   /// 生成持续改进建议（基于达成度分析）
@@ -2512,10 +2599,65 @@ class AchievementDao {
     ''', [batchId, env]);
     return {
       for (final row in rows)
-        if (_asInt(row['objective']) >= 1 && _asInt(row['objective']) <= 4)
+        if (_asInt(row['objective']) >= 1 && _asInt(row['objective']) <= 10)
           'obj${_asInt(row['objective'])}':
               _asDouble(row['achievement']).clamp(0.0, 1.0).toDouble()
     };
+  }
+
+  Future<Map<int, double>> _dynamicAggregateClassAverage(int batchId) async {
+    final db = await DatabaseHelper.instance.database;
+    await _ensureDynamicComponentScoresTable(db);
+    final rows = await db.rawQuery('''
+      SELECT objective, AVG(student_achievement) AS achievement
+      FROM (
+        SELECT student_id,
+               objective,
+               CASE
+                 WHEN SUM(ratio) > 0
+                 THEN SUM(achievement * ratio) / SUM(ratio)
+                 ELSE AVG(achievement)
+               END AS student_achievement
+        FROM achievement_component_scores
+        WHERE batch_id = ?
+        GROUP BY student_id, objective
+      )
+      GROUP BY objective
+    ''', [batchId]);
+    return {
+      for (final row in rows)
+        if (_asInt(row['objective']) >= 1 && _asInt(row['objective']) <= 10)
+          _asInt(row['objective']):
+              _asDouble(row['achievement']).clamp(0.0, 1.0).toDouble()
+    };
+  }
+
+  Future<Map<int, List<double>>> _dynamicAggregateStudentAchievements(
+      int batchId) async {
+    final db = await DatabaseHelper.instance.database;
+    await _ensureDynamicComponentScoresTable(db);
+    final rows = await db.rawQuery('''
+      SELECT student_id,
+             objective,
+             CASE
+               WHEN SUM(ratio) > 0
+               THEN SUM(achievement * ratio) / SUM(ratio)
+               ELSE AVG(achievement)
+             END AS achievement
+      FROM achievement_component_scores
+      WHERE batch_id = ?
+      GROUP BY student_id, objective
+      ORDER BY student_id ASC, objective ASC
+    ''', [batchId]);
+    final result = <int, List<double>>{};
+    for (final row in rows) {
+      final objective = _asInt(row['objective']);
+      if (objective < 1 || objective > 10) continue;
+      result
+          .putIfAbsent(objective, () => <double>[])
+          .add(_asDouble(row['achievement']).clamp(0.0, 1.0).toDouble());
+    }
+    return result;
   }
 
   Future<bool> _componentRowsAreAggregateBackfill(

@@ -610,9 +610,15 @@ class DatabaseHelper {
             final text = cells[c];
             if (text.contains('学号') ||
                 text.contains('账号') ||
-                text.contains('工号')) idCol = c;
-            if (text == '姓名' || text.contains('学生姓名')) nameCol = c;
-            if (text.contains('班级') || text.contains('教学班')) classCol = c;
+                text.contains('工号')) {
+              idCol = c;
+            }
+            if (text == '姓名' || text.contains('学生姓名')) {
+              nameCol = c;
+            }
+            if (text.contains('班级') || text.contains('教学班')) {
+              classCol = c;
+            }
           }
           if (idCol >= 0 && nameCol >= 0) {
             headerRow = r;
@@ -1259,10 +1265,28 @@ class DatabaseHelper {
         package_version TEXT,
         imported_at TEXT,
         manifest_hash TEXT,
+        template_id TEXT,
+        template_version TEXT,
+        template_profile TEXT,
+        profile_template_id TEXT,
+        profile_template_name TEXT,
+        profile_template_version TEXT,
         status TEXT,
         message TEXT
       )
     ''');
+    await _addTextColumnIfMissing(db, 'course_package_versions', 'template_id',
+        'course_package_versions');
+    await _addTextColumnIfMissing(db, 'course_package_versions',
+        'template_version', 'course_package_versions');
+    await _addTextColumnIfMissing(db, 'course_package_versions',
+        'template_profile', 'course_package_versions');
+    await _addTextColumnIfMissing(db, 'course_package_versions',
+        'profile_template_id', 'course_package_versions');
+    await _addTextColumnIfMissing(db, 'course_package_versions',
+        'profile_template_name', 'course_package_versions');
+    await _addTextColumnIfMissing(db, 'course_package_versions',
+        'profile_template_version', 'course_package_versions');
   }
 
   /// 补齐 achievement_batches 表可能缺少的 calc_results_json 列
@@ -1647,6 +1671,7 @@ class DatabaseHelper {
       CREATE TABLE IF NOT EXISTS teaching_progress(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         class_id INTEGER,
+        course_name TEXT,
         chapter INTEGER NOT NULL,
         topic TEXT,
         planned_date TEXT,
@@ -2968,6 +2993,8 @@ class DatabaseHelper {
 
   /// V35: exam_analysis 表 — 试卷分析数据存储
   Future<void> _migrateToV35(Database db) async {
+    await _addTextColumnIfMissing(
+        db, 'teaching_progress', 'course_name', 'V35.teaching_progress');
     await db.execute('''
       CREATE TABLE IF NOT EXISTS exam_analysis(
         id INTEGER PRIMARY KEY AUTOINCREMENT,

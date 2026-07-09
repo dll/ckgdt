@@ -34,6 +34,10 @@ void main() {
       expect(md, contains('实际完成第1-7周内容'));
       expect(md, contains('调课、停课、补课有记录'));
       expect(md, contains('第8周因调课顺延'));
+      expect(md, contains('理论/实践学时'));
+      expect(md, contains('实践任务安排'));
+      expect(md, isNot(contains('理论/实验学时')));
+      expect(md, isNot(contains('实验安排')));
     });
 
     test('homework content records assigned reviewed and alignment', () {

@@ -5,7 +5,9 @@ import 'package:path/path.dart' as p;
 import '../core/constants/archive_periods.dart' as periods;
 import '../core/error_handler.dart';
 import '../data/local/class_dao.dart';
+import '../data/local/achievement_dao.dart';
 import '../data/local/course_dao.dart';
+import '../data/local/database_helper.dart';
 import '../data/models/archive_document_model.dart';
 import 'archive/archive_document_policy.dart';
 import 'archive/native_docx_service.dart';
@@ -47,6 +49,7 @@ class ArchivePackageService {
 
   final _classDao = ClassDao();
   final _courseDao = CourseDao();
+  final _achievementDao = AchievementDao();
   final _auth = AuthService();
 
   bool get isAvailable {
@@ -77,24 +80,36 @@ class ArchivePackageService {
       warnings.add('课程读取失败');
     }
 
-    // 教师 + 学院
+    final latestBatch = await _latestBatchForCourse(courseName);
+
+    // 教师 + 学院。当前登录教师优先；归档后台/测试场景未登录时，用达成批次教师兜底。
     final user = _auth.currentUser;
-    final teacherName = user?.realName ?? user?.userId ?? '[未登录]';
-    if (user == null) warnings.add('教师未登录');
-    // 学期：取教师当前班级的 semester（classes 表真实列）；找不到给当前学年默认值
-    String semester = _defaultSemester();
+    var teacherName = user?.realName ?? user?.userId;
+    if ((teacherName == null || teacherName.trim().isEmpty) &&
+        latestBatch != null) {
+      teacherName = await _teacherNameFromBatch(latestBatch) ??
+          latestBatch['teacher_id']?.toString();
+    }
+    teacherName ??= '[未登录]';
+    if (user == null && teacherName == '[未登录]') warnings.add('教师未登录');
+
+    // 学期：当前课程最近达成批次优先，保证达成、报告、归档使用同一课程上下文。
+    String semester = latestBatch?['semester']?.toString().trim() ?? '';
     try {
-      final tid = user?.userId;
-      if (tid != null) {
-        final classes = await _classDao.getTeacherClasses(tid);
-        if (classes.isNotEmpty) {
-          final s = classes.first['semester']?.toString();
-          if (s != null && s.isNotEmpty) semester = s;
+      if (semester.isEmpty) {
+        final tid = user?.userId;
+        if (tid != null && tid.isNotEmpty) {
+          final classes = await _classDao.getTeacherClasses(tid);
+          if (classes.isNotEmpty) {
+            final s = classes.first['semester']?.toString();
+            if (s != null && s.isNotEmpty) semester = s;
+          }
         }
       }
     } catch (e, st) {
       swallowDebug(e, tag: 'ArchivePackageService.class', stack: st);
     }
+    if (semester.isEmpty) semester = _defaultSemester();
     // 学院：classes/users 表均无学院列，采用部署院校简称常量（可改 [collegeName]）。
     final department = collegeName;
 
@@ -301,6 +316,38 @@ class ArchivePackageService {
   }
 
   // ─── helpers ──────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>?> _latestBatchForCourse(String courseName) async {
+    try {
+      final batches =
+          await _achievementDao.getAllBatches(courseName: courseName);
+      return batches.isEmpty ? null : batches.first;
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchivePackageService.latestBatch', stack: st);
+      return null;
+    }
+  }
+
+  Future<String?> _teacherNameFromBatch(Map<String, dynamic> batch) async {
+    final teacherId = batch['teacher_id']?.toString().trim();
+    if (teacherId == null || teacherId.isEmpty) return null;
+    try {
+      final db = await DatabaseHelper.instance.database;
+      final rows = await db.query(
+        'users',
+        columns: ['real_name'],
+        where: 'user_id = ?',
+        whereArgs: [teacherId],
+        limit: 1,
+      );
+      if (rows.isEmpty) return null;
+      final name = rows.first['real_name']?.toString().trim();
+      return name == null || name.isEmpty ? null : name;
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchivePackageService.teacherName', stack: st);
+      return null;
+    }
+  }
 
   ArchiveFile _fileToArchiveFile(File f, String relPath) {
     final bytes = f.readAsBytesSync();

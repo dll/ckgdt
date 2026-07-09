@@ -20,6 +20,7 @@ void main() {
 
   tearDown(() {
     BaseDocumentProcessor.archiveDataRoot = oldRoot;
+    ArchiveTemplateSourceService.clearRegisteredCourseArchiveRoots();
     if (temp.existsSync()) temp.deleteSync(recursive: true);
   });
 
@@ -83,6 +84,37 @@ void main() {
     expect(doc, isNotNull);
     expect(doc!.sourcePath, source.path);
     expect(doc.content, contains('PDF 原件'));
+  });
+
+  test(
+      'prefers registered course package archive template over global template',
+      () async {
+    File(p.join(templateDir.path, '课程档案袋目录.md'))
+        .writeAsStringSync('# 全局课程档案袋目录\n\n旧模板');
+    final courseArchiveRoot =
+        Directory(p.join(temp.path, 'courses', 'lit', '归档'));
+    final courseTemplateDir =
+        Directory(p.join(courseArchiveRoot.path, '期末', '模板'))
+          ..createSync(recursive: true);
+    final source = File(p.join(
+      courseTemplateDir.path,
+      'final_archive_catalog-课程档案袋目录.md',
+    ))
+      ..writeAsStringSync('# 文学鉴赏课程档案袋目录\n\n课程包模板');
+    ArchiveTemplateSourceService.registerCourseArchiveRoot(
+      courseId: 'lit',
+      archiveRoot: courseArchiveRoot.path,
+    );
+
+    final doc = await ArchiveTemplateSourceService.parseBestSource(
+      periodKey: 'final',
+      documentType: 'final_archive_catalog',
+      label: '课程档案袋目录',
+    );
+
+    expect(doc, isNotNull);
+    expect(doc!.sourcePath, source.path);
+    expect(doc.content, contains('文学鉴赏'));
   });
 
   test('prefers direct lesson plan markdown over lesson plan directory',

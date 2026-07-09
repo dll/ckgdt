@@ -30,14 +30,40 @@ class QuizGenerationService {
 
     // 查找课程包目录
     final dir = await _getCourseDir(courseId);
+    final planned = await _loadPlannedChapters(dir);
+    if (planned.isNotEmpty) {
+      await db
+          .delete('questions', where: 'course_id = ?', whereArgs: [courseId]);
+      for (var i = 0; i < planned.length; i++) {
+        final chapter = planned[i];
+        onProgress?.call(chapter.title, i / planned.length);
+        final questions = _generateDeterministicQuestions(
+          chapter: chapter,
+          count: questionsPerChapter,
+          courseId: courseId,
+        );
+        for (final q in questions) {
+          await db.insert(
+            'questions',
+            q.toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+        result.generated.add(GenerationChapterResult(
+          chapter: chapter.title,
+          questionCount: questions.length,
+        ));
+      }
+      onProgress?.call('', 1.0);
+      return result;
+    }
+
     final theoryDir = Directory('$dir${Platform.pathSeparator}理论');
 
     List<FileSystemEntity> mdFiles = [];
     if (await theoryDir.exists()) {
-      mdFiles = await theoryDir
-          .list()
-          .where((f) => f.path.endsWith('.md'))
-          .toList();
+      mdFiles =
+          await theoryDir.list().where((f) => f.path.endsWith('.md')).toList();
     } else {
       // 尝试 courses/{courseId}/ 目录下的 MD 文件
       final courseDir = Directory(dir);
@@ -54,9 +80,13 @@ class QuizGenerationService {
       return result;
     }
 
+    mdFiles.sort(
+        (a, b) => _chapterSortKey(a.path).compareTo(_chapterSortKey(b.path)));
     for (int i = 0; i < mdFiles.length; i++) {
       final mdFile = mdFiles[i];
-      final name = mdFile.path.split(Platform.pathSeparator).last
+      final name = mdFile.path
+          .split(Platform.pathSeparator)
+          .last
           .replaceAll(RegExp(r'\.md$'), '');
 
       onProgress?.call(name, i / mdFiles.length);
@@ -96,6 +126,147 @@ class QuizGenerationService {
     return result;
   }
 
+  List<QuestionModel> _generateDeterministicQuestions({
+    required _QuizChapter chapter,
+    required int count,
+    required String courseId,
+  }) {
+    final concepts = <String>[
+      chapter.shortTitle,
+      ...chapter.keyPoints,
+      ...chapter.objectives,
+      ...chapter.difficultPoints,
+    ]
+        .map((item) => item.trim())
+        .where((item) => item.length >= 2)
+        .toSet()
+        .toList();
+    if (concepts.isEmpty) concepts.add(chapter.shortTitle);
+
+    final templates = <QuestionModel>[];
+    for (var i = 0; i < count; i++) {
+      final concept = concepts[i % concepts.length];
+      final source = chapter.title;
+      switch (i % 5) {
+        case 0:
+          templates.add(QuestionModel(
+            courseId: courseId,
+            source: source,
+            question: '关于“$concept”，下列哪项最符合${chapter.title}的教学要求？',
+            optionA: '能够说明其核心含义，并联系本章学习任务进行应用',
+            optionB: '只需记住名称，不需要理解用途',
+            optionC: '与本章学习内容无关',
+            optionD: '只在期末复习时临时了解即可',
+            answerIndex: 0,
+          ));
+          break;
+        case 1:
+          templates.add(QuestionModel(
+            courseId: courseId,
+            source: source,
+            question: '${chapter.title}学习中，围绕“$concept”应优先形成哪类学习证据？',
+            optionA: '学习笔记、任务成果、测验或实践记录',
+            optionB: '与课程无关的随意截图',
+            optionC: '没有过程记录的口头说明',
+            optionD: '只提交空白模板',
+            answerIndex: 0,
+          ));
+          break;
+        case 2:
+          templates.add(QuestionModel(
+            courseId: courseId,
+            source: source,
+            question: '教师评价“$concept”相关学习成果时，最应关注什么？',
+            optionA: '概念理解、应用过程、成果质量和反思改进',
+            optionB: '文件名是否足够长',
+            optionC: '是否完全脱离本章目标',
+            optionD: '是否只复制资料不做分析',
+            answerIndex: 0,
+          ));
+          break;
+        case 3:
+          templates.add(QuestionModel(
+            courseId: courseId,
+            source: source,
+            question: '如果学生在“$concept”上表现薄弱，合理的改进方式是？',
+            optionA: '回到本章知识节点，结合示例、任务和反馈重新练习',
+            optionB: '跳过本章直接进入无关内容',
+            optionC: '删除学习记录避免暴露问题',
+            optionD: '只看答案不理解过程',
+            answerIndex: 0,
+          ));
+          break;
+        default:
+          templates.add(QuestionModel(
+            courseId: courseId,
+            source: source,
+            question: '“$concept”在课程知识图谱中的作用更接近哪一项？',
+            optionA: '连接本章目标、资源、任务和评价证据的关键节点',
+            optionB: '与学习路径无关的孤立文字',
+            optionC: '只用于装饰页面的标签',
+            optionD: '不需要被评价或复习的内容',
+            answerIndex: 0,
+          ));
+      }
+    }
+    return templates;
+  }
+
+  Future<List<_QuizChapter>> _loadPlannedChapters(String courseDir) async {
+    final lazyFile = File(
+      '$courseDir${Platform.pathSeparator}配置${Platform.pathSeparator}lazy_generation.json',
+    );
+    final chaptersFile = File(
+      '$courseDir${Platform.pathSeparator}配置${Platform.pathSeparator}chapters.json',
+    );
+    final chapterDetails = <int, Map<String, dynamic>>{};
+    if (await chaptersFile.exists()) {
+      try {
+        final list = jsonDecode(await chaptersFile.readAsString()) as List;
+        for (final item in list.whereType<Map>()) {
+          final map = Map<String, dynamic>.from(item);
+          final number = int.tryParse(map['number']?.toString() ?? '') ?? 0;
+          if (number > 0) chapterDetails[number] = map;
+        }
+      } catch (e, st) {
+        swallowDebug(e, tag: 'QuizGen.loadChapters', stack: st);
+      }
+    }
+    if (await lazyFile.exists()) {
+      try {
+        final json =
+            jsonDecode(await lazyFile.readAsString()) as Map<String, dynamic>;
+        final chapters = (json['chapters'] as List? ?? const [])
+            .whereType<Map>()
+            .map(Map<String, dynamic>.from)
+            .toList();
+        final result = <_QuizChapter>[];
+        for (final chapter in chapters) {
+          final number =
+              int.tryParse(chapter['chapter_number']?.toString() ?? '') ?? 0;
+          if (number <= 0) continue;
+          final detail = chapterDetails[number] ?? const {};
+          final titleText =
+              chapter['chapter_title']?.toString().trim().isNotEmpty == true
+                  ? chapter['chapter_title'].toString().trim()
+                  : detail['title']?.toString().trim() ?? '第$number章';
+          result.add(_QuizChapter(
+            number: number,
+            title: _normalizeChapterTitle(number, titleText),
+            objectives: _stringList(detail['objectives']),
+            keyPoints: _stringList(detail['key_points']),
+            difficultPoints: _stringList(detail['difficult_points']),
+          ));
+        }
+        result.sort((a, b) => a.number.compareTo(b.number));
+        return result;
+      } catch (e, st) {
+        swallowDebug(e, tag: 'QuizGen.loadLazyPlan', stack: st);
+      }
+    }
+    return <_QuizChapter>[];
+  }
+
   /// 从 MD 内容生成测验题目
   Future<List<QuestionModel>> _generateQuestionsFromMd({
     required String chapterTitle,
@@ -104,9 +275,8 @@ class QuizGenerationService {
     required String courseId,
   }) async {
     // 截取 MD 内容（避免 prompt 过长）
-    final content = mdContent.length > 3000
-        ? mdContent.substring(0, 3000)
-        : mdContent;
+    final content =
+        mdContent.length > 3000 ? mdContent.substring(0, 3000) : mdContent;
 
     final prompt = '''
 请根据以下课程内容，生成 $count 道四选一测验题。
@@ -224,12 +394,81 @@ $content
 
   Future<String> _getCourseDir(String courseId) async {
     try {
-      final appDir = await getApplicationSupportDirectory();
+      final appDir = await getApplicationDocumentsDirectory();
       return '${appDir.path}${Platform.pathSeparator}courses${Platform.pathSeparator}$courseId';
     } catch (_) {
       return 'courses${Platform.pathSeparator}$courseId';
     }
   }
+
+  String _normalizeChapterTitle(int number, String value) {
+    var title = value.trim();
+    if (title.startsWith('第$number章')) return title;
+    title =
+        title.replaceFirst(RegExp(r'^第\s*[一二三四五六七八九十\d]+\s*章\s*'), '').trim();
+    return '第$number章 $title'.trim();
+  }
+
+  List<String> _stringList(Object? value) {
+    if (value is List) {
+      return value
+          .map((item) => item.toString())
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
+    final text = value?.toString().trim() ?? '';
+    return text.isEmpty ? <String>[] : <String>[text];
+  }
+
+  int _chapterSortKey(String path) {
+    final name = path.split(Platform.pathSeparator).last;
+    final m = RegExp(r'第\s*([一二三四五六七八九十\d]+)\s*章').firstMatch(name);
+    if (m == null) return 9999;
+    return _chapterNumber(m.group(1)!) ?? 9999;
+  }
+
+  int? _chapterNumber(String value) {
+    final arabic = int.tryParse(value);
+    if (arabic != null) return arabic;
+    const digits = {
+      '一': 1,
+      '二': 2,
+      '三': 3,
+      '四': 4,
+      '五': 5,
+      '六': 6,
+      '七': 7,
+      '八': 8,
+      '九': 9,
+    };
+    if (value == '十') return 10;
+    if (value.startsWith('十')) return 10 + (digits[value.substring(1)] ?? 0);
+    if (value.endsWith('十')) return (digits[value.substring(0, 1)] ?? 0) * 10;
+    if (value.contains('十')) {
+      final parts = value.split('十');
+      return (digits[parts[0]] ?? 0) * 10 + (digits[parts[1]] ?? 0);
+    }
+    return digits[value];
+  }
+}
+
+class _QuizChapter {
+  final int number;
+  final String title;
+  final List<String> objectives;
+  final List<String> keyPoints;
+  final List<String> difficultPoints;
+
+  const _QuizChapter({
+    required this.number,
+    required this.title,
+    required this.objectives,
+    required this.keyPoints,
+    required this.difficultPoints,
+  });
+
+  String get shortTitle =>
+      title.replaceFirst(RegExp(r'^第\s*[一二三四五六七八九十\d]+\s*章\s*'), '').trim();
 }
 
 /// 生成结果

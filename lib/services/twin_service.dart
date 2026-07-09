@@ -362,9 +362,16 @@ class TwinService {
     // 待批阅数
     int pending = 0;
     try {
-      final r = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM lab_submissions WHERE status = '已提交'",
+      final scope = await _courseContext.scopedWhere(
+        column: 'lt.course_id',
+        extraWhere: "ls.status = '已提交'",
       );
+      final r = await db.rawQuery('''
+        SELECT COUNT(*) as c
+        FROM lab_submissions ls
+        INNER JOIN lab_tasks lt ON lt.id = ls.task_id
+        WHERE ${scope.where}
+      ''', scope.args);
       pending = (r.first['c'] as int?) ?? 0;
     } catch (e, st) {
       swallowDebug(e, tag: 'TwinService', stack: st);
@@ -412,11 +419,20 @@ class TwinService {
     // 教学进度（教学大纲执行率）
     double teachingProgress = 0;
     try {
+      final course = await _courseContext.getActiveCourse();
+      final courseKeys = <String>{
+        if (course.name.trim().isNotEmpty) course.name.trim(),
+        if (course.id.trim().isNotEmpty) course.id.trim(),
+      }.toList();
+      if (courseKeys.isEmpty) throw StateError('No active course');
+      final placeholders = List.filled(courseKeys.length, '?').join(', ');
       final total = await db.rawQuery(
-        'SELECT COUNT(*) as c FROM teaching_progress',
+        'SELECT COUNT(*) as c FROM teaching_progress WHERE course_name IN ($placeholders)',
+        courseKeys,
       );
       final done = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM teaching_progress WHERE status = '已完成'",
+        "SELECT COUNT(*) as c FROM teaching_progress WHERE course_name IN ($placeholders) AND status IN ('已完成', 'completed')",
+        courseKeys,
       );
       final t = (total.first['c'] as int?) ?? 0;
       final d = (done.first['c'] as int?) ?? 0;
@@ -448,12 +464,23 @@ class TwinService {
     // 批阅及时性（3天内批完的占比）
     double gradingTimeliness = 0;
     try {
-      final totalGraded = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM lab_submissions WHERE status = '已批改'",
+      final gradedScope = await _courseContext.scopedWhere(
+        column: 'lt.course_id',
+        extraWhere: "ls.status = '已批改'",
       );
-      final timelyGraded = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM lab_submissions WHERE status = '已批改' AND julianday(updated_at) - julianday(submitted_at) <= 3",
-      );
+      final totalGraded = await db.rawQuery('''
+        SELECT COUNT(*) as c
+        FROM lab_submissions ls
+        INNER JOIN lab_tasks lt ON lt.id = ls.task_id
+        WHERE ${gradedScope.where}
+      ''', gradedScope.args);
+      final timelyGraded = await db.rawQuery('''
+        SELECT COUNT(*) as c
+        FROM lab_submissions ls
+        INNER JOIN lab_tasks lt ON lt.id = ls.task_id
+        WHERE ${gradedScope.where}
+          AND julianday(ls.updated_at) - julianday(ls.submitted_at) <= 3
+      ''', gradedScope.args);
       final tg = (totalGraded.first['c'] as int?) ?? 0;
       final tl = (timelyGraded.first['c'] as int?) ?? 0;
       gradingTimeliness = tg > 0 ? (tl / tg * 100).clamp(0, 100) : 100;
@@ -467,9 +494,14 @@ class TwinService {
       final threeDaysLater =
           DateTime.now().add(const Duration(days: 3)).toIso8601String();
       final now = DateTime.now().toIso8601String();
+      final scope = await _courseContext.scopedWhere(
+        extraWhere:
+            "status = 'active' AND due_date IS NOT NULL AND due_date >= ? AND due_date <= ?",
+        extraArgs: [now, threeDaysLater],
+      );
       final r = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM lab_tasks WHERE status = 'active' AND due_date IS NOT NULL AND due_date >= ? AND due_date <= ?",
-        [now, threeDaysLater],
+        'SELECT COUNT(*) as c FROM lab_tasks WHERE ${scope.where}',
+        scope.args,
       );
       deadlineWarnings = (r.first['c'] as int?) ?? 0;
     } catch (e, st) {
