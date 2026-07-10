@@ -1256,6 +1256,46 @@ class DatabaseHelper {
     await _ensureCoursePackageVersionTable(db);
     await _ensureAchievementColumns(db);
     await _ensureCourseObjectivesColumns(db);
+    await _ensureTeachingWorkloadTable(db);
+  }
+
+  /// 工作量管理表
+  Future<void> _ensureTeachingWorkloadTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS teaching_workload(
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        teacher_id      TEXT NOT NULL,
+        teacher_name    TEXT NOT NULL,
+        course_code     TEXT,
+        course_name     TEXT NOT NULL,
+        course_category TEXT,
+        class_names     TEXT,
+        teaching_form   TEXT,
+        course_nature   TEXT,
+        credits         REAL,
+        student_count   INTEGER,
+        group_number    INTEGER,
+        group_size      INTEGER,
+        group_count     INTEGER DEFAULT 1,
+        course_coefficient REAL DEFAULT 1.0,
+        class_hours     INTEGER DEFAULT 0,
+        practice_credits REAL,
+        scale_coefficient REAL DEFAULT 1.0,
+        calculated_workload REAL DEFAULT 0,
+        declared_workload   REAL DEFAULT 0,
+        verified_workload   REAL DEFAULT 0,
+        workload_type   TEXT DEFAULT '理论工作量',
+        other_category  TEXT,
+        status          TEXT DEFAULT 'draft',
+        ai_review_json  TEXT,
+        teacher_confirmed INTEGER DEFAULT 0,
+        semester        TEXT,
+        course_id       TEXT,
+        remark          TEXT,
+        created_at      TEXT,
+        updated_at      TEXT
+      )
+    ''');
   }
 
   Future<void> _ensureCoursePackageVersionTable(Database db) async {

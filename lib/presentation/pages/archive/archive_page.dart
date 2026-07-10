@@ -8,6 +8,7 @@ import 'archive_constants.dart';
 import 'tabs/period_tab.dart';
 import 'tabs/midterm_tab.dart';
 import 'tabs/final_tab.dart';
+import 'tabs/workload_tab.dart';
 import 'widgets/archive_materials_checklist.dart';
 
 class ArchivePage extends StatefulWidget {
@@ -148,6 +149,7 @@ class _ArchivePageState extends State<ArchivePage>
                   ),
                 ],
               ),
+              const WorkloadTab(),
             ],
           ),
         ),

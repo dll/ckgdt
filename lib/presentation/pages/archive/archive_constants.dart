@@ -9,6 +9,7 @@ const List<IconData> archivePeriodIcons = [
   Icons.cloud_outlined,
   Icons.nights_stay_outlined,
   Icons.archive_outlined,
+  Icons.workspaces_outlined,
 ];
 
 const List<DocumentTypeDef> finalArchiveDocs = [
@@ -236,6 +237,7 @@ const examCourseDocs = {
         iconCodePoint: '0xe884',
         needsGeneration: true),
   ],
+  'workload': <DocumentTypeDef>[],
 };
 
 const assessCourseDocs = {
@@ -364,6 +366,7 @@ const assessCourseDocs = {
         iconCodePoint: '0xe884',
         needsGeneration: true),
   ],
+  'workload': <DocumentTypeDef>[],
 };
 
 bool isExamCourse(String courseType) => courseType == 'exam';
