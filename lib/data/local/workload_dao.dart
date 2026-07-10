@@ -6,6 +6,8 @@ class TeachingWorkload {
   final int? id;
   final String teacherId;
   final String teacherName;
+  final String? department;
+  final String? courseSerial;
   final String? courseCode;
   final String courseName;
   final String? courseCategory;
@@ -26,9 +28,11 @@ class TeachingWorkload {
   final double verifiedWorkload;
   final String workloadType;
   final String? otherCategory;
+  final String? extraHoursProject;
   final String status;
   final String? aiReviewJson;
   final bool teacherConfirmed;
+  final String? feedback;
   final String? semester;
   final String? courseId;
   final String? remark;
@@ -39,6 +43,8 @@ class TeachingWorkload {
     this.id,
     required this.teacherId,
     required this.teacherName,
+    this.department,
+    this.courseSerial,
     this.courseCode,
     required this.courseName,
     this.courseCategory,
@@ -58,6 +64,18 @@ class TeachingWorkload {
     this.declaredWorkload = 0,
     this.verifiedWorkload = 0,
     this.workloadType = '理论工作量',
+    this.otherCategory,
+    this.extraHoursProject,
+    this.status = 'draft',
+    this.aiReviewJson,
+    this.teacherConfirmed = false,
+    this.feedback,
+    this.semester,
+    this.courseId,
+    this.remark,
+    this.createdAt,
+    this.updatedAt,
+  });
     this.otherCategory,
     this.status = 'draft',
     this.aiReviewJson,
@@ -85,6 +103,8 @@ class TeachingWorkload {
         if (id != null) 'id': id,
         'teacher_id': teacherId,
         'teacher_name': teacherName,
+        'department': department,
+        'course_serial': courseSerial,
         'course_code': courseCode,
         'course_name': courseName,
         'course_category': courseCategory,
@@ -105,9 +125,11 @@ class TeachingWorkload {
         'verified_workload': verifiedWorkload,
         'workload_type': workloadType,
         'other_category': otherCategory,
+        'extra_hours_project': extraHoursProject,
         'status': status,
         'ai_review_json': aiReviewJson,
         'teacher_confirmed': teacherConfirmed ? 1 : 0,
+        'feedback': feedback,
         'semester': semester,
         'course_id': courseId,
         'remark': remark,
@@ -120,6 +142,8 @@ class TeachingWorkload {
         id: m['id'] as int?,
         teacherId: (m['teacher_id'] ?? '').toString(),
         teacherName: (m['teacher_name'] ?? '').toString(),
+        department: m['department']?.toString(),
+        courseSerial: m['course_serial']?.toString(),
         courseCode: m['course_code']?.toString(),
         courseName: (m['course_name'] ?? '').toString(),
         courseCategory: m['course_category']?.toString(),
@@ -145,9 +169,11 @@ class TeachingWorkload {
             (m['verified_workload'] as num?)?.toDouble() ?? 0,
         workloadType: (m['workload_type'] ?? '理论工作量').toString(),
         otherCategory: m['other_category']?.toString(),
+        extraHoursProject: m['extra_hours_project']?.toString(),
         status: (m['status'] ?? 'draft').toString(),
         aiReviewJson: m['ai_review_json']?.toString(),
         teacherConfirmed: (m['teacher_confirmed'] as int?) == 1,
+        feedback: m['feedback']?.toString(),
         semester: m['semester']?.toString(),
         courseId: m['course_id']?.toString(),
         remark: m['remark']?.toString(),
@@ -159,6 +185,8 @@ class TeachingWorkload {
     int? id,
     String? teacherId,
     String? teacherName,
+    String? department,
+    String? courseSerial,
     String? courseCode,
     String? courseName,
     String? courseCategory,
@@ -178,9 +206,11 @@ class TeachingWorkload {
     double? verifiedWorkload,
     String? workloadType,
     String? otherCategory,
+    String? extraHoursProject,
     String? status,
     String? aiReviewJson,
     bool? teacherConfirmed,
+    String? feedback,
     String? semester,
     String? courseId,
     String? remark,
@@ -189,6 +219,8 @@ class TeachingWorkload {
         id: id ?? this.id,
         teacherId: teacherId ?? this.teacherId,
         teacherName: teacherName ?? this.teacherName,
+        department: department ?? this.department,
+        courseSerial: courseSerial ?? this.courseSerial,
         courseCode: courseCode ?? this.courseCode,
         courseName: courseName ?? this.courseName,
         courseCategory: courseCategory ?? this.courseCategory,
@@ -208,9 +240,11 @@ class TeachingWorkload {
         verifiedWorkload: verifiedWorkload ?? this.verifiedWorkload,
         workloadType: workloadType ?? this.workloadType,
         otherCategory: otherCategory ?? this.otherCategory,
+        extraHoursProject: extraHoursProject ?? this.extraHoursProject,
         status: status ?? this.status,
         aiReviewJson: aiReviewJson ?? this.aiReviewJson,
         teacherConfirmed: teacherConfirmed ?? this.teacherConfirmed,
+        feedback: feedback ?? this.feedback,
         semester: semester ?? this.semester,
         courseId: courseId ?? this.courseId,
         remark: remark ?? this.remark,

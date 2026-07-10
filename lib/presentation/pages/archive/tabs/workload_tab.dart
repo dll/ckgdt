@@ -1,7 +1,15 @@
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:excel/excel.dart' as xl;
+import 'package:path/path.dart' as p;
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../../core/error_handler.dart';
 import '../../../../data/local/workload_dao.dart';
+import '../../../../data/local/course_dao.dart';
+import '../../../../services/workload_excel_service.dart';
 import '../../../widgets/agent_chat_overlay.dart';
 
 class WorkloadTab extends StatefulWidget {
@@ -13,11 +21,14 @@ class WorkloadTab extends StatefulWidget {
 
 class _WorkloadTabState extends State<WorkloadTab> {
   final _dao = WorkloadDao();
+  final _excel = WorkloadExcelService();
   List<TeachingWorkload> _courseWorkloads = [];
   List<TeachingWorkload> _otherWorkloads = [];
   Map<String, double> _stats = {'total': 0, 'approved': 0, 'pending': 0};
   bool _loading = true;
   String? _currentTeacherId;
+  String? _currentTeacherName;
+  String? _currentCourseId;
 
   @override
   void initState() {
@@ -28,7 +39,14 @@ class _WorkloadTabState extends State<WorkloadTab> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final all = await _dao.getWorkloads(semester: _currentSemester());
+      final course = await CourseDao().getActiveCourse();
+      _currentCourseId = course?.id;
+      _currentTeacherId = course?.teacherId ?? '419116';
+      _currentTeacherName = course?.teacherName ?? '管理员';
+      final all = await _dao.getWorkloads(
+        semester: _currentSemester(),
+        courseId: _currentCourseId,
+      );
       _courseWorkloads = all
           .where((w) => w.workloadType == '理论工作量')
           .toList();
@@ -77,9 +95,52 @@ class _WorkloadTabState extends State<WorkloadTab> {
           ..._otherWorkloads.map((w) => _buildOtherWorkloadCard(w, primary)),
           const SizedBox(height: 8),
           _buildAddOtherButton(primary),
+          ..._buildFeedbackSection(primary),
         ],
       ),
     );
+  }
+
+  List<Widget> _buildFeedbackSection(Color primary) {
+    final feedbacks = [
+      ..._courseWorkloads,
+      ..._otherWorkloads,
+    ].where((w) => (w.feedback ?? '').isNotEmpty).toList();
+    if (feedbacks.isEmpty) return [];
+    return [
+      const SizedBox(height: 16),
+      _buildSectionHeader('审核反馈', Icons.feedback_outlined, primary),
+      const SizedBox(height: 8),
+      ...feedbacks.map((w) => Card(
+            color: Colors.amber.withValues(alpha: 0.05),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.feedback_outlined,
+                          size: 16, color: Colors.amber.shade700),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          w.courseName,
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      _statusWidget(w.status),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(w.feedback!,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+            ),
+          )),
+    ];
   }
 
   Widget _buildSummaryCards(Color primary) {
@@ -119,33 +180,83 @@ class _WorkloadTabState extends State<WorkloadTab> {
   }
 
   Widget _buildActionButtons(Color primary) {
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _onAiReview,
-            icon: const Icon(Icons.auto_awesome, size: 18),
-            label: const Text('AI 审核'),
-          ),
+        OutlinedButton.icon(
+          onPressed: _onDeclare,
+          icon: const Icon(Icons.edit_note, size: 18),
+          label: const Text('申报'),
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _onTeacherConfirm,
-            icon: const Icon(Icons.check_circle_outline, size: 18),
-            label: const Text('教师确认'),
-          ),
+        OutlinedButton.icon(
+          onPressed: _onImport,
+          icon: const Icon(Icons.upload_outlined, size: 18),
+          label: const Text('导入'),
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _onExport,
-            icon: const Icon(Icons.download_outlined, size: 18),
-            label: const Text('导出'),
-          ),
+        OutlinedButton.icon(
+          onPressed: _onAiReview,
+          icon: const Icon(Icons.auto_awesome, size: 18),
+          label: const Text('AI 审核'),
+        ),
+        OutlinedButton.icon(
+          onPressed: _onTeacherConfirm,
+          icon: const Icon(Icons.check_circle_outline, size: 18),
+          label: const Text('确认'),
+        ),
+        OutlinedButton.icon(
+          onPressed: _onExport,
+          icon: const Icon(Icons.download_outlined, size: 18),
+          label: const Text('导出'),
+        ),
+        OutlinedButton.icon(
+          onPressed: _onExportTemplate,
+          icon: const Icon(Icons.table_view_outlined, size: 18),
+          label: const Text('模板'),
         ),
       ],
     );
+  }
+
+  Future<void> _onDeclare() async {
+    final editables = [..._courseWorkloads, ..._otherWorkloads]
+        .where((w) => w.status != 'approved')
+        .toList();
+    if (editables.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('无可申报的工作量（已全部确认）')),
+      );
+      return;
+    }
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('工作量申报'),
+        content: Text('将 ${editables.length} 条工作量标记为"已申报"，提交 AI 审核？'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true), child: const Text('申报')),
+        ],
+      ),
+    );
+    if (result == true) {
+      for (final w in editables) {
+        await _dao.update(w.copyWith(
+          status: 'submitted',
+          declaredWorkload: w.declaredWorkload > 0
+              ? w.declaredWorkload
+              : w.computedWorkload,
+        ));
+      }
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已申报 ${editables.length} 条工作量')),
+        );
+      }
+    }
   }
 
   Widget _buildSectionHeader(String title, IconData icon, Color primary) {
@@ -180,22 +291,35 @@ class _WorkloadTabState extends State<WorkloadTab> {
           headingRowColor: WidgetStateProperty.all(primary.withValues(alpha: 0.08)),
           columns: const [
             DataColumn(label: Text('课程名称', style: TextStyle(fontSize: 12))),
-            DataColumn(label: Text('班级', style: TextStyle(fontSize: 12))),
+            DataColumn(label: Text('教学班', style: TextStyle(fontSize: 12))),
+            DataColumn(label: Text('学分', style: TextStyle(fontSize: 12))),
+            DataColumn(label: Text('人数', style: TextStyle(fontSize: 12))),
             DataColumn(label: Text('课时', style: TextStyle(fontSize: 12))),
-            DataColumn(label: Text('系数', style: TextStyle(fontSize: 12))),
-            DataColumn(label: Text('规模', style: TextStyle(fontSize: 12))),
-            DataColumn(label: Text('工作量', style: TextStyle(fontSize: 12))),
+            DataColumn(label: Text('课程系数', style: TextStyle(fontSize: 12))),
+            DataColumn(label: Text('规模系数', style: TextStyle(fontSize: 12))),
+            DataColumn(label: Text('计算公式', style: TextStyle(fontSize: 11))),
+            DataColumn(label: Text('教师申报', style: TextStyle(fontSize: 12))),
+            DataColumn(label: Text('学院核算', style: TextStyle(fontSize: 12))),
             DataColumn(label: Text('状态', style: TextStyle(fontSize: 12))),
           ],
           rows: _courseWorkloads.map((w) {
             final status = _statusWidget(w.status);
+            final formula =
+                '${w.classHours}×${w.courseCoefficient.toStringAsFixed(2)}×${w.scaleCoefficient.toStringAsFixed(2)}';
             return DataRow(cells: [
               DataCell(Text(w.courseName, style: const TextStyle(fontSize: 12))),
               DataCell(Text(w.classNames ?? '-', style: const TextStyle(fontSize: 12))),
+              DataCell(Text((w.credits ?? 0).toStringAsFixed(1),
+                  style: const TextStyle(fontSize: 12))),
+              DataCell(Text('${w.studentCount ?? 0}', style: const TextStyle(fontSize: 12))),
               DataCell(Text('${w.classHours}', style: const TextStyle(fontSize: 12))),
               DataCell(Text(w.courseCoefficient.toStringAsFixed(2), style: const TextStyle(fontSize: 12))),
               DataCell(Text(w.scaleCoefficient.toStringAsFixed(2), style: const TextStyle(fontSize: 12))),
-              DataCell(Text(w.computedWorkload.toStringAsFixed(1), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+              DataCell(Text(formula, style: const TextStyle(fontSize: 11, color: Colors.grey))),
+              DataCell(Text(w.declaredWorkload.toStringAsFixed(1),
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+              DataCell(Text(w.verifiedWorkload.toStringAsFixed(1),
+                  style: const TextStyle(fontSize: 12))),
               DataCell(status),
             ]);
           }).toList(),
@@ -370,6 +494,46 @@ class _WorkloadTabState extends State<WorkloadTab> {
       agentId: 'archive',
       initialContext: buffer.toString(),
     );
+
+    // 审核后由教师将 AI 结论写入各条记录反馈（简化流程）
+    if (!mounted) return;
+    final feedbackCtrl = TextEditingController();
+    final save = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('AI 审核反馈'),
+        content: TextField(
+          controller: feedbackCtrl,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            labelText: 'AI 审核意见（可粘贴智能体结论）',
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false), child: const Text('跳过')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true), child: const Text('保存')),
+        ],
+      ),
+    );
+    if (save == true && feedbackCtrl.text.isNotEmpty) {
+      for (final w in [..._courseWorkloads, ..._otherWorkloads]) {
+        await _dao.update(w.copyWith(
+          feedback: feedbackCtrl.text,
+          aiReviewJson: feedbackCtrl.text,
+          status: w.status == 'draft' ? 'submitted' : w.status,
+        ));
+      }
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('AI 审核反馈已保存')),
+        );
+      }
+    }
   }
 
   Future<void> _onTeacherConfirm() async {
@@ -415,34 +579,86 @@ class _WorkloadTabState extends State<WorkloadTab> {
   }
 
   Future<void> _onExport() async {
-    final buffer = StringBuffer();
-    buffer.writeln('工作量报表');
-    buffer.writeln('学期: ${_currentSemester()}');
-    buffer.writeln('导出时间: ${DateTime.now().toString().substring(0, 19)}');
-    buffer.writeln('');
-    buffer.writeln('=== 课程工作量 ===');
-    buffer.writeln('课程名称\t班级\t课时\t系数\t规模系数\t工作量\t状态');
-    for (final w in _courseWorkloads) {
-      buffer.writeln(
-          '${w.courseName}\t${w.classNames ?? ''}\t${w.classHours}\t${w.courseCoefficient}\t${w.scaleCoefficient}\t${w.computedWorkload.toStringAsFixed(1)}\t${w.status}');
+    try {
+      final bytes = _excel.exportResult(_courseWorkloads, _otherWorkloads);
+      final dir = await getApplicationDocumentsDirectory();
+      final path = p.join(dir.path,
+          '工作量结果_${_currentSemester()}_${DateTime.now().millisecondsSinceEpoch}.xlsx');
+      await File(path).writeAsBytes(bytes);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已导出: ${p.basename(path)}')),
+        );
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'WorkloadTab._onExport', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('导出失败')),
+        );
+      }
     }
-    buffer.writeln('');
-    buffer.writeln('=== 其他工作量 ===');
-    buffer.writeln('类型\t工作量\t备注\t状态');
-    for (final w in _otherWorkloads) {
-      buffer.writeln(
-          '${w.otherCategory}\t${w.declaredWorkload}\t${w.remark ?? ''}\t${w.status}');
-    }
-    buffer.writeln('');
-    buffer.writeln('总计: ${(_stats['total'] ?? 0).toStringAsFixed(1)}');
-    buffer.writeln('已审核: ${(_stats['approved'] ?? 0).toStringAsFixed(1)}');
-    buffer.writeln('待审核: ${(_stats['pending'] ?? 0).toStringAsFixed(1)}');
+  }
 
-    await Clipboard.setData(ClipboardData(text: buffer.toString()));
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('工作量报表已复制到剪贴板')),
+  Future<void> _onExportTemplate() async {
+    try {
+      final bytes = _excel.exportTemplate();
+      final dir = await getApplicationDocumentsDirectory();
+      final path = p.join(dir.path, '工作量申报模板.xlsx');
+      await File(path).writeAsBytes(bytes);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('模板已导出: ${p.basename(path)}')),
+        );
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'WorkloadTab._onExportTemplate', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('模板导出失败')),
+        );
+      }
+    }
+  }
+
+  Future<void> _onImport() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'xls'],
       );
+      if (result == null || result.files.isEmpty) return;
+      final file = File(result.files.single.path!);
+      final bytes = await file.readAsBytes();
+      final records = _excel.importExcel(
+        bytes,
+        courseId: _currentCourseId ?? '',
+        defaultTeacherId: _currentTeacherId ?? '419116',
+        defaultTeacherName: _currentTeacherName ?? '管理员',
+        semester: _currentSemester(),
+      );
+      if (records.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('未读取到工作量数据')),
+          );
+        }
+        return;
+      }
+      await _dao.batchImport(records);
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已导入 ${records.length} 条工作量（关联课程：$_currentCourseId）')),
+        );
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'WorkloadTab._onImport', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('导入失败')),
+        );
+      }
     }
   }
 }
