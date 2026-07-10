@@ -1116,7 +1116,6 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
       return;
     }
 
-      final semester = _semesterForClass(classes, selectedClass, today);
       final semester = AchievementDao.semesterForClass(classes, selectedClass, today);
      final syllabusVersion =
          await widget.achievementDao.currentSyllabusVersion(courseName);
