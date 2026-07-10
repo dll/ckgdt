@@ -1296,6 +1296,80 @@ class DatabaseHelper {
         updated_at      TEXT
       )
     ''');
+
+    // 为内置 CKGDT 课程播种默认工作量数据
+    final cnt = await db.rawQuery('SELECT COUNT(*) as c FROM teaching_workload');
+    if (((cnt.first['c'] as int?) ?? 0) == 0) {
+      final now = DateTime.now().toIso8601String();
+      final semester = DateTime.now().month >= 2 && DateTime.now().month <= 7
+          ? '${DateTime.now().year}-1'
+          : '${DateTime.now().year}-2';
+      final seeds = <Map<String, dynamic>>[
+        {
+          'teacher_id': '419116',
+          'teacher_name': '管理员',
+          'course_code': 'CKGDT',
+          'course_name': '课程知识图谱与数字孪生',
+          'course_category': '专业基础课',
+          'class_names': '软件231,软件232',
+          'teaching_form': '合班',
+          'course_nature': '理论',
+          'credits': 3.0,
+          'student_count': 86,
+          'group_number': 1,
+          'group_size': 86,
+          'group_count': 1,
+          'course_coefficient': 1.0,
+          'class_hours': 32,
+          'practice_credits': 0.0,
+          'scale_coefficient': 1.21,
+          'calculated_workload': 38.72,
+          'declared_workload': 38.72,
+          'verified_workload': 38.72,
+          'workload_type': '理论工作量',
+          'status': 'approved',
+          'teacher_confirmed': 1,
+          'semester': semester,
+          'course_id': 'ckgdt',
+          'remark': '内置默认课程工作量',
+          'created_at': now,
+          'updated_at': now,
+        },
+        {
+          'teacher_id': '419116',
+          'teacher_name': '管理员',
+          'course_code': 'CKGDT-LAB',
+          'course_name': '课程知识图谱与数字孪生（实验）',
+          'course_category': '专业基础课',
+          'class_names': '软件231,软件232',
+          'teaching_form': '合班',
+          'course_nature': '实践',
+          'credits': 1.0,
+          'student_count': 86,
+          'group_number': 1,
+          'group_size': 86,
+          'group_count': 1,
+          'course_coefficient': 1.0,
+          'class_hours': 16,
+          'practice_credits': 1.0,
+          'scale_coefficient': 1.21,
+          'calculated_workload': 19.36,
+          'declared_workload': 19.36,
+          'verified_workload': 19.36,
+          'workload_type': '理论工作量',
+          'status': 'approved',
+          'teacher_confirmed': 1,
+          'semester': semester,
+          'course_id': 'ckgdt',
+          'remark': '实验课时工作量',
+          'created_at': now,
+          'updated_at': now,
+        },
+      ];
+      for (final s in seeds) {
+        await db.insert('teaching_workload', s);
+      }
+    }
   }
 
   Future<void> _ensureCoursePackageVersionTable(Database db) async {
