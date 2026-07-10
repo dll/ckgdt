@@ -2284,9 +2284,15 @@ $rawText
     final activeItems = objectiveItems.isNotEmpty
         ? objectiveItems
         : _assessmentItemsFromConfig(cfg);
-    final fullMarks = objectiveRows.isNotEmpty
+    final rawFullMarks = objectiveRows.isNotEmpty
         ? _fullMarksFromRows(objectiveRows)
         : cfg.fullMarks;
+    // Cap fullMarks to config objective count to avoid RangeError
+    // when DB has more objectives than config arrays.
+    final objCount = cfg.weights.length;
+    final fullMarks = rawFullMarks.length > objCount
+        ? rawFullMarks.sublist(0, objCount)
+        : rawFullMarks;
 
     final excel = xl.Excel.createExcel();
     // 删除默认 Sheet1，最终只输出动态模板 sheet。

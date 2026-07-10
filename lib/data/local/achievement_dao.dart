@@ -1129,16 +1129,27 @@ class AchievementDao {
   /// 从平台现有数据聚合平时、实验、考核三类明细，并写入与 Excel 导入
   /// 完全相同的三张分项表和 achievement_scores 总表。
   Future<int> importPlatformAchievementScores(int batchId) async {
-    final components = await collectPlatformAchievementComponents();
+    final db = await DatabaseHelper.instance.database;
+    final batchRows = await db.query('achievement_batches',
+        columns: ['class_name', 'course_name'],
+        where: 'id = ?',
+        whereArgs: [batchId],
+        limit: 1);
+    final className =
+        batchRows.isNotEmpty ? (batchRows.first['class_name'] ?? '').toString() : '';
+    final courseName =
+        batchRows.isNotEmpty ? (batchRows.first['course_name'] ?? '').toString() : '';
+    final components =
+        await collectPlatformAchievementComponents(className: className, courseName: courseName);
     return importComponentsToDatabase(batchId, components);
   }
 
   /// 聚合结果结构与 AchievementExcelService.parseComponentSheets 一致：
   /// {pingshi: [...], experiment: [...], exam: [...]}。
   Future<Map<String, List<Map<String, dynamic>>>>
-      collectPlatformAchievementComponents() async {
+      collectPlatformAchievementComponents({String className = '', String courseName = ''}) async {
     final db = await DatabaseHelper.instance.database;
-    final students = await _loadActiveStudents(db);
+    final students = await _loadActiveStudents(db, className: className, courseName: courseName);
     if (students.isEmpty) {
       return {
         'pingshi': <Map<String, dynamic>>[],
@@ -1157,7 +1168,31 @@ class AchievementDao {
     };
   }
 
-  Future<List<Map<String, dynamic>>> _loadActiveStudents(Database db) async {
+  Future<List<Map<String, dynamic>>> _loadActiveStudents(
+    Database db, {
+    String className = '',
+    String courseName = '',
+  }) async {
+    // If a class name is provided, scope students to that class.
+    if (className.isNotEmpty) {
+      try {
+        return (await db.rawQuery('''
+          SELECT u.user_id,
+                 COALESCE(NULLIF(TRIM(u.real_name), ''), u.user_id) AS real_name
+          FROM users u
+          JOIN class_members cm ON cm.user_id = u.user_id
+          JOIN classes c ON c.id = cm.class_id
+          WHERE c.name = ?
+            AND u.role = 'student'
+            AND COALESCE(u.is_active, 1) = 1
+            AND COALESCE(c.is_archived, 0) = 0
+          ORDER BY u.user_id ASC
+        ''', [className])).toList();
+      } catch (e, st) {
+        swallowDebug(e, tag: 'AchievementDao.loadActiveStudentsByClass', stack: st);
+      }
+    }
+    // Fallback: load all active students (no class scoping).
     final activeWhere = ActiveStudentScope.where(alias: 'u');
     try {
       return (await db.rawQuery('''
