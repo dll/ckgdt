@@ -136,12 +136,6 @@ class _ArchivePageState extends State<ArchivePage>
                 dao: _dao,
                 agent: _agent,
               ),
-              ArchivePeriodTab(
-                periodKey: 'final',
-                courseType: _detectedCourseType,
-                dao: _dao,
-                agent: _agent,
-              ),
               const WorkloadTab(),
               ArchivePeriodTab(
                 periodKey: 'archive',
