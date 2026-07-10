@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
 import '../data/local/database_helper.dart';
 import '../core/error_handler.dart';
+import 'rich_resource_generation_service.dart';
 
 /// 资源生成服务 — 从课程包 MD 文件生成 PDF / PPT / 视频脚本
 ///
@@ -29,7 +30,17 @@ class ResourceGenerationService {
     required String chapterTitle,
     required String chapterMdPath,
     String sourceType = 'preset',
+    bool rich = true,
+    PlannedChapter? plannedChapter,
   }) async {
+    if (rich && plannedChapter != null) {
+      return _generateRichResourcesForChapter(
+        courseId: courseId,
+        chapter: plannedChapter,
+        sourceType: sourceType,
+      );
+    }
+
     final result = GenerationResult(chapter: chapterTitle);
 
     // 1. 读取 MD 内容
@@ -433,6 +444,7 @@ class ResourceGenerationService {
   Future<List<GenerationResult>> generateAll({
     required String courseId,
     String sourceType = 'preset',
+    bool rich = true,
   }) async {
     final results = <GenerationResult>[];
 
@@ -454,6 +466,8 @@ class ResourceGenerationService {
           chapterTitle: title,
           chapterMdPath: chapterMdPath,
           sourceType: sourceType,
+          rich: rich,
+          plannedChapter: chapter,
         );
         results.add(r);
       }
@@ -541,7 +555,7 @@ class ResourceGenerationService {
     );
   }
 
-  Future<List<_PlannedChapter>> _loadPlannedChapters(String courseDir) async {
+  Future<List<PlannedChapter>> _loadPlannedChapters(String courseDir) async {
     final lazyFile = File(
       '$courseDir${Platform.pathSeparator}配置${Platform.pathSeparator}lazy_generation.json',
     );
@@ -569,7 +583,7 @@ class ResourceGenerationService {
             .whereType<Map>()
             .map(Map<String, dynamic>.from)
             .toList();
-        final result = <_PlannedChapter>[];
+        final result = <PlannedChapter>[];
         for (final chapter in chapters) {
           final number =
               int.tryParse(chapter['chapter_number']?.toString() ?? '') ?? 0;
@@ -579,7 +593,7 @@ class ResourceGenerationService {
               chapter['chapter_title']?.toString().trim().isNotEmpty == true
                   ? chapter['chapter_title'].toString().trim()
                   : detail['title']?.toString().trim() ?? '第$number章';
-          result.add(_PlannedChapter(
+          result.add(PlannedChapter(
             number: number,
             title: _normalizeChapterTitle(number, titleText),
             description: detail['description']?.toString() ?? '',
@@ -597,7 +611,7 @@ class ResourceGenerationService {
     final chapterDetailsList = chapterDetails.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
     return chapterDetailsList
-        .map((entry) => _PlannedChapter(
+        .map((entry) => PlannedChapter(
               number: entry.key,
               title: _normalizeChapterTitle(
                 entry.key,
@@ -611,7 +625,7 @@ class ResourceGenerationService {
         .toList();
   }
 
-  String _teachingResourceMarkdown(_PlannedChapter chapter) {
+  String _teachingResourceMarkdown(PlannedChapter chapter) {
     final objectives = chapter.objectives.isEmpty
         ? ['理解${chapter.shortTitle}的核心概念', '能够完成${chapter.shortTitle}相关学习任务']
         : chapter.objectives;
@@ -775,9 +789,107 @@ class ResourceGenerationService {
     }
     return digits[value];
   }
+
+  // Rich resource generation: lesson plan -> PDF / PPTX / video
+
+  /// Generates teachable resources driven by an AI lesson plan.
+  Future<GenerationResult> _generateRichResourcesForChapter({
+    required String courseId,
+    required PlannedChapter chapter,
+    required String sourceType,
+  }) async {
+    final result = GenerationResult(chapter: chapter.title);
+    final db = await DatabaseHelper.instance.database;
+    final courseDir = await _getCourseDir(courseId);
+
+    final rich = RichResourceGenerationService();
+    rich.onProgress = (fileType, progress) {
+      onProgress?.call(chapter.title, fileType, progress);
+    };
+
+    // 查询课程名称，避免 RichResourceGenerationService 重复查库
+    final courseRows = await db.query(
+      'courses',
+      columns: ['name'],
+      where: 'id = ?',
+      whereArgs: [courseId],
+    );
+    final courseName = courseRows.isNotEmpty
+        ? (courseRows.first['name']?.toString() ?? '')
+        : '';
+
+    final paths = await rich.generateForChapter(
+      courseId: courseId,
+      chapterTitle: chapter.title,
+      chapterShortTitle: chapter.shortTitle,
+      description: chapter.description,
+      objectives: chapter.objectives,
+      keyPoints: chapter.keyPoints,
+      difficultPoints: chapter.difficultPoints,
+      sourceType: sourceType,
+      outputBaseDir: courseDir,
+      courseName: courseName,
+    );
+
+    if (paths['pdf'] != null) {
+      result.pdfPath = paths['pdf'];
+      result.generated.add('pdf');
+      await db.insert(
+        'resource_files',
+        {
+          'course_id': courseId,
+          'file_name': paths['pdf']!.split(Platform.pathSeparator).last,
+          'file_path': paths['pdf']!,
+          'file_type': 'pdf',
+          'chapter': chapter.title,
+          'description': '[LessonPlan] ${chapter.title} PDF',
+          'source_type': sourceType,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
+    if (paths['ppt'] != null) {
+      result.pptxPath = paths['ppt'];
+      result.generated.add('ppt');
+      await db.insert(
+        'resource_files',
+        {
+          'course_id': courseId,
+          'file_name': paths['ppt']!.split(Platform.pathSeparator).last,
+          'file_path': paths['ppt']!,
+          'file_type': 'ppt',
+          'chapter': chapter.title,
+          'description': '[LessonPlan] ${chapter.title} PPTX',
+          'source_type': sourceType,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
+    if (paths['video'] != null) {
+      result.videoScriptPath = paths['video'];
+      result.generated.add('video');
+      await db.insert(
+        'resource_files',
+        {
+          'course_id': courseId,
+          'file_name': paths['video']!.split(Platform.pathSeparator).last,
+          'file_path': paths['video']!,
+          'file_type': 'video',
+          'chapter': chapter.title,
+          'description': '[LessonPlan] ${chapter.title} Video',
+          'source_type': sourceType,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
+    return result;
+  }
 }
 
-class _PlannedChapter {
+class PlannedChapter {
   final int number;
   final String title;
   final String description;
@@ -785,7 +897,7 @@ class _PlannedChapter {
   final List<String> keyPoints;
   final List<String> difficultPoints;
 
-  const _PlannedChapter({
+  const PlannedChapter({
     required this.number,
     required this.title,
     required this.description,

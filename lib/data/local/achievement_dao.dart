@@ -135,11 +135,10 @@ class AchievementDao {
         await _courseContext.activeCourseName(
           fallback: '当前课程',
         );
-    if (effective.isNotEmpty) {
-      AchievementContext.instance.courseName = effective;
-    }
-    final db = await DatabaseHelper.instance.database;
-    final activeWhere = ActiveStudentScope.where(alias: 'u');
+   if (effective.isNotEmpty) {
+     AchievementContext.instance.courseName = effective;
+   }
+   final db = await DatabaseHelper.instance.database;
     final courseWhere = effective.isNotEmpty ? 'WHERE ab.course_name = ?' : '';
     final args = effective.isNotEmpty ? <Object?>[effective] : <Object?>[];
     try {
@@ -148,16 +147,14 @@ class AchievementDao {
           (
             SELECT COUNT(*)
             FROM achievement_scores s
-            LEFT JOIN users u ON u.user_id = s.student_id
             WHERE s.batch_id = ab.id
-              AND (u.user_id IS NULL OR ($activeWhere))
           ) AS student_count
         FROM achievement_batches ab
         $courseWhere
         ORDER BY ab.created_at DESC
       ''', args);
     } catch (e, st) {
-      swallowDebug(e, tag: 'AchievementDao.getAllBatches.active', stack: st);
+      swallowDebug(e, tag: 'AchievementDao.getAllBatches.count', stack: st);
       return db.rawQuery('''
         SELECT ab.*,
           (SELECT COUNT(*) FROM achievement_scores WHERE batch_id = ab.id) AS student_count
@@ -216,30 +213,17 @@ class AchievementDao {
   // 学生成绩 CRUD
   // ═══════════════════════════════════════════════════════════════════════
 
-  /// 获取批次内所有学生成绩
-  Future<List<Map<String, dynamic>>> getScores(int batchId) async {
-    final db = await DatabaseHelper.instance.database;
-    // .toList() 把 sqflite 只读的 QueryResultSet 转成可变 List，
-    // 否则调用方 sortScoresInPlace() 原地排序会抛 "Unsupported operation: read-only"。
-    final activeWhere = ActiveStudentScope.where(alias: 'u');
-    try {
-      return (await db.rawQuery('''
-        SELECT s.*
-        FROM achievement_scores s
-        LEFT JOIN users u ON u.user_id = s.student_id
-        WHERE s.batch_id = ?
-          AND (u.user_id IS NULL OR ($activeWhere))
-        ORDER BY s.student_id ASC
-      ''', [batchId])).toList();
-    } catch (e, st) {
-      swallowDebug(e, tag: 'AchievementDao.getScores.active', stack: st);
-      return (await db.query('achievement_scores',
-              where: 'batch_id = ?',
-              whereArgs: [batchId],
-              orderBy: 'student_id ASC'))
-          .toList();
-    }
-  }
+ /// 获取批次内所有学生成绩
+ Future<List<Map<String, dynamic>>> getScores(int batchId) async {
+   final db = await DatabaseHelper.instance.database;
+    // 批次自身即权威作用域；导入/聚合时已按当前教学班级筛选，
+    // 查看历史批次时不应再因班级归档而隐藏已有成绩。
+    return (await db.query('achievement_scores',
+            where: 'batch_id = ?',
+            whereArgs: [batchId],
+            orderBy: 'student_id ASC'))
+        .toList();
+ }
 
   /// 添加学生成绩
   Future<int> insertScore(Map<String, dynamic> score) async {
@@ -573,12 +557,82 @@ class AchievementDao {
   // 页面适配方法（别名 & 便捷方法）
   // ═══════════════════════════════════════════════════════════════════════
 
-  /// getScoresByBatch — 别名，等价于 getScores(batchId)
-  Future<List<Map<String, dynamic>>> getScoresByBatch(int batchId) =>
-      getScores(batchId);
+ /// getScoresByBatch — 别名，等价于 getScores(batchId)
+ Future<List<Map<String, dynamic>>> getScoresByBatch(int batchId) =>
+     getScores(batchId);
 
-  /// addBatch — 命名参数便捷方法
-  Future<int> addBatch({
+ /// 标准达成度批次命名：课程-班级-学期-教师
+ static String buildBatchName({
+   required String courseName,
+   required String className,
+   required String semester,
+   required String teacherName,
+ }) {
+   String safe(String s) => s.trim().replaceAll('-', '_');
+   return '${safe(courseName)}-${safe(className)}-${safe(semester)}-${safe(teacherName)}';
+ }
+
+  /// 从未归档班级列表中选择最合适的班级用于新建达成批次。
+  static String selectClassForBatch(List<Map<String, dynamic>> classes) {
+    if (classes.isEmpty) return '';
+    final nonDemo = classes.where((c) {
+      final name = (c['name'] ?? '').toString();
+      return !name.toUpperCase().contains('CKGDT') &&
+          !name.contains('春季') &&
+          !name.contains('演示');
+    }).toList();
+    final source = nonDemo.isNotEmpty ? nonDemo : classes;
+    final software = source.where((c) {
+      final name = (c['name'] ?? '').toString();
+      return name.contains('软件') || RegExp(r'软[工件]?\d+').hasMatch(name);
+    }).toList();
+    final selected = software.isNotEmpty ? software.first : source.first;
+    return selected['name']?.toString() ?? '';
+  }
+
+  /// 把原始学期字符串规范化为「YYYY-YYYY年第N学期」。
+  static String normalizeAcademicSemester(String? raw, {DateTime? now}) {
+    final current = now ?? DateTime.now();
+    final text = (raw ?? '').trim();
+    final yearMatch = RegExp(r'(\d{4})\s*[-—~至]\s*(\d{4})').firstMatch(text);
+    int startYear;
+    int endYear;
+    if (yearMatch != null) {
+      startYear = int.parse(yearMatch.group(1)!);
+      endYear = int.parse(yearMatch.group(2)!);
+    } else if (current.month >= 9) {
+      startYear = current.year;
+      endYear = current.year + 1;
+    } else {
+      startYear = current.year - 1;
+      endYear = current.year;
+    }
+
+    final term = text.contains('第一') || text.contains('第1')
+        ? 1
+        : text.contains('第二') || text.contains('第2')
+            ? 2
+            : current.month >= 9
+                ? 1
+                : 2;
+    return '$startYear-$endYear年第$term学期';
+  }
+
+  /// 从班级列表中查找指定班级的学期并规范化。
+  static String semesterForClass(
+    List<Map<String, dynamic>> classes,
+    String className,
+    DateTime now,
+  ) {
+    final row = classes.cast<Map<String, dynamic>?>().firstWhere(
+          (c) => c?['name']?.toString() == className,
+          orElse: () => null,
+        );
+    return normalizeAcademicSemester(row?['semester']?.toString(), now: now);
+  }
+
+ /// addBatch — 命名参数便捷方法
+ Future<int> addBatch({
     required String batchName,
     String courseName = '',
     String className = '',

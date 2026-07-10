@@ -5,6 +5,7 @@ import '../../../core/error_handler.dart';
 import '../../../data/local/achievement_dao.dart';
 import '../../../data/local/ordinary_score_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../data/local/class_dao.dart';
 import '../../../services/course_context_service.dart';
 
 class OrdinaryScoreTab extends StatefulWidget {
@@ -106,12 +107,27 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
     setState(() => _creatingBatch = true);
     try {
       final now = DateTime.now();
-      final name =
-          '${snapshot?.courseName ?? '课程'}平时成绩 ${now.year}-${_two(now.month)}-${_two(now.day)}';
+      final courseName = snapshot?.courseName ?? '课程';
+      final classes = await ClassDao().getActiveClasses();
+      final selectedClass = AchievementDao.selectClassForBatch(classes);
+      final semester = selectedClass.isNotEmpty
+          ? AchievementDao.semesterForClass(classes, selectedClass, now)
+          : AchievementDao.normalizeAcademicSemester(null, now: now);
+      final rawTeacherName =
+          _authService.currentUser?.realName?.trim() ?? '';
+      final teacherName = rawTeacherName.isNotEmpty ? rawTeacherName : '任课教师';
+      final name = AchievementDao.buildBatchName(
+        courseName: courseName,
+        className: selectedClass.isNotEmpty ? selectedClass : '未绑定班级',
+        semester: semester,
+        teacherName: teacherName,
+      );
       final id = await _achievementDao.addBatch(
         batchName: name,
-        courseName: snapshot?.courseName ?? '当前课程',
-        teacherId: _authService.currentUser?.userId ?? '',
+        courseName: courseName,
+        className: selectedClass.isNotEmpty ? selectedClass : '未绑定班级',
+        semester: semester,
+        teacherId: _authService.currentUser?.userId ?? teacherName,
       );
       final batches = await _achievementDao.getBatches();
       if (!mounted) return;

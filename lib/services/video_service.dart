@@ -463,7 +463,7 @@ except ImportError:
     if (kIsWeb) return null;
     try {
       final safeVideo = videoPath.replaceAll('\\', '/');
-      final safeSrt = srtPath.replaceAll('\\', '/');
+      final safeSrt = srtPath.replaceAll('\\', '/').replaceAll(':', r'\:');
       final safeOutput = outputPath.replaceAll('\\', '/');
 
       // 使用 subtitles filter 烧录字幕

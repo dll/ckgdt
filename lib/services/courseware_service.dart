@@ -12,6 +12,7 @@ import '../core/error_handler.dart';
 import 'ai_service.dart';
 import 'course_context_service.dart';
 import 'plantuml_service.dart';
+import 'lesson_plan_quality_gate.dart';
 
 /// 课件工坊服务 — 教案→MD→PDF/UML/语音/视频 全流水线
 class CoursewareService {
@@ -38,15 +39,17 @@ class CoursewareService {
     final isEnhanced = configOverride != null;
     final courseName = await _courseContext.activeCourseName();
     final system = isEnhanced
-        ? '''你是一位拥有15年教学经验的资深《$courseName》课程教授，精通 ADDIE 教学设计模型和布鲁姆认知层次理论。
+        ? '''你是一位拥有15年教学经验的资深《$courseName》课程教授，精通 ADDIE 教学设计模型、布鲁姆认知层次理论和五星教学法。
 请用中文回复，回复必须是合法的 JSON 对象。
-你的教案应：
-- 教学目标按布鲁姆认知层次（记忆→理解→应用→分析→评价→创造）递进
-- 每个教学环节的 content 字段需包含至少 200 字的详细内容描述，含关键概念解释、示例说明
-- 如课程内容涉及代码、模型、公式或流程，应给出完整示例并含注释或说明
-- 实验/实践步骤须精确到每个操作，含预期结果
-- 软件类课程至少包含 2 个 UML 图表；非软件类课程可改为结构图、流程图或评价表
-- 重点难点要有突破策略说明'''
+你的教案必须达到可直接上台授课的质量：
+- 教学目标按布鲁姆认知层次（记忆→理解→应用→分析→评价→创造）分层撰写，每项目标用"学生能够…"开头
+- 每个教学环节的 content 字段为 300-600 字的完整授课稿，包含：概念定义、1 个贴近学生的真实案例或类比、关键原理推导/操作步骤、1 个常见误区与纠正、1 道课堂互动问题
+- 涉及代码/模型/公式/流程时，codeExample 必须给出完整、可运行的最小示例，并附关键行注释
+- activities 必须具体：说明教师做什么、学生做什么、预计用时、如何检验理解（如举手、投票、填空、小组讨论）
+- 实验/实践步骤须精确到每个操作，含输入、预期输出和评分点
+- 软件类课程至少包含 2 个 UML 图表（类图/时序图/活动图）；非软件类课程用知识结构图、流程图或评价量规替代
+- keyPoints 要写出"为什么重要"和"如何突破"，difficulties 要给出具体化解策略
+- 课后作业分层：基础题+提高题+拓展题各 1 道'''
         : '''你是一位资深的《$courseName》课程教师，擅长制定教学教案。
 请用中文回复，回复必须是合法的 JSON 对象。
 你的教案应结构清晰、内容专业、可操作性强。''';
@@ -105,14 +108,30 @@ ${additionalRequirements != null ? '额外要求: $additionalRequirements' : ''}
     // 提取 JSON 对象
     final match = RegExp(r'\{[\s\S]*\}').firstMatch(raw);
     if (match == null) {
-      return _fallbackLessonPlan(topic, chapter, classHours);
+      return LessonPlanQualityGate.ensureTeachable(
+        _fallbackLessonPlan(topic, chapter, classHours),
+        topic: topic,
+        chapter: chapter,
+        classHours: classHours,
+      );
     }
     try {
-      return jsonDecode(match.group(0)!) as Map<String, dynamic>;
+      final parsed = jsonDecode(match.group(0)!) as Map<String, dynamic>;
+      return LessonPlanQualityGate.ensureTeachable(
+        parsed,
+        topic: topic,
+        chapter: chapter,
+        classHours: classHours,
+      );
     } catch (e) {
       // AI 输出非合法 JSON 属预期，回退兜底教案
       swallow(e, tag: 'CoursewareService.parseLessonPlan');
-      return _fallbackLessonPlan(topic, chapter, classHours);
+      return LessonPlanQualityGate.ensureTeachable(
+        _fallbackLessonPlan(topic, chapter, classHours),
+        topic: topic,
+        chapter: chapter,
+        classHours: classHours,
+      );
     }
   }
 
@@ -182,7 +201,7 @@ ${additionalRequirements != null ? '额外要求: $additionalRequirements' : ''}
           buf.writeln('```');
         }
         if (s['notes'] != null && s['notes'].toString().isNotEmpty) {
-          buf.writeln('\n> 💡 **教师备注**: ${s['notes']}');
+          buf.writeln('\n> 提示：**教师备注**：${s['notes']}');
         }
         buf.writeln();
       }
@@ -348,6 +367,7 @@ ${context != null ? '上下文说明: $context' : ''}
   /// 从教案生成增强版 PDF（含 UML 图）
   Future<String?> generateEnhancedPdf({
     required Map<String, dynamic> lessonPlan,
+    String? outputDir,
     List<Uint8List>? umlImages,
   }) async {
     if (kIsWeb) return null;
@@ -656,11 +676,9 @@ ${context != null ? '上下文说明: $context' : ''}
 
       // ─── 保存 ──────────────────────────────────────────────────────
       final pdfBytes = await pdf.save();
-      final dir = await getApplicationDocumentsDirectory();
-      final coursewareDir = Directory('${dir.path}/courseware');
-      if (!coursewareDir.existsSync()) {
-        coursewareDir.createSync(recursive: true);
-      }
+      final coursewareDir = outputDir != null
+          ? (Directory(outputDir)..createSync(recursive: true))
+          : (Directory('${(await getApplicationDocumentsDirectory()).path}/courseware')..createSync(recursive: true));
 
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final safeTitle = title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
@@ -761,6 +779,16 @@ ${context != null ? '上下文说明: $context' : ''}
     final prompt = '''
 为教案"$title"生成视频旁白脚本。教案包含以下教学环节: $sectionTitles
 
+教学环节详细内容如下，请充分吸收后转化为讲解语言：
+${sections.map((s) {
+      final map = s as Map<String, dynamic>;
+      final sTitle = map['title']?.toString() ?? '';
+      final sContent = map['content']?.toString() ?? '';
+      final sCode = map['codeExample']?.toString() ?? '';
+      final sNotes = map['notes']?.toString() ?? '';
+      return '【$sTitle】\n内容：$sContent${sCode.isNotEmpty ? '\n代码示例：$sCode' : ''}${sNotes.isNotEmpty ? '\n讲授提示：$sNotes' : ''}';
+    }).join('\n\n')}
+
 请为每个幻灯片（含封面、每个教学环节、实验说明、总结）生成一段旁白。
 返回 JSON 数组，格式:
 [
@@ -770,8 +798,10 @@ ${context != null ? '上下文说明: $context' : ''}
 ]
 
 要求:
-- 每段旁白 100-200 字，适合 TTS 朗读
-- 语言口语化、节奏自然
+- 每段旁白 150-280 字，适合 TTS 朗读
+- 语言口语化、节奏自然，像优秀教师在课堂讲解
+- 必须引用具体案例、关键步骤或代码中的核心思想，避免空泛
+- 适当使用过渡句和强调句（"这里要特别注意…"、"换句话说…"）
 - 仅返回 JSON，不要其他文字
 ''';
 
@@ -800,6 +830,124 @@ ${context != null ? '上下文说明: $context' : ''}
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  /// 根据实际幻灯片列表生成旁白脚本，确保与图片/TTS/视频严格一一对应。
+  Future<List<Map<String, String>>> generateNarrationScriptsForSlides({
+    required String title,
+    required String chapter,
+    required List<Map<String, dynamic>> slides,
+    AiConfigModel? configOverride,
+  }) async {
+    final isEnhanced = configOverride != null;
+    final courseName = await _courseContext.activeCourseName();
+    final system = isEnhanced
+        ? '''你是一位极具感染力的《$courseName》课程讲师，正在录制高品质教学视频。
+请用中文、口语化、清晰的语言生成教学视频旁白脚本。回复必须是合法的 JSON 数组。
+要求：
+- 语言自然生动，像与学生面对面交流
+- 适当使用过渡句（"接下来让我们看看…"、"这里要特别注意…"）
+- 关键概念要用通俗易懂的比喻解释
+- 每段旁白 150-250 字，节奏适中
+- 必须结合每张幻灯片的具体标题和要点，避免空泛'''
+        : '''你是一位专业的《$courseName》课程讲师，正在录制教学视频。
+请用中文、口语化、清晰的语言生成教学视频旁白脚本。
+回复必须是合法的 JSON 数组。''';
+
+    final slideTitles = slides.map((s) => s['title']?.toString() ?? '').join('、');
+    final prompt = '''
+为课程"$title"（$chapter）生成视频旁白脚本。
+幻灯片数据如下（按顺序）：
+${slides.map((s) => jsonEncode(s)).join('\n')}
+
+请生成 ${slides.length + 2} 段旁白，顺序为：封面、$slideTitles、结束页。
+封面应做课程引入；每张内容页要结合标题和要点讲解；结束页要做总结与作业提醒。
+
+返回 JSON 数组，格式:
+[
+  {"slide": "封面", "narration": "同学们好..."},
+  ...
+]
+
+要求:
+- 每段旁白 150-250 字，适合 TTS 朗读
+- 语言口语化、节奏自然
+- 引用具体案例、关键步骤或代码中的核心思想，避免空泛
+- 仅返回 JSON，不要其他文字
+''';
+
+    final raw = await _aiService.chat(
+      [
+        {'role': 'user', 'content': prompt}
+      ],
+      systemPrompt: system,
+      configOverride: configOverride,
+    );
+
+    final match = RegExp(r'\[[\s\S]*\]').firstMatch(raw);
+    List<Map<String, String>> parsed = [];
+    if (match != null) {
+      try {
+        final list = jsonDecode(match.group(0)!) as List;
+        parsed = list
+            .map((item) => {
+                  'slide': (item as Map)['slide']?.toString() ?? '',
+                  'narration': item['narration']?.toString() ?? '',
+                })
+            .toList();
+      } catch (e, st) {
+        swallowDebug(e, tag: 'CoursewareService.parseNarrationForSlides', stack: st);
+      }
+    }
+
+    final expected = [
+      {
+        'slide': '封面',
+        'narration': '同学们好，今天我们来学习$title。$chapter。'
+            '本节课我们将围绕核心概念、典型案例和实践任务展开，帮助大家建立对$title的系统理解。'
+      },
+      ...slides.map((s) => {
+            'slide': s['title']?.toString() ?? '',
+            'narration': '下面进入${s['title']}。${_slideTextForNarration(s)}'
+          }),
+      {
+        'slide': '结束页',
+        'narration': '今天我们学习了$title的核心内容，希望大家课后及时完成作业，并预习下一节。谢谢大家！'
+      },
+    ];
+
+    final result = <Map<String, String>>[];
+    for (var i = 0; i < expected.length; i++) {
+      if (i < parsed.length && (parsed[i]['narration'] ?? '').trim().length >= 30) {
+        result.add(parsed[i]);
+      } else {
+        result.add(expected[i]);
+      }
+    }
+    return result;
+  }
+
+  String _slideTextForNarration(Map<String, dynamic> slide) {
+    final bullets = (slide['bullets'] as List?)
+            ?.map((b) => b.toString())
+            .where((s) => s.isNotEmpty)
+            .join('，') ??
+        '';
+    final code = slide['code']?.toString() ?? '';
+    final notes = slide['notes']?.toString() ?? '';
+    final parts = <String>[];
+    if (bullets.isNotEmpty) {
+      parts.add('本页要点包括：$bullets。');
+    }
+    if (code.isNotEmpty) {
+      parts.add('代码示例展示了核心实现思路，请大家关注关键行注释。');
+    }
+    if (notes.isNotEmpty) {
+      parts.add('教师提示：$notes。');
+    }
+    if (parts.isEmpty) {
+      parts.add('请大家认真听讲，理解本页核心内容。');
+    }
+    return parts.join('');
+  }
   // 辅助：保存 UML 图片
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -896,14 +1044,11 @@ ${context != null ? '上下文说明: $context' : ''}
                 color: const PdfColor.fromInt(0xFFF5F5F5),
                 border: pw.Border.all(
                     color: const PdfColor.fromInt(0xFFE0E0E0), width: 0.5),
-                borderRadius: const pw.BorderRadius.only(
-                    topRight: pw.Radius.circular(4),
-                    bottomLeft: pw.Radius.circular(4),
-                    bottomRight: pw.Radius.circular(4)),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
               ),
               child: pw.Text(code,
                   style: pw.TextStyle(
-                      font: pw.Font.courier(),
+                      font: font ?? pw.Font.courier(),
                       fontSize: 11,
                       color: const PdfColor.fromInt(0xFF37474F),
                       lineSpacing: 4)),
@@ -930,7 +1075,7 @@ ${context != null ? '上下文说明: $context' : ''}
                 borderRadius: pw.BorderRadius.all(pw.Radius.circular(9)),
               ),
               child: pw.Center(
-                child: pw.Text('▶',
+                child: pw.Text('>',
                     style: pw.TextStyle(
                         font: font, fontSize: 9, color: PdfColors.white)),
               ),
@@ -1005,7 +1150,7 @@ ${context != null ? '上下文说明: $context' : ''}
         trimmed.startsWith('-') ||
         trimmed.startsWith('·') ||
         RegExp(r'^\d+[.、]').hasMatch(trimmed);
-    final String displayText = alreadyHasBullet ? trimmed : '•  $trimmed';
+    final String displayText = alreadyHasBullet ? trimmed.replaceAll('•', '-') : '- $trimmed';
 
     return pw.Padding(
       padding: const pw.EdgeInsets.only(bottom: 10),
@@ -1086,9 +1231,21 @@ ${context != null ? '上下文说明: $context' : ''}
             pw.SizedBox(height: 20),
             // 内容（智能样式渲染），限制条目数防溢出
             ...safeItems.map((item) {
-              // 截断过长文本（单个条目限制 500 字）
-              final truncated =
-                  item.length > 500 ? '${item.substring(0, 500)}...' : item;
+              // 截断过长文本（单个条目限制 1200 字）
+              // 统一替换可能缺失字形的 Unicode 图标
+              final sanitized = item
+                  .replaceAll('•', '-')
+                  .replaceAll('·', '-')
+                  .replaceAll('▶', '>')
+                  .replaceAll('💡', '[提示]')
+                  .replaceAll('✅', '[OK]')
+                  .replaceAll('📋', '[任务]')
+                  .replaceAll('🎯', '[目标]')
+                  .replaceAll('⏱', '[时间]')
+                  .replaceAll('🌰', '[例]');
+              final truncated = sanitized.length > 1200
+                  ? '${sanitized.substring(0, 1200)}...'
+                  : sanitized;
               return _buildContentItem(truncated, font);
             }),
             pw.SizedBox(height: 8),
@@ -1114,14 +1271,12 @@ ${context != null ? '上下文说明: $context' : ''}
                 padding: const pw.EdgeInsets.all(10),
                 decoration: const pw.BoxDecoration(
                   color: PdfColor.fromInt(0xFFF5F7FA),
-                  borderRadius:
-                      pw.BorderRadius.all(pw.Radius.circular(6)),
                   border: pw.Border(
                     left: pw.BorderSide(
                         color: PdfColor.fromInt(0xFF1677FF), width: 3),
                   ),
                 ),
-                child: pw.Text('💡 $notes',
+                child: pw.Text('提示：$notes',
                     style: pw.TextStyle(
                         font: font, fontSize: 10, color: PdfColors.grey700)),
               ),
@@ -1133,40 +1288,63 @@ ${context != null ? '上下文说明: $context' : ''}
 
   Map<String, dynamic> _fallbackLessonPlan(
       String topic, String? chapter, int hours) {
+    final minutes = hours * 45;
     return {
       'title': topic,
       'chapter': chapter ?? '',
       'classHours': hours,
-      'objectives': ['了解$topic的基本概念', '掌握$topic的核心技术', '能够实践$topic相关操作'],
-      'keyPoints': ['$topic核心概念'],
-      'difficulties': ['$topic高级应用'],
+      'objectives': [
+        '学生能够解释$topic的基本概念与核心术语',
+        '学生能够运用$topic的关键方法解决典型问题',
+        '学生能够评价不同场景下$topic方案的适用性',
+      ],
+      'keyPoints': [
+        '$topic的核心概念与工作原理',
+        '$topic的典型应用场景与使用步骤',
+      ],
+      'difficulties': [
+        '$topic中容易混淆的概念辨析',
+        '$topic在实际问题中的综合应用',
+      ],
       'sections': [
         {
-          'title': '课程导入',
+          'title': '课程导入与目标',
           'duration': '10分钟',
-          'content': '介绍$topic的背景和重要性',
-          'activities': '讲授+讨论',
-          'notes': ''
+          'content': '通过生活化案例引出$topic的学习价值，明确本节课要解决的核心问题。\n1. 为什么要学习$topic？\n2. 本节课的学习目标与预期产出。\n3. 与已学知识的衔接点。',
+          'activities': '教师展示案例并提问，学生思考并口头回应',
+          'notes': '板书：$topic = 问题 + 方法 + 应用'
         },
         {
-          'title': '核心讲解',
-          'duration': '${hours * 45 - 20}分钟',
-          'content': '详细讲解$topic的核心内容',
-          'activities': '讲授+演示',
-          'notes': ''
+          'title': '核心概念讲解',
+          'duration': '${minutes - 25}分钟',
+          'content': '系统讲解$topic的核心概念、工作原理与关键步骤。\n1. 定义与关键术语。\n2. 工作流程或结构组成。\n3. 一个最小可运行示例。\n4. 常见误区与纠正方法。\n5. 课堂互动问题。',
+          'activities': '讲授+示例演示+即时提问',
+          'notes': '配合板书或图示，强调关键步骤'
         },
         {
-          'title': '总结回顾',
+          'title': '总结与作业',
           'duration': '10分钟',
-          'content': '总结本节课重点',
-          'activities': '讨论+答疑',
-          'notes': ''
+          'content': '回顾本节课重点，布置分层作业。\n1. 核心知识点梳理。\n2. 基础题巩固概念。\n3. 提高题训练综合应用。',
+          'activities': '师生共同总结，教师发布作业',
+          'notes': '预留答疑时间'
         },
       ],
-      'experiments': [],
+      'experiments': [
+        {
+          'name': '$topic实践练习',
+          'objective': '通过动手操作加深对$topic的理解',
+          'steps': [
+            '明确任务要求与输入数据',
+            '按照步骤完成核心操作',
+            '记录运行结果与遇到的问题',
+            '总结关键发现',
+          ],
+          'deliverables': '提交操作过程截图与简短总结报告',
+        }
+      ],
       'umlDiagrams': [],
-      'homework': '复习$topic相关内容',
-      'references': [],
+      'homework': '基础题：简述$topic的核心概念。提高题：完成一个$topic的典型案例分析。拓展题：查阅资料，比较$topic与相关技术的异同。',
+      'references': ['教材相关章节', '$topic官方文档或权威教程'],
     };
   }
 
@@ -1176,6 +1354,44 @@ ${context != null ? '上下文说明: $context' : ''}
 
   /// 将结构化教案直接转换为高质量幻灯片数据
   ///
+  /// 将教学环节的 content 拆分为适合幻灯片展示的要点列表
+  List<String> _splitContentIntoBullets(String content) {
+    final result = <String>[];
+    final lines = content.split('\n');
+    for (var raw in lines) {
+      var line = raw.trim();
+      if (line.isEmpty) continue;
+
+      // 去除常见列表标记
+      if (line.startsWith('- ') || line.startsWith('• ')) {
+        line = line.substring(2).trim();
+      } else if (line.startsWith('\u2022 ')) {
+        line = line.substring(1).trim();
+      } else {
+        line = line.replaceFirst(RegExp(r'^\d+[.、\)]\s*'), '').trim();
+      }
+      if (line.isEmpty) continue;
+
+      // 如果单行过长，按句读拆成多条
+      const maxLen = 90;
+      if (line.length > maxLen &&
+          RegExp(r'[。！？；]').hasMatch(line)) {
+        final chunks = line
+            .split(RegExp(r'(?<=[。！？；])'))
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+        for (final chunk in chunks) {
+          result.add(chunk.length > maxLen ? '${chunk.substring(0, maxLen)}…' : chunk);
+        }
+      } else {
+        result.add(line.length > maxLen ? '${line.substring(0, maxLen)}…' : line);
+      }
+    }
+    return result;
+  }
+
+  /// 生成的幻灯片包含：封面信息 + 教学目标 + 重难点 + 每个教学环节 +
   /// 生成的幻灯片包含：封面信息 + 教学目标 + 重难点 + 每个教学环节 +
   /// 实验项目 + UML图表说明 + 课后作业 + 参考资料 + 总结
   List<Map<String, dynamic>> lessonPlanToSlides(
@@ -1213,7 +1429,7 @@ ${context != null ? '上下文说明: $context' : ''}
       });
     }
 
-    // ── 3. 教学过程 — 每个环节一张幻灯片 ──────────────────────────────
+    // ── 3. 教学过程 — 智能拆分长内容为多张幻灯片 ──────────────────────
     final sections = lessonPlan['sections'] as List? ?? [];
     for (var i = 0; i < sections.length; i++) {
       final s = sections[i] as Map<String, dynamic>;
@@ -1224,45 +1440,44 @@ ${context != null ? '上下文说明: $context' : ''}
       final codeExample = s['codeExample']?.toString() ?? '';
       final notes = s['notes']?.toString() ?? '';
 
-      final bullets = <String>[];
-      if (duration.isNotEmpty) bullets.add('⏱ 时间：$duration');
-      if (activities.isNotEmpty) bullets.add('🎯 教学活动：$activities');
+      final subtitleParts = <String>[];
+      if (duration.isNotEmpty) subtitleParts.add('⏱ $duration');
+      if (activities.isNotEmpty) subtitleParts.add('🎯 $activities');
+      final subtitle = subtitleParts.join('  ');
 
-      // 解析 content 为要点列表
-      final contentLines = content.split('\n');
-      for (final line in contentLines) {
-        final trimmed = line.trim();
-        if (trimmed.isEmpty) continue;
-        if (trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
-          bullets.add('• ${trimmed.substring(2)}');
-        } else if (RegExp(r'^\d+[.、]').hasMatch(trimmed)) {
-          bullets.add('• ${trimmed.replaceFirst(RegExp(r'^\d+[.、]\s*'), '')}');
-        } else {
-          bullets.add('• $trimmed');
+      // 将 content 拆分为适合单行的要点
+      final rawBullets = _splitContentIntoBullets(content);
+      // 教学活动作为首个要点，更醒目
+      if (activities.isNotEmpty && !rawBullets.any((b) => b.contains('教学活动'))) {
+        rawBullets.insert(0, '【教学活动】$activities');
+      }
+
+      // 每页 5-6 个要点，给长文本留空间
+      const bulletsPerSlide = 6;
+      for (var page = 0; page < rawBullets.length; page += bulletsPerSlide) {
+        final pageBullets = rawBullets.skip(page).take(bulletsPerSlide).toList();
+        final pageTitle = page == 0 ? sTitle : '$sTitle（续${page ~/ bulletsPerSlide + 1}）';
+        final pageSlide = <String, dynamic>{
+          'title': pageTitle,
+          if (subtitle.isNotEmpty && page == 0) 'subtitle': subtitle,
+          'bullets': pageBullets,
+        };
+        // 教师备注只放在最后一页内容页
+        if (notes.isNotEmpty && page + bulletsPerSlide >= rawBullets.length) {
+          pageSlide['notes'] = notes;
         }
+        slides.add(pageSlide);
       }
 
-      final slide = <String, dynamic>{
-        'title': sTitle,
-        'subtitle': duration.isNotEmpty ? '时间：$duration' : null,
-        'bullets': bullets.take(8).toList(), // 每页最多8个要点
-      };
-
-      if (codeExample.isNotEmpty) {
-        slide['code'] = codeExample;
-        slide['codeLanguage'] = 'java';
-      }
-      if (notes.isNotEmpty) {
-        slide['notes'] = notes;
-      }
-
-      slides.add(slide);
-
-      // 如果要点超过8个，创建续页
-      if (bullets.length > 8) {
+      // 代码示例单独成页，避免与文字挤在一起
+      if (codeExample.trim().isNotEmpty) {
         slides.add({
-          'title': '$sTitle（续）',
-          'bullets': bullets.skip(8).toList(),
+          'title': '$sTitle — 代码示例',
+          'subtitle': '完整可运行示例',
+          'bullets': ['关键思路与注释见代码'],
+          'code': codeExample,
+          'codeLanguage': 'java',
+          if (notes.isNotEmpty && rawBullets.isEmpty) 'notes': notes,
         });
       }
     }
@@ -1587,14 +1802,13 @@ ${context != null ? '上下文说明: $context' : ''}
     required String title,
     required List<Map<String, dynamic>> slides,
     String? chapter,
+    String? outputDir,
   }) async {
     if (kIsWeb) return null;
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final coursewareDir = Directory('${dir.path}/courseware');
-      if (!coursewareDir.existsSync()) {
-        coursewareDir.createSync(recursive: true);
-      }
+      final coursewareDir = outputDir != null
+          ? (Directory(outputDir)..createSync(recursive: true))
+          : (Directory('${(await getApplicationDocumentsDirectory()).path}/courseware')..createSync(recursive: true));
 
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final safeTitle = title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
@@ -1968,7 +2182,7 @@ def main():
     # 底部信息
     tx2 = slide.shapes.add_textbox(Inches(1), Inches(6.2), Inches(11.3), Inches(0.5))
     p3 = tx2.text_frame.paragraphs[0]
-    set_p_font(p3, '\u79fb\u52a8\u5e94\u7528\u5f00\u53d1\u77e5\u8bc6\u56fe\u8c31\u6559\u5b66\u7cfb\u7edf', 14, RGBColor(0x88, 0x99, 0xCC))
+    set_p_font(p3, '\u8bfe\u7a0b\u77e5\u8bc6\u56fe\u8c31\u4e0e\u6570\u5b57\u5b6a\u751f\u5e73\u53f0', 14, RGBColor(0x88, 0x99, 0xCC))
     p3.alignment = PP_ALIGN.CENTER
 
     # ═══════════════════════════════════════════════════════════════
@@ -2194,7 +2408,7 @@ def main():
     tx3 = slide.shapes.add_textbox(Inches(1), Inches(5.5), Inches(11.3), Inches(0.8))
     tf3 = tx3.text_frame
     p3 = tf3.paragraphs[0]
-    set_p_font(p3, '\u79fb\u52a8\u5e94\u7528\u5f00\u53d1\u77e5\u8bc6\u56fe\u8c31\u6559\u5b66\u7cfb\u7edf', 14, RGBColor(0x88, 0x99, 0xCC))
+    set_p_font(p3, '\u8bfe\u7a0b\u77e5\u8bc6\u56fe\u8c31\u4e0e\u6570\u5b57\u5b6a\u751f\u5e73\u53f0', 14, RGBColor(0x88, 0x99, 0xCC))
     p3.alignment = PP_ALIGN.CENTER
 
     p4 = tf3.add_paragraph()
@@ -2320,10 +2534,20 @@ def main():
         "C:/Windows/Fonts/msyhbd.ttc",
         "C:/Windows/Fonts/simhei.ttf",
         "C:/Windows/Fonts/simsun.ttc",
+        "/System/Library/Fonts/PingFang.ttc",
+        "/System/Library/Fonts/STHeiti Light.ttc",
+        "/Library/Fonts/Arial Unicode.ttf",
+        "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+        "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
     ]
     code_paths = [
         "C:/Windows/Fonts/consola.ttf",
         "C:/Windows/Fonts/cour.ttf",
+        "/System/Library/Fonts/Menlo.ttc",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
     ]
 
     def load(paths, size):
@@ -2370,7 +2594,7 @@ def main():
         except:
             cw = 20
         chars = max(int(max_w / cw), 10)
-        lines = textwrap.wrap(text, width=chars)
+        lines = textwrap.wrap(text, width=chars, break_long_words=True, replace_whitespace=False)
         for ln in lines:
             draw.text((x, y), ln, font=font, fill=fill)
             y += line_h

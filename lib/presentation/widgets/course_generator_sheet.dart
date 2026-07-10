@@ -16,6 +16,7 @@ import '../../data/models/node_model.dart';
 import '../../services/achievement/achievement_excel_service.dart';
 import '../../services/course_generation_service.dart';
 import '../../services/resource_persistence_service.dart';
+import '../../services/resource_generation_service.dart';
 import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 一键生课 — 底部弹出表单（只上传大纲）
@@ -420,6 +421,32 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
       _updateProgress('保存到数据库...');
       await _saveToDatabase(result);
       await _saveCourseObjectivesFromSyllabus(result);
+
+      // 生成高质量教学资源（PDF / PPTX / MP4）
+      _updateProgress('正在生成高质量教学资源...');
+      final resourceService = ResourceGenerationService(
+        onProgress: (chapter, fileType, progress) {
+          _updateProgress('$chapter → ${fileType.toUpperCase()}');
+        },
+      );
+      final resourceResults = await resourceService.generateAll(
+        courseId: result.courseId,
+        sourceType: 'course_package',
+        rich: true,
+      );
+      final totalGenerated =
+          resourceResults.fold<int>(0, (sum, r) => sum + r.generated.length);
+      final totalErrors =
+          resourceResults.fold<int>(0, (sum, r) => sum + r.errors.length);
+      _log('高质量教学资源生成完成：$totalGenerated 个');
+      for (final r in resourceResults) {
+        if (r.generated.isNotEmpty) {
+          _log('${r.chapter}: ${r.generated.join(', ')}');
+        }
+      }
+      if (totalErrors > 0) {
+        _log('生成错误：$totalErrors 个');
+      }
 
       _log('课程《$name》创建成功！');
       _log('已建立懒生成资源包：测验、课件、视频脚本将在首次使用时生成');

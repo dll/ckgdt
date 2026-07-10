@@ -762,12 +762,20 @@ class _ReportTabState extends State<ReportTab> {
     }
   }
 
-  void _showReportDialog(String reportText) {
+ void _showReportDialog(String reportText) {
+    final batch = _batches.firstWhere(
+      (b) => b['id'] == _selectedBatchId,
+      orElse: () => <String, dynamic>{},
+    );
+    final version = batch['syllabus_version']?.toString() ?? '';
     showDialog(
       context: context,
-      builder: (ctx) => ReportPreviewDialog(reportText: reportText),
+      builder: (ctx) => ReportPreviewDialog(
+        reportText: reportText,
+        syllabusVersion: version,
+      ),
     );
-  }
+ }
 
   Future<void> _showAchievementAudit() async {
     setState(() => _generatingReport = true);
@@ -942,9 +950,10 @@ class _ReportTabState extends State<ReportTab> {
         courseName: batch['course_name'] ?? _fallbackCourseName,
         className: batch['class_name'] ?? '班级',
         semester: batch['semester'] ?? DateTime.now().year.toString(),
-        teacherName: teacherName,
-        syllabus: syllabus,
-        objectives: objectives,
+       teacherName: teacherName,
+       syllabus: syllabus,
+        syllabusVersion: batch['syllabus_version']?.toString() ?? '',
+       objectives: objectives,
         qualitativeText: _qualitativeFromSurvey(),
         classStats: {
           'studentCount': scores.length,
@@ -3044,7 +3053,12 @@ class _ReportTabState extends State<ReportTab> {
 
 class ReportPreviewDialog extends StatefulWidget {
   final String reportText;
-  const ReportPreviewDialog({super.key, required this.reportText});
+  final String syllabusVersion;
+  const ReportPreviewDialog({
+    super.key,
+    required this.reportText,
+    this.syllabusVersion = '',
+  });
 
   @override
   State<ReportPreviewDialog> createState() => _ReportPreviewDialogState();
@@ -3071,7 +3085,8 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
           .toIso8601String()
           .replaceAll(RegExp(r'[:.]'), '-')
           .substring(0, 19);
-      final file = File('${dir.path}/达成度报告_$ts.docx');
+      final v = widget.syllabusVersion.trim();
+      final file = File('${dir.path}/达成度报告${v.isNotEmpty ? '_v$v' : ''}_$ts.docx');
       await file.writeAsBytes(bytes);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -95,6 +95,7 @@ class ArchivePackageService {
 
     // 学期：当前课程最近达成批次优先，保证达成、报告、归档使用同一课程上下文。
     String semester = latestBatch?['semester']?.toString().trim() ?? '';
+    String version = latestBatch?['syllabus_version']?.toString().trim() ?? '';
     try {
       if (semester.isEmpty) {
         final tid = user?.userId;
@@ -119,6 +120,7 @@ class ArchivePackageService {
       docLabel: _safeSegment(docLabel),
       teacher: _safeSegment(teacherName),
       semester: _safeSegment(semester),
+      version: _safeSegment(version),
       warnings: warnings,
     );
   }
@@ -505,6 +507,7 @@ class ArchiveNaming {
   final String docLabel;
   final String teacher;
   final String semester;
+  final String version;
   final List<String> warnings;
 
   ArchiveNaming({
@@ -513,6 +516,7 @@ class ArchiveNaming {
     required this.docLabel,
     required this.teacher,
     required this.semester,
+    this.version = '',
     this.warnings = const [],
   });
 
@@ -520,11 +524,17 @@ class ArchiveNaming {
   /// 形如：`{学院}+{课程}+{docLabel}+{教师}+{学期}`
   String fileBase({String? docLabel}) {
     final lbl = docLabel ?? this.docLabel;
-    return '$department+$course+$lbl+$teacher+$semester';
+    final v = version.trim();
+    final suffix = v.isNotEmpty ? '+v$v' : '';
+    return '$department+$course+$lbl+$teacher+$semester$suffix';
   }
 
   /// 用于 zip 命名（不含 docLabel，因为 zip 是聚合）
-  String get zipBase => '$department+$course+$teacher+$semester';
+  String get zipBase {
+    final v = version.trim();
+    final suffix = v.isNotEmpty ? '+v$v' : '';
+    return '$department+$course+$teacher+$semester$suffix';
+  }
 
   ArchiveNaming copyWith({
     String? department,
@@ -532,6 +542,7 @@ class ArchiveNaming {
     String? docLabel,
     String? teacher,
     String? semester,
+    String? version,
   }) =>
       ArchiveNaming(
         department: department ?? this.department,
@@ -539,6 +550,7 @@ class ArchiveNaming {
         docLabel: docLabel ?? this.docLabel,
         teacher: teacher ?? this.teacher,
         semester: semester ?? this.semester,
+        version: version ?? this.version,
         warnings: warnings,
       );
 }

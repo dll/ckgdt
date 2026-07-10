@@ -285,6 +285,7 @@ class _LearningHubPageState extends State<LearningHubPage>
       final results = await service.generateAll(
         courseId: courseId,
         sourceType: _isTeacherOrAdmin ? 'preset' : 'extended',
+        rich: true,
       );
 
       if (!mounted) return;

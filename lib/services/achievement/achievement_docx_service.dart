@@ -46,6 +46,7 @@ class AchievementDocxService {
     double expectation = 0.6,
     Uint8List? barChartPng,
     List<Uint8List?> scatterChartPngs = const [],
+    String syllabusVersion = '',
   }) async {
     final template = await _findTemplateForCourse(courseName);
     if (template != null) {
@@ -66,6 +67,7 @@ class AchievementDocxService {
           expectation: expectation,
           barChartPng: barChartPng,
           scatterChartPngs: scatterChartPngs,
+          syllabusVersion: syllabusVersion,
         );
       } catch (e, st) {
         swallowDebug(e,
@@ -106,7 +108,8 @@ class AchievementDocxService {
         : archive;
 
     final dir = await OutputPathService.getOutputDirectory();
-    final safeName = '${courseName}_${className}_达成评价报告'
+    final v = syllabusVersion.trim();
+    final safeName = '${courseName}_${className}_达成评价报告${v.isNotEmpty ? '_v$v' : ''}'
         .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
     final filePath = '${dir.path}/$safeName.docx';
 
@@ -164,6 +167,7 @@ class AchievementDocxService {
     required double expectation,
     Uint8List? barChartPng,
     List<Uint8List?> scatterChartPngs = const [],
+    String syllabusVersion = '',
   }) async {
     final archive = ZipDecoder().decodeBytes(await template.readAsBytes());
     final files = <String, List<int>>{};
@@ -215,7 +219,8 @@ class AchievementDocxService {
     }
 
     final dir = await OutputPathService.getOutputDirectory();
-    final safeName = '${courseName}_${className}_达成评价报告'
+    final v = syllabusVersion.trim();
+    final safeName = '${courseName}_${className}_达成评价报告${v.isNotEmpty ? '_v$v' : ''}'
         .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
     final filePath = '${dir.path}/$safeName.docx';
     final zipBytes = ZipEncoder().encode(out) ?? <int>[];

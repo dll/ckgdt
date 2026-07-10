@@ -261,8 +261,8 @@ ${chapters.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n')}
       courseName: courseName,
       className: className,
       semester: semester,
-      teacherName: teacherName,
-      syllabus: {
+     teacherName: teacherName,
+     syllabus: {
         'info': {
           '考核方式': '考查',
           '开课学期': semester,
@@ -290,9 +290,10 @@ ${chapters.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n')}
                   i < envWeights.length ? envWeights[i]['exam'] ?? 0 : 0,
             }
         ],
-      },
-      objectives: objectives,
-      classStats: {
+     },
+     objectives: objectives,
+      syllabusVersion: batch['syllabus_version']?.toString() ?? '',
+     classStats: {
         'studentCount': scores.length,
         'avgTotal': (avg['weighted'] ?? 0) * 100,
         'maxTotal': _maxOf(scores, 'total_score'),

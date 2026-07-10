@@ -1101,10 +1101,10 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
         ? activeCourse.name.trim()
         : AchievementContext.instance.courseName;
     final today = DateTime.now();
-    final classes = await ClassDao().getActiveClasses();
-    final selectedClass = _selectClassForBatch(classes);
+     final classes = await ClassDao().getActiveClasses();
+      final selectedClass = AchievementDao.selectClassForBatch(classes);
 
-    if (selectedClass.isEmpty) {
+      if (selectedClass.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1116,15 +1116,21 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
       return;
     }
 
-    final semester = _semesterForClass(classes, selectedClass, today);
-    final syllabusVersion =
-        await widget.achievementDao.currentSyllabusVersion(courseName);
-    final rawTeacherName =
-        widget.authService.currentUser?.realName?.trim() ?? '';
-    final teacherName = rawTeacherName.isNotEmpty ? rawTeacherName : '任课教师';
-    final teacherId = widget.authService.getCurrentUserId() ?? '';
-    final batchName = '$courseName-$selectedClass-$semester-$teacherName';
-    try {
+      final semester = _semesterForClass(classes, selectedClass, today);
+      final semester = AchievementDao.semesterForClass(classes, selectedClass, today);
+     final syllabusVersion =
+         await widget.achievementDao.currentSyllabusVersion(courseName);
+     final rawTeacherName =
+         widget.authService.currentUser?.realName?.trim() ?? '';
+     final teacherName = rawTeacherName.isNotEmpty ? rawTeacherName : '任课教师';
+     final teacherId = widget.authService.getCurrentUserId() ?? '';
+      final batchName = AchievementDao.buildBatchName(
+        courseName: courseName,
+        className: selectedClass,
+        semester: semester,
+        teacherName: teacherName,
+      );
+     try {
       final id = await widget.achievementDao.addBatch(
         batchName: batchName,
         courseName: courseName,
@@ -1165,62 +1171,6 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
     } catch (_) {
       return 0;
     }
-  }
-
-  String _selectClassForBatch(List<Map<String, dynamic>> classes) {
-    if (classes.isEmpty) return '';
-    final nonDemo = classes.where((c) {
-      final name = (c['name'] ?? '').toString();
-      return !name.toUpperCase().contains('CKGDT') &&
-          !name.contains('春季') &&
-          !name.contains('演示');
-    }).toList();
-    final source = nonDemo.isNotEmpty ? nonDemo : classes;
-    final software = source.where((c) {
-      final name = (c['name'] ?? '').toString();
-      return name.contains('软件') || RegExp(r'软[工件]?\d+').hasMatch(name);
-    }).toList();
-    final selected = software.isNotEmpty ? software.first : source.first;
-    return selected['name']?.toString() ?? '';
-  }
-
-  String _semesterForClass(
-    List<Map<String, dynamic>> classes,
-    String className,
-    DateTime now,
-  ) {
-    final row = classes.cast<Map<String, dynamic>?>().firstWhere(
-          (c) => c?['name']?.toString() == className,
-          orElse: () => null,
-        );
-    return _normalizeAcademicSemester(row?['semester']?.toString(), now: now);
-  }
-
-  String _normalizeAcademicSemester(String? raw, {DateTime? now}) {
-    final current = now ?? DateTime.now();
-    final text = (raw ?? '').trim();
-    final yearMatch = RegExp(r'(\d{4})\s*[-—~至]\s*(\d{4})').firstMatch(text);
-    int startYear;
-    int endYear;
-    if (yearMatch != null) {
-      startYear = int.parse(yearMatch.group(1)!);
-      endYear = int.parse(yearMatch.group(2)!);
-    } else if (current.month >= 9) {
-      startYear = current.year;
-      endYear = current.year + 1;
-    } else {
-      startYear = current.year - 1;
-      endYear = current.year;
-    }
-
-    final term = text.contains('第一') || text.contains('第1')
-        ? 1
-        : text.contains('第二') || text.contains('第2')
-            ? 2
-            : current.month >= 9
-                ? 1
-                : 2;
-    return '$startYear-$endYear年第$term学期';
   }
 
   Widget _buildActionChip({

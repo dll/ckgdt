@@ -6,13 +6,23 @@ import '../../../services/resource_generation_service.dart';
 /// 课件工坊智能体 — 从课程包 MD 生成 PDF / PPT / 视频脚本
 class CoursewareWorkshopAgent extends BaseAgent {
   @override
-  AgentConfig get config => AgentConfig(
+  AgentConfig get config => const AgentConfig(
         id: 'courseware_workshop',
         name: '课件工坊',
         emoji: '\u{1F3A8}',
-        description: '从课程包自动生成 PDF 课件、PPT 幻灯片和视频脚本',
+        description: '从课程包自动生成 AI 教案驱动的高质量 PDF 讲义、PPTX 课件和 MP4 教学视频',
         persona: '你是一个专业的课件生成助手，擅长将课程内容转换为多种格式的教学资源。',
-        keywords: ['课件', '工坊', '生成pdf', '生成ppt', '视频脚本', '生成资源', '资源生成'],
+        keywords: [
+          '课件',
+          '工坊',
+          '生成pdf',
+          '生成ppt',
+          '生成pptx',
+          '视频',
+          '视频脚本',
+          '生成资源',
+          '资源生成'
+        ],
         useRag: false,
       );
 
@@ -29,7 +39,8 @@ class CoursewareWorkshopAgent extends BaseAgent {
   }
 
   @override
-  Future<AgentMessage> handleMessage(String userMessage, AgentSession session) async {
+  Future<AgentMessage> handleMessage(
+      String userMessage, AgentSession session) async {
     final db = await DatabaseHelper.instance.database;
 
     // 获取当前课程 ID
@@ -59,6 +70,7 @@ class CoursewareWorkshopAgent extends BaseAgent {
       final results = await service.generateAll(
         courseId: courseId,
         sourceType: sourceType,
+        rich: true,
       );
 
       final totalGenerated =
@@ -71,10 +83,12 @@ class CoursewareWorkshopAgent extends BaseAgent {
       }
 
       final buffer = StringBuffer();
-      buffer.writeln('✅ 已生成 $totalGenerated 个资源：');
+      buffer.writeln(
+          '✅ 已生成 $totalGenerated 个高质量教学资源（PDF 讲义 / PPTX 课件 / MP4 视频）：');
       for (final r in results) {
         if (r.generated.isNotEmpty) {
-          buffer.writeln('  • ${r.chapter}: ${r.generated.join(", ")}');
+          buffer.writeln(
+              '  • ${r.chapter}: ${r.generated.map(_resourceLabel).join("、")}');
         }
       }
       if (totalErrors > 0) {
@@ -89,6 +103,19 @@ class CoursewareWorkshopAgent extends BaseAgent {
       return buildReply(buffer.toString());
     } catch (e) {
       return buildReply('生成过程出错: $e');
+    }
+  }
+
+  String _resourceLabel(String type) {
+    switch (type) {
+      case 'pdf':
+        return 'PDF讲义';
+      case 'ppt':
+        return 'PPTX课件';
+      case 'video':
+        return 'MP4视频';
+      default:
+        return type;
     }
   }
 }
