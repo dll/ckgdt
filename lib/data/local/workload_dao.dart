@@ -76,16 +76,6 @@ class TeachingWorkload {
     this.createdAt,
     this.updatedAt,
   });
-    this.otherCategory,
-    this.status = 'draft',
-    this.aiReviewJson,
-    this.teacherConfirmed = false,
-    this.semester,
-    this.courseId,
-    this.remark,
-    this.createdAt,
-    this.updatedAt,
-  });
 
   double get computedWorkload =>
       classHours * courseCoefficient * scaleCoefficient;
@@ -214,6 +204,8 @@ class TeachingWorkload {
     String? semester,
     String? courseId,
     String? remark,
+    String? createdAt,
+    String? updatedAt,
   }) =>
       TeachingWorkload(
         id: id ?? this.id,

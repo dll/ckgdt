@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:excel/excel.dart' as xl;
 import '../../core/error_handler.dart';
-import '../local/workload_dao.dart';
+import '../data/local/workload_dao.dart';
 
 /// 工作量 Excel 导入/导出服务。
 ///
@@ -87,7 +87,7 @@ class WorkloadExcelService {
       xl.TextCellValue(''),
     ]);
 
-    return excel.save()!;
+    return Uint8List.fromList(excel.save()!);
   }
 
   /// 导出当前课程工作量结果。
@@ -140,7 +140,7 @@ class WorkloadExcelService {
       ]);
     }
 
-    return excel.save()!;
+    return Uint8List.fromList(excel.save()!);
   }
 
   /// 从 Excel 字节读取工作量记录。
@@ -204,6 +204,7 @@ class WorkloadExcelService {
           teacherId: _cellStr(r, 0).isNotEmpty ? _cellStr(r, 0) : defaultTeacherId,
           teacherName: _cellStr(r, 1).isNotEmpty ? _cellStr(r, 1) : defaultTeacherName,
           department: _cellStr(r, 2),
+          courseName: '',
           workloadType: _cellStr(r, 3).isNotEmpty ? _cellStr(r, 3) : '其他工作量',
           otherCategory: category,
           extraHoursProject: _cellStr(r, 5),

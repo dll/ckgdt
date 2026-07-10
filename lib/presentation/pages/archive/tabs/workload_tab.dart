@@ -5,10 +5,12 @@ import 'package:excel/excel.dart' as xl;
 import 'package:path/path.dart' as p;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../../core/error_handler.dart';
 import '../../../../data/local/workload_dao.dart';
 import '../../../../data/local/course_dao.dart';
+import '../../../../data/local/user_dao.dart';
 import '../../../../services/workload_excel_service.dart';
 import '../../../widgets/agent_chat_overlay.dart';
 
@@ -41,8 +43,9 @@ class _WorkloadTabState extends State<WorkloadTab> {
     try {
       final course = await CourseDao().getActiveCourse();
       _currentCourseId = course?.id;
-      _currentTeacherId = course?.teacherId ?? '419116';
-      _currentTeacherName = course?.teacherName ?? '管理员';
+      final user = await UserDao().getCurrentUser();
+      _currentTeacherId = user?.userId ?? '419116';
+      _currentTeacherName = user?.realName ?? '管理员';
       final all = await _dao.getWorkloads(
         semester: _currentSemester(),
         courseId: _currentCourseId,
