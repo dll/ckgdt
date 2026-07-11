@@ -15,13 +15,19 @@ class ClassDao {
   // 班级 CRUD
   // ─────────────────────────────────────────────────────────────────────────
 
-  /// 获取所有未归档班级
-  Future<List<Map<String, dynamic>>> getActiveClasses() async {
+  /// 获取所有未归档班级（可选按课程过滤）
+  Future<List<Map<String, dynamic>>> getActiveClasses({String? courseId}) async {
     final db = await _dbHelper.database;
+    final where = <String>['is_archived = ?'];
+    final args = <dynamic>[0];
+    if (courseId != null && courseId.isNotEmpty) {
+      where.add('course_id = ?');
+      args.add(courseId);
+    }
     return await db.query(
       'classes',
-      where: 'is_archived = ?',
-      whereArgs: [0],
+      where: where.join(' AND '),
+      whereArgs: args,
       orderBy: 'created_at DESC',
     );
   }

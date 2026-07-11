@@ -83,7 +83,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 35,
+      version: 36,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -142,7 +142,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 35,
+          version: 36,
           singleInstance: true, // 启用单例模式
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
@@ -226,7 +226,7 @@ class DatabaseHelper {
     Database db;
     db = await openDatabase(
       dbPath,
-      version: 35,
+      version: 36,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -579,6 +579,15 @@ class DatabaseHelper {
   // ── CKGDT 学生名单导入 ──────────────────────────────────────────────────
 
   Future<void> _importStudentRoster(Database db) async {
+    // Get the active course ID for class association.
+    String activeCourseId = '';
+    try {
+      final courseRows = await db.query('courses',
+          columns: ['id'], where: 'is_active = 1', limit: 1);
+      if (courseRows.isNotEmpty) {
+        activeCourseId = courseRows.first['id']?.toString() ?? '';
+      }
+    } catch (_) {}
     try {
       InitLogger.log(
           'db', '_importStudentRoster: calling _loadStudentRosterBytes');
@@ -680,6 +689,7 @@ class DatabaseHelper {
                     'semester': '2025-2026学年第二学期',
                     'teacher_id': '',
                     'teacher_name': '',
+                    'course_id': activeCourseId,
                     'description': '$className — CKGDT课程班级',
                     'student_count': 0,
                     'is_archived': 0,
@@ -1174,6 +1184,9 @@ class DatabaseHelper {
     }
     if (oldVersion < 35) {
       await _migrateToV35(db);
+    }
+    if (oldVersion < 36) {
+      await _migrateToV36(db);
     }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
@@ -3144,6 +3157,13 @@ class DatabaseHelper {
         db, 'exam_analysis', 'director_sign_path', 'V35.exam_analysis');
     await _addTextColumnIfMissing(
         db, 'exam_analysis', 'dean_sign_path', 'V35.exam_analysis');
+  }
+
+  /// V36: Add course_id to classes table so each class belongs to a course.
+  Future<void> _migrateToV36(Database db) async {
+    await _addTextColumnIfMissing(db, 'classes', 'course_id', 'V36.classes');
+    // Backfill existing CKGDT classes with the active course ID.
+    await _backfillDefaultCourseId(db, 'classes');
   }
 
   Future<void> _addTextColumnIfMissing(

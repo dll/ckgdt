@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/ai_history_dao.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../../core/error_handler.dart';
 
 class StudentTokenPage extends StatefulWidget {
@@ -31,8 +32,9 @@ class _StudentTokenPageState extends State<StudentTokenPage> {
   Future<void> _loadData() async {
     setState(() => _loading = true);
     try {
+      final courseId = await CourseContextService().activeCourseId();
       final results = await Future.wait([
-        _classDao.getActiveClasses(),
+        _classDao.getActiveClasses(courseId: courseId),
         _dao.getTokenTotalsByUser(classId: _selectedClassId),
       ]);
       if (mounted) {

@@ -1101,7 +1101,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
         ? activeCourse.name.trim()
         : AchievementContext.instance.courseName;
     final today = DateTime.now();
-     final classes = await ClassDao().getActiveClasses();
+      final classes = await ClassDao().getActiveClasses(courseId: activeCourse.id);
       final selectedClass = AchievementDao.selectClassForBatch(classes);
 
       if (selectedClass.isEmpty) {

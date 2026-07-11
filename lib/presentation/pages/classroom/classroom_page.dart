@@ -5,6 +5,7 @@ import '../../../data/local/classroom_dao.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/default_class_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/voice_service.dart';
 import '../../../core/error_handler.dart';
@@ -66,7 +67,8 @@ class _ClassroomPageState extends State<ClassroomPage>
 
   Future<void> _loadClasses() async {
     try {
-      final classes = await _classDao.getActiveClasses();
+      final courseId = await CourseContextService().activeCourseId();
+      final classes = await _classDao.getActiveClasses(courseId: courseId);
       // 默认班级走 DefaultClassService（确定性落到软件231），不再把所有
       // 学生灌进同一个班级（旧 syncAllStudentsToClass 会合并软件231+232，
       // 破坏班级隔离）。

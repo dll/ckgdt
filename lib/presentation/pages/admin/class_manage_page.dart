@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' as xl;
 import '../../../core/error_handler.dart';
 import '../../../data/local/class_dao.dart';
+import '../../../data/local/course_dao.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../data/local/user_dao.dart';
 import '../../../data/models/user_model.dart';
@@ -60,7 +61,8 @@ class _ClassManagePageState extends State<ClassManagePage>
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final active = await _classDao.getActiveClasses();
+      final courseId = (await CourseDao().getActiveCourse())?.id;
+      final active = await _classDao.getActiveClasses(courseId: courseId);
       final archived = await _classDao.getArchivedClasses();
       final stats = await _classDao.getClassStats();
 

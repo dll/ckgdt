@@ -95,7 +95,8 @@ class ArchiveContextService {
           if (teacherClasses.isNotEmpty) cls = teacherClasses.first;
         }
         if (cls == null) {
-          final actives = await _classDao.getActiveClasses();
+          final courseId = await _courseContext.activeCourseId();
+          final actives = await _classDao.getActiveClasses(courseId: courseId);
           if (actives.isNotEmpty) cls = actives.first;
         }
       }

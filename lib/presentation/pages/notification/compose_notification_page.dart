@@ -3,6 +3,7 @@ import '../../../core/error_handler.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../data/local/notification_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/course_context_service.dart';
 
 /// 发布通知页面 — 教师/管理员创建并发送通知
 ///
@@ -49,7 +50,8 @@ class _ComposeNotificationPageState extends State<ComposeNotificationPage> {
   /// 加载可选班级
   Future<void> _loadClasses() async {
     try {
-      final classes = await _classDao.getActiveClasses();
+      final courseId = await CourseContextService().activeCourseId();
+      final classes = await _classDao.getActiveClasses(courseId: courseId);
       if (mounted) {
         setState(() => _classes = classes);
       }

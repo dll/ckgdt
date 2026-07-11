@@ -1,6 +1,7 @@
 import '../core/error_handler.dart';
 import '../data/local/database_helper.dart';
 import '../data/local/class_dao.dart';
+import '../data/local/course_dao.dart';
 
 /// 默认班级管理 — 集中管理当前用户默认显示班级
 /// 所有页面通过此服务获取"应该显示的班级"，而非各自取 classes.first
@@ -9,6 +10,16 @@ class DefaultClassService {
   static final DefaultClassService instance = DefaultClassService._();
 
   final _classDao = ClassDao();
+
+  /// 获取当前活跃课程 ID
+  Future<String?> _activeCourseId() async {
+    try {
+      final course = await CourseDao().getActiveCourse();
+      return course?.id;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// 获取默认班级 ID（从 current_session 读取）
   Future<int?> getDefaultClassId() async {
@@ -38,7 +49,8 @@ class DefaultClassService {
   Future<Map<String, dynamic>?> getDefaultClass() async {
     final classId = await getDefaultClassId();
     if (classId == null) return null;
-    final classes = await _classDao.getActiveClasses();
+    final courseId = await _activeCourseId();
+    final classes = await _classDao.getActiveClasses(courseId: courseId);
     try {
       return classes.firstWhere((c) => c['id'] == classId);
     } catch (e) {
@@ -50,24 +62,26 @@ class DefaultClassService {
 
   /// 获取所有活跃班级（供选择切换用）
   Future<List<Map<String, dynamic>>> getAvailableClasses() async {
-    return _classDao.getActiveClasses();
+    final courseId = await _activeCourseId();
+    return _classDao.getActiveClasses(courseId: courseId);
   }
 
   /// 确保班级数据已初始化，并设置默认班级
   Future<void> ensureDefaultClass() async {
     await _classDao.generateDemoData();
 
+    final courseId = await _activeCourseId();
     final existing = await getDefaultClassId();
     if (existing != null) {
       // 校验已设的默认班级仍是活跃班级；若已被归档/删除则重选
-      final active = await _classDao.getActiveClasses();
+      final active = await _classDao.getActiveClasses(courseId: courseId);
       if (active.any((c) => c['id'] == existing)) return;
     }
 
-    var active = await _classDao.getActiveClasses();
+    var active = await _classDao.getActiveClasses(courseId: courseId);
     if (active.isEmpty) {
       await _classDao.generateDemoData();
-      active = await _classDao.getActiveClasses();
+      active = await _classDao.getActiveClasses(courseId: courseId);
     }
     if (active.isEmpty) return;
 

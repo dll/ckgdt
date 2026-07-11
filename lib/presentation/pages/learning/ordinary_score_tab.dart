@@ -108,7 +108,8 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
     try {
       final now = DateTime.now();
       final courseName = snapshot?.courseName ?? '课程';
-      final classes = await ClassDao().getActiveClasses();
+      final courseId = await CourseContextService().activeCourseId();
+      final classes = await ClassDao().getActiveClasses(courseId: courseId);
       final selectedClass = AchievementDao.selectClassForBatch(classes);
       final semester = selectedClass.isNotEmpty
           ? AchievementDao.semesterForClass(classes, selectedClass, now)

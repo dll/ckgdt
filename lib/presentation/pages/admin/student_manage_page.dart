@@ -2,6 +2,7 @@
 import '../../../data/local/class_dao.dart';
 import '../../../data/models/user_model.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../../services/default_class_service.dart';
 import 'student_detail_page.dart';
 import 'package:knowledge_graph_app/core/error_handler.dart';
@@ -440,7 +441,8 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
   }
 
   Future<void> _loadClasses() async {
-    final classes = await widget.classDao.getActiveClasses();
+    final courseId = await CourseContextService().activeCourseId();
+    final classes = await widget.classDao.getActiveClasses(courseId: courseId);
     if (mounted) {
       setState(() {
         _classes = classes;

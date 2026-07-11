@@ -4,6 +4,7 @@ import '../../../core/design/noir_tokens.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../data/local/notification_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/course_context_service.dart';
 import 'package:knowledge_graph_app/core/error_handler.dart';
 
 class NotificationManagePage extends StatefulWidget {
@@ -126,7 +127,8 @@ class _NotificationManagePageState extends State<NotificationManagePage>
 
   Future<void> _loadClasses() async {
     try {
-      final list = await _classDao.getActiveClasses();
+      final courseId = await CourseContextService().activeCourseId();
+      final list = await _classDao.getActiveClasses(courseId: courseId);
       if (mounted) setState(() => _classes = list);
     } catch (e) { swallowDebug(e, tag: 'notification_manage_page'); }
   }
