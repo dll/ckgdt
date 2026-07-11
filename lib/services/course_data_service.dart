@@ -163,23 +163,26 @@ class CourseDataService {
 
   /// 加载单个 JSON 文件
   Future<Map<String, dynamic>?> _loadJson(String path) async {
-    try {
-      final content = await rootBundle.loadString(path);
-      return jsonDecode(content) as Map<String, dynamic>;
-    } catch (e) {
-      return null;
+    // Try exact path first, then case-insensitive variant
+    for (final p in [path, path.replaceAll('/ckgdt/', '/CKGDT/')]) {
+      try {
+        final content = await rootBundle.loadString(p);
+        return jsonDecode(content) as Map<String, dynamic>;
+      } catch (_) {}
     }
+    return null;
   }
 
   /// 加载 JSON 数组文件
   Future<List<Map<String, dynamic>>?> _loadJsonList(String path) async {
-    try {
-      final content = await rootBundle.loadString(path);
-      final list = jsonDecode(content) as List;
-      return list.cast<Map<String, dynamic>>();
-    } catch (e) {
-      return null;
+    for (final p in [path, path.replaceAll('/ckgdt/', '/CKGDT/')]) {
+      try {
+        final content = await rootBundle.loadString(p);
+        final list = jsonDecode(content) as List;
+        return list.cast<Map<String, dynamic>>();
+      } catch (_) {}
     }
+    return null;
   }
 
   /// 扫描目录中的 MD 文件（基于已知的章节编号模式）
@@ -189,13 +192,14 @@ class CourseDataService {
     final files = <QuizFileInfo>[];
     final manifestKeys = await _assetManifestKeys();
     final prefix = 'data/$courseId/$subDir/';
+    final prefixLower = prefix.toLowerCase();
     final matcher = RegExp(pattern);
     final excludeMatcher = exclude == null ? null : RegExp(exclude);
 
     final paths = manifestKeys.where((key) {
       final decoded = _safeDecode(key);
       final normalized = decoded.startsWith(prefix) ? decoded : key;
-      if (!normalized.startsWith(prefix)) return false;
+      if (!normalized.toLowerCase().startsWith(prefixLower)) return false;
       final fileName = normalized.split('/').last;
       if (!fileName.endsWith('.md')) return false;
       if (!matcher.hasMatch(fileName)) return false;
@@ -241,12 +245,15 @@ class CourseDataService {
     final dirs = <GraphDirInfo>[];
     final manifestKeys = await _assetManifestKeys();
     final prefix = 'data/$courseId/图谱/';
+    final prefixLower = prefix.toLowerCase();
     final grouped = <String, List<String>>{};
 
     for (final rawKey in manifestKeys) {
       final key = _safeDecode(rawKey);
-      if (!key.startsWith(prefix) || !key.endsWith('.md')) continue;
-      final rest = key.substring(prefix.length);
+      final keyLower = key.toLowerCase();
+      if (!keyLower.startsWith(prefixLower) || !key.endsWith('.md')) continue;
+      final matchStart = keyLower.indexOf(prefixLower);
+      final rest = key.substring(matchStart + prefixLower.length);
       final parts = rest.split('/');
       if (parts.length < 2) continue;
       grouped

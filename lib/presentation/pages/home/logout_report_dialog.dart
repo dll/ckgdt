@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/database_helper.dart';
+import '../../../data/local/active_student_scope.dart';
 import '../../../data/local/homework_dao.dart';
 import '../../../services/course_context_service.dart';
 import '../../../services/twin_service.dart';
@@ -126,8 +127,9 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
         // 教师数字孪生画像
         _teacherProfile = await twinService.buildTeacherProfile(widget.userId);
 
+        final activeWhere = ActiveStudentScope.where();
         final studentCount = await db.rawQuery(
-          "SELECT COUNT(*) as c FROM users WHERE role = 'student' AND is_active = 1",
+          "SELECT COUNT(*) as c FROM users u WHERE $activeWhere",
         );
         final quizAvg = await db.rawQuery(
           "SELECT AVG(score * 100.0 / total_questions) as avg_score FROM quiz_results WHERE course_id = ?",

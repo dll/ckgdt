@@ -2,8 +2,8 @@
   "app": {
     "bundleName": "cn.edu.chzu.madkgdt",
     "vendor": "CKGDT",
-    "versionCode": 11,
-    "versionName": "2.5.15",
+    "versionCode": 16,
+    "versionName": "2.5.16",
     "icon": "$media:app_icon",
     "label": "$string:app_name"
   }

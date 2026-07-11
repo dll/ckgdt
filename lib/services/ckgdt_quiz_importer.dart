@@ -27,7 +27,10 @@ class CkgdtQuizImporter {
       return 0;
     }
 
-    // 检查是否已导入
+    // 检查是否已导入（先清理 NULL course_id 的陈旧题目）
+    try {
+      await db.rawDelete("DELETE FROM questions WHERE course_id IS NULL");
+    } catch (_) {}
     final existing = await db.rawQuery(
       "SELECT COUNT(*) as c FROM questions WHERE course_id = ?",
       [courseId],

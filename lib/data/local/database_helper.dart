@@ -174,6 +174,8 @@ class DatabaseHelper {
     await _importStudents(db);
     await _importTeacherRoster(db);
     await _importStudentRoster(db);
+    await _cleanupLegacyUsers(db);
+    await _cleanupDuplicateResources(db);
 
     return db;
   }
@@ -246,6 +248,15 @@ class DatabaseHelper {
     await _importTeacherRoster(db);
     await _importStudentRoster(db);
 
+    // 清理旧课程（MAD/软件231/232等）残留用户，只保留当前课程名单中的用户
+    await _cleanupLegacyUsers(db);
+
+    // 彻底清理所有旧课程数据（考核/作品/提交/测验/成绩/贡献分等）
+    await _cleanupLegacyCourseData(db);
+
+    // 去重教学资源：修正错误类型、删除重复版本、统一章节标题
+    await _cleanupDuplicateResources(db);
+
     // ── 第五步：确保讯飞凭据为最新值 ──
     await _updateXunfeiCredentials(db);
     // ── 第五步 b：确保 DeepSeek API Key 为最新值 ──
@@ -303,6 +314,13 @@ class DatabaseHelper {
     try {
       final db = await database;
       InitLogger.log('db', 'forceReimportSeed invoked from UI');
+      // 清理旧种子数据（NULL + mad），再重新导入
+      try {
+        await db.rawDelete("DELETE FROM questions WHERE course_id IS NULL OR course_id = 'mad'");
+        await db.rawDelete("DELETE FROM graphs WHERE course_id IS NULL OR course_id = 'mad'");
+        await db.rawDelete("DELETE FROM nodes WHERE graph_id IN (SELECT graph_id FROM graphs WHERE course_id IS NULL OR course_id = 'mad')");
+        await db.rawDelete("DELETE FROM edges WHERE graph_id IN (SELECT graph_id FROM graphs WHERE course_id IS NULL OR course_id = 'mad')");
+      } catch (_) {}
       await _importSeedDataViaSql(db);
       final qc = await db.rawQuery('SELECT COUNT(*) as c FROM questions');
       final gc = await db.rawQuery('SELECT COUNT(*) as c FROM graphs');
@@ -373,6 +391,12 @@ class DatabaseHelper {
       await _importTableSafe(seedDb, db, 'resource_files');
 
       await seedDb.close();
+
+      // 清理种子导入产生的 NULL course_id 数据（种子 DB 没有 course_id 列）
+      try {
+        await db.rawUpdate("UPDATE questions SET course_id = 'mad' WHERE course_id IS NULL");
+        await db.rawUpdate("UPDATE graphs SET course_id = 'mad' WHERE course_id IS NULL");
+      } catch (_) {}
 
       // 清理临时文件
       try {
@@ -848,6 +872,370 @@ class DatabaseHelper {
     } catch (e, st) {
       swallowDebug(e, tag: 'DatabaseHelper.reconcileStudents', stack: st);
     }
+  }
+
+  /// 清理旧课程（MAD/软件231/232 等）残留用户。
+  /// 只保留 students.json + 管理员教师名单.xlsx + 学生名单.xlsx 中的用户，
+  /// 其余用户和 class_members 记录一律删除，防止旧课程脏数据污染当前课程。
+  Future<void> _cleanupLegacyUsers(Database db) async {
+    InitLogger.log('db', 'cleanup: starting _cleanupLegacyUsers');
+    try {
+      // 1. 收集当前课程所有合法 user_id — 只用 students.json（xlsx 解析不可靠）
+      final allowedIds = <String>{};
+
+      // 从 students.json 收集
+      try {
+        final jsonStr = await rootBundle.loadString('assets/students.json');
+        final students = json.decode(jsonStr) as List;
+        for (final s in students) {
+          final uid = s['user_id']?.toString();
+          if (uid != null && uid.isNotEmpty) allowedIds.add(uid);
+        }
+        InitLogger.log('db', 'cleanup: loaded ${allowedIds.length} IDs from students.json');
+      } catch (e, st) {
+        InitLogger.error('db', 'cleanup: failed to load students.json: $e', st);
+      }
+
+      // 从 teacher roster 收集（不解析 xlsx，直接用已知 ID）
+      // 教师 ID 从 students.json 已包含（203014/203045/206004/419116）
+
+      // 从学生名单 DB 表收集（如果 _importStudentRoster 已成功导入）
+      try {
+        final rosterRows = await db.rawQuery(
+            "SELECT user_id FROM users WHERE role = 'student' AND user_id LIKE '2023211%'");
+        for (final row in rosterRows) {
+          final uid = row['user_id']?.toString();
+          if (uid != null && uid.isNotEmpty) allowedIds.add(uid);
+        }
+        InitLogger.log('db', 'cleanup: total allowed IDs = ${allowedIds.length}');
+      } catch (e, st) {
+        InitLogger.error('db', 'cleanup: failed to query existing students: $e', st);
+      }
+
+      // 教师花名册（xlsx 解析不可靠，硬编码兜底）
+      allowedIds.addAll(['910910', '203014', '203045', '206004']);
+      InitLogger.log('db', 'cleanup: after adding roster teachers = ${allowedIds.length}');
+
+      if (allowedIds.isEmpty) {
+        InitLogger.log('db', 'cleanup: no allowed IDs found, skipping');
+        return;
+      }
+
+      // 始终保留 419116 管理员
+      allowedIds.add('419116');
+
+      final before = await db.rawQuery('SELECT COUNT(*) AS c FROM users');
+      final beforeCount = (before.first['c'] as int?) ?? 0;
+      InitLogger.log('db', 'cleanup: before=$beforeCount users, allowed=${allowedIds.length} IDs');
+
+      // 2. 删除不在名单中的 class_members
+      final placeholders = allowedIds.map((_) => '?').join(',');
+      final deletedCm = await db.rawDelete(
+        'DELETE FROM class_members WHERE user_id NOT IN ($placeholders)',
+        allowedIds.toList(),
+      );
+
+      // 3. 删除不在名单中的用户（保留管理员 419116）
+      final deletedUsers = await db.rawDelete(
+        'DELETE FROM users WHERE user_id NOT IN ($placeholders)',
+        allowedIds.toList(),
+      );
+
+      // 4. 更新班级学生数
+      try {
+        final classRows = await db.query('classes', columns: ['id']);
+        for (final row in classRows) {
+          final classId = row['id'];
+          final countRows = await db.rawQuery(
+            'SELECT COUNT(*) AS c FROM class_members WHERE class_id = ? AND role = ?',
+            [classId, 'student'],
+          );
+          await db.update(
+            'classes',
+            {'student_count': (countRows.first['c'] as int?) ?? 0},
+            where: 'id = ?',
+            whereArgs: [classId],
+          );
+        }
+      } catch (_) {}
+
+      final after = await db.rawQuery('SELECT COUNT(*) AS c FROM users');
+      final afterCount = (after.first['c'] as int?) ?? 0;
+      InitLogger.log('db',
+          'cleanup legacy users: before=$beforeCount after=$afterCount allowed=${allowedIds.length} deleted_users=$deletedUsers deleted_members=$deletedCm');
+    } catch (e, st) {
+      InitLogger.error('db', 'cleanup legacy users failed: $e', st);
+    }
+  }
+
+  /// 彻底清理所有旧课程（MAD）残留数据。
+  /// 删除标准：user_id 不在合法名单中的行，以及 course_id 不属于当前课程的行。
+  Future<void> _cleanupLegacyCourseData(Database db) async {
+    InitLogger.log('db', 'cleanup: starting _cleanupLegacyCourseData');
+    try {
+      // 合法 user_id 集合 — 只来自 students.json + 教师花名册，不从 DB 读取
+      final allowedUsers = <String>{};
+      try {
+        final jsonStr = await rootBundle.loadString('assets/students.json');
+        final students = json.decode(jsonStr) as List;
+        for (final s in students) {
+          final uid = s['user_id']?.toString();
+          if (uid != null && uid.isNotEmpty) allowedUsers.add(uid);
+        }
+      } catch (_) {}
+      // 教师花名册（xlsx 解析不可靠，硬编码兜底）
+      allowedUsers.addAll(['910910']);
+      allowedUsers.add('419116');
+      final ph = allowedUsers.map((_) => '?').join(',');
+
+      int totalDeleted = 0;
+
+      // ── 有 user_id 列的表：删除不在 allowedUsers 中的行 ──
+      final userTables = {
+        'assessment_groups': 'leader_id',
+        'assessment_reports': 'user_id',
+        'student_reports': 'user_id',
+        'student_works': 'user_id',
+        'lab_submissions': 'user_id',
+        'quiz_results': 'user_id',
+        'wrong_answers': 'user_id',
+        'contribution_scores': 'user_id',
+        'defense_records': 'user_id',
+        'learning_paths': 'user_id',
+        'learning_records': 'user_id',
+        'classroom_questions': 'user_id',
+        'hot_video_favorites': 'user_id',
+        'work_views': 'user_id',
+        'work_comments': 'user_id',
+        'work_likes': 'user_id',
+        'ai_chat_history': 'user_id',
+        'notification_recipients': 'user_id',
+        'twin_snapshots': 'user_id',
+        'survey_responses': 'user_id',
+        'agent_call_logs': 'user_id',
+        'grading_results': 'user_id',
+        'plagiarism_records': 'user_id',
+        'checkin_records': 'user_id',
+        'roll_call_records': 'user_id',
+        'favorites': 'user_id',
+        'homework_submissions': 'user_id',
+        'ordinary_scores': 'user_id',
+        'concept_progress': 'user_id',
+      };
+
+      for (final entry in userTables.entries) {
+        try {
+          final col = entry.value;
+          final table = entry.key;
+          final deleted = await db.rawDelete(
+            'DELETE FROM [$table] WHERE [$col] NOT IN ($ph)',
+            allowedUsers.toList(),
+          );
+          if (deleted > 0) {
+            totalDeleted += deleted;
+            InitLogger.log('db', 'cleanup: $table: deleted $deleted rows (user)');
+          }
+        } catch (_) {}
+      }
+
+      // ── course_id 不匹配的行 ──
+      final courseTables = {
+        'quiz_results': 'course_id',
+        'wrong_answers': 'course_id',
+        'knowledge_concepts': 'course_id',
+        'assessment_groups': 'course_id',
+        'assessment_projects': 'course_id',
+        'assessment_reports': 'course_id',
+        'student_works': 'course_id',
+        'lab_tasks': 'course_id',
+        'lab_submissions': 'course_id',
+        'homeworks': 'course_id',
+        'resource_files': 'course_id',
+        'favorites': 'course_id',
+        'learning_records': 'course_id',
+        'survey_responses': 'course_id',
+      };
+
+      // 只删除 course_id = 'mad' 或 NULL 的行；保留 ckgdt
+      for (final entry in courseTables.entries) {
+        try {
+          final table = entry.key;
+          final col = entry.value;
+          final deleted = await db.rawDelete(
+            "DELETE FROM [$table] WHERE [$col] = ? OR [$col] IS NULL",
+            ['mad'],
+          );
+          if (deleted > 0) {
+            totalDeleted += deleted;
+            InitLogger.log('db', 'cleanup: $table: deleted $deleted rows (course=mad)');
+          }
+        } catch (_) {}
+      }
+
+      // ── 清理 contribution_scores（可能没有 course_id）──
+      try {
+        final deleted = await db.rawDelete(
+          'DELETE FROM contribution_scores WHERE user_id NOT IN ($ph)',
+          allowedUsers.toList(),
+        );
+        if (deleted > 0) {
+          totalDeleted += deleted;
+          InitLogger.log('db', 'cleanup: contribution_scores: deleted $deleted rows');
+        }
+      } catch (_) {}
+
+      // ── 清理 knowledge_concepts 中的作业条目（homework_type） ──
+      try {
+        final deleted = await db.rawDelete(
+          "DELETE FROM knowledge_concepts WHERE node_type = 'homework'",
+        );
+        if (deleted > 0) {
+          totalDeleted += deleted;
+          InitLogger.log('db', 'cleanup: knowledge_concepts: deleted $deleted homework entries');
+        }
+      } catch (_) {}
+
+      // ── 清理 assessment_groups / assessment_projects 中无对应成员的空组 ──
+      try {
+        final deleted = await db.rawDelete('''
+          DELETE FROM assessment_groups WHERE id NOT IN (
+            SELECT DISTINCT group_id FROM assessment_projects
+          ) AND id NOT IN (
+            SELECT DISTINCT group_id FROM defense_records
+          )
+        ''');
+        if (deleted > 0) {
+          totalDeleted += deleted;
+          InitLogger.log('db', 'cleanup: assessment_groups: deleted $deleted empty groups');
+        }
+      } catch (_) {}
+
+      // ── 更新班级学生数 ──
+      try {
+        final classRows = await db.query('classes', columns: ['id']);
+        for (final row in classRows) {
+          final classId = row['id'];
+          final countRows = await db.rawQuery(
+            'SELECT COUNT(*) AS c FROM class_members WHERE class_id = ? AND role = ?',
+            [classId, 'student'],
+          );
+          await db.update(
+            'classes',
+            {'student_count': (countRows.first['c'] as int?) ?? 0},
+            where: 'id = ?',
+            whereArgs: [classId],
+          );
+        }
+      } catch (_) {}
+
+      InitLogger.log('db', 'cleanup legacy course data: total_deleted=$totalDeleted');
+    } catch (e, st) {
+      InitLogger.error('db', 'cleanup legacy course data failed: $e', st);
+    }
+  }
+
+  /// 去重教学资源，修正错误类型，统一章节标题。
+  /// 问题：
+  /// 1. 视频脚本 .md 被错误标记为 file_type='video' → 点击时下载失败
+  /// 2. 课件源 .md 被错误标记为 file_type='ppt' → 与真实 .pptx 重复
+  /// 3. 同一章节有多个版本（1/2/3）→ 应只保留一个
+  /// 4. 章节标题应使用大纲中的完整标题
+  Future<void> _cleanupDuplicateResources(Database db) async {
+    try {
+      // 1. 修正视频脚本 .md 的 file_type：video → video_script
+      final fixedScript = await db.rawUpdate(
+        "UPDATE resource_files SET file_type = 'video_script' "
+        "WHERE file_type = 'video' AND file_name LIKE '%.md'",
+      );
+
+      // 2. 修正课件源 .md 的 file_type：ppt → ppt_source
+      final fixedPptSource = await db.rawUpdate(
+        "UPDATE resource_files SET file_type = 'ppt_source' "
+        "WHERE file_type = 'ppt' AND file_name LIKE '%.md'",
+      );
+
+      // 3. 获取当前课程的章节标题映射（从 chapters.json）
+      final chapterTitleMap = <String, String>{};
+      try {
+        final jsonStr = await rootBundle.loadString('data/CKGDT/配置/chapters.json');
+        final chapters = json.decode(jsonStr) as List;
+        for (final ch in chapters) {
+          final num = ch['number'] as int;
+          final title = ch['title'] as String;
+          chapterTitleMap['第$num章'] = '第$num章 $title';
+          // 也处理中文数字
+          final cnNum = _arabicToChinese(num);
+          if (cnNum.isNotEmpty) {
+            chapterTitleMap['第$cnNum章'] = '第$num章 $title';
+          }
+        }
+      } catch (_) {}
+
+      // 4. 修正章节标题：把简单的"第N章"替换为"第N章 标题"
+      var fixedTitles = 0;
+      for (final entry in chapterTitleMap.entries) {
+        final result = await db.rawUpdate(
+          'UPDATE resource_files SET chapter = ? '
+          "WHERE chapter = ? AND course_id = 'ckgdt' "
+          "AND file_type IN ('video', 'video_script', 'ppt', 'ppt_source', 'pdf', 'md', 'homework')",
+          [entry.value, entry.key],
+        );
+        fixedTitles += result;
+      }
+
+      // 5. 去重：同一 file_type + 同一章节前缀只保留 id 最小的（最新版本）
+      var deletedDupes = 0;
+      for (final type in ['video', 'ppt', 'pdf']) {
+        // 找出同类型的重复章节（基于章节前缀，去掉尾部数字）
+        final rows = await db.rawQuery(
+          'SELECT id, chapter, file_name FROM resource_files '
+          'WHERE file_type = ? AND course_id = ? '
+          'ORDER BY chapter, id',
+          [type, 'ckgdt'],
+        );
+        if (rows.isEmpty) continue;
+
+        // 按章节前缀分组（去掉尾部数字版本号）
+        final groups = <String, List<Map<String, dynamic>>>{};
+        for (final row in rows) {
+          final chapter = row['chapter']?.toString() ?? '';
+          // 去掉尾部数字： "第1章 xxx1" → "第1章 xxx"
+          final prefix = chapter.replaceFirst(RegExp(r'\d+$'), '').trim();
+          groups.putIfAbsent(prefix, () => []).add(row);
+        }
+
+        // 每组只保留 id 最小的
+        for (final group in groups.values) {
+          if (group.length <= 1) continue;
+          // 按 id 排序，保留第一个
+          group.sort((a, b) => (a['id'] as int).compareTo(b['id'] as int));
+          final keepId = group.first['id'];
+          final deleteIds = group.skip(1).map((r) => r['id'] as int).toList();
+          if (deleteIds.isNotEmpty) {
+            final placeholders = deleteIds.map((_) => '?').join(',');
+            await db.delete(
+              'resource_files',
+              where: 'id IN ($placeholders)',
+              whereArgs: deleteIds,
+            );
+            deletedDupes += deleteIds.length;
+          }
+        }
+      }
+
+      InitLogger.log('db',
+          'cleanup resources: fixed_script=$fixedScript fixed_ppt_source=$fixedPptSource fixed_titles=$fixedTitles deleted_dupes=$deletedDupes');
+    } catch (e, st) {
+      InitLogger.error('db', 'cleanup duplicate resources failed: $e', st);
+    }
+  }
+
+  static String _arabicToChinese(int num) {
+    const map = {
+      1: '一', 2: '二', 3: '三', 4: '四', 5: '五',
+      6: '六', 7: '七', 8: '八', 9: '九', 10: '十',
+    };
+    return map[num] ?? '';
   }
 
   Future<void> _createTables(Database db, int version) async {
@@ -1328,13 +1716,13 @@ class DatabaseHelper {
           'course_code': 'CKGDT',
           'course_name': '课程知识图谱与数字孪生',
           'course_category': '专业基础课',
-          'class_names': '软件231,软件232',
+          'class_names': '软件23',
           'teaching_form': '合班',
           'course_nature': '理论',
           'credits': 3.0,
-          'student_count': 86,
+          'student_count': 5,
           'group_number': 1,
-          'group_size': 86,
+          'group_size': 5,
           'group_count': 1,
           'course_coefficient': 1.0,
           'class_hours': 32,
@@ -1358,13 +1746,13 @@ class DatabaseHelper {
           'course_code': 'CKGDT-LAB',
           'course_name': '课程知识图谱与数字孪生（实验）',
           'course_category': '专业基础课',
-          'class_names': '软件231,软件232',
+          'class_names': '软件23',
           'teaching_form': '合班',
           'course_nature': '实践',
           'credits': 1.0,
-          'student_count': 86,
+          'student_count': 5,
           'group_number': 1,
-          'group_size': 86,
+          'group_size': 5,
           'group_count': 1,
           'course_coefficient': 1.0,
           'class_hours': 16,

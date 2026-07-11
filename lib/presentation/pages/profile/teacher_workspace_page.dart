@@ -3,6 +3,7 @@ import '../../../core/error_handler.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/course_context_service.dart';
 import '../../../data/local/database_helper.dart';
+import '../../../data/local/active_student_scope.dart';
 import '../../../core/constants/app_theme.dart';
 import '../admin/student_manage_page.dart';
 import '../admin/data_import_page.dart';
@@ -78,8 +79,9 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
       final db = await DatabaseHelper.instance.database;
       final course = await _courseContext.getActiveCourse();
 
+      final activeWhere = ActiveStudentScope.where();
       final studentResult = await db.rawQuery(
-        "SELECT COUNT(*) as count FROM users WHERE role='student'",
+        "SELECT COUNT(*) as count FROM users u WHERE $activeWhere",
       );
       final graphScope = await _courseContext.scopedWhere();
       final questionScope = await _courseContext.scopedWhere();

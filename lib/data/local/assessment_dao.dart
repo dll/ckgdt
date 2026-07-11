@@ -915,8 +915,10 @@ class AssessmentDao {
   /// 返回 {techStack, features, groupId} 或 null
   Future<Map<String, String?>?> getStudentGroupTechInfo(String userId) async {
     final db = await DatabaseHelper.instance.database;
+    final scope = await _courseContext.scopedWhere();
     // 通过 member_ids JSON 数组查找包含该 userId 的小组
-    final groups = await db.query('assessment_groups');
+    final groups = await db.query('assessment_groups',
+        where: scope.where, whereArgs: scope.args);
     for (final g in groups) {
       final ids = _parseMemberIds(g['member_ids'] as String?);
       if (ids.isEmpty || !ids.contains(userId)) continue;
@@ -969,7 +971,9 @@ class AssessmentDao {
 
     String? groupName;
     String? projectName;
-    final groups = await db.query('assessment_groups');
+    final scope = await _courseContext.scopedWhere();
+    final groups = await db.query('assessment_groups',
+        where: scope.where, whereArgs: scope.args);
     for (final g in groups) {
       final ids = _parseMemberIds(g['member_ids'] as String?);
       if (!ids.contains(userId)) continue;

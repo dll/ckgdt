@@ -1004,10 +1004,21 @@ class _LearningHubPageState extends State<LearningHubPage>
               separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
               itemBuilder: (context, index) {
                 final file = files[index];
-                final name = file['file_name'] as String? ?? '未命名';
+                final rawName = file['file_name'] as String? ?? '未命名';
+                final name = rawName.replaceAll(RegExp(r'\.(md|pptx|pdf|mp4)$'), '');
                 final chapter = file['chapter'] as String?;
                 final desc = file['description'] as String?;
                 final isExtended = file['source_type'] == 'extended';
+
+                // 构建副标题：避免重复（如果 desc 和 chapter 前缀相同则省略 desc）
+                final subtitleParts = <String>[];
+                if (chapter != null && chapter.isNotEmpty) {
+                  subtitleParts.add(chapter);
+                }
+                if (desc != null && desc.isNotEmpty && chapter != null && !desc.startsWith(chapter)) {
+                  subtitleParts.add(desc);
+                }
+                subtitleParts.add(isExtended ? '· AI 扩展' : '· 预制');
 
                 return ListTile(
                   leading: Container(
@@ -1032,11 +1043,7 @@ class _LearningHubPageState extends State<LearningHubPage>
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                   subtitle: Text(
-                    [
-                      if (chapter != null) chapter,
-                      if (desc != null) desc,
-                      if (isExtended) '· AI 扩展' else '· 预制',
-                    ].join('  '),
+                    subtitleParts.join('  '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 12),

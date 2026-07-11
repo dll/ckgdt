@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/database_helper.dart';
+import '../../../data/local/active_student_scope.dart';
 import '../../../services/course_context_service.dart';
 import '../../../services/twin_service.dart';
 import '../../../data/models/twin_profile_model.dart';
@@ -110,8 +111,9 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
         // 教师数字孪生画像
         _teacherProfile = await twinService.buildTeacherProfile(widget.userId);
 
+        final activeWhere = ActiveStudentScope.where();
         final studentCount = await db.rawQuery(
-          "SELECT COUNT(*) as c FROM users WHERE role = 'student' AND is_active = 1",
+          "SELECT COUNT(*) as c FROM users u WHERE $activeWhere",
         );
         final courseCount = await db.rawQuery(
           "SELECT COUNT(*) as c FROM courses WHERE is_active = 1",

@@ -1250,13 +1250,16 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
       }
     }
 
+    final surfaceColor = Theme.of(context).colorScheme.surface;
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1267,7 +1270,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
               // 序号
               CircleAvatar(
                 radius: 12,
-                backgroundColor: primary.withOpacity(0.1),
+                backgroundColor: primary.withValues(alpha: 0.1),
                 child: Text(
                   '$seq',
                   style: TextStyle(
@@ -1285,9 +1288,10 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                   children: [
                     Text(
                       qText,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
+                        color: onSurfaceColor,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -1422,13 +1426,13 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.grey[300]!),
+                      border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
                     ),
                     child: Text(
                       opt,
-                      style: TextStyle(fontSize: 10, color: Colors.grey[700]),
+                      style: TextStyle(fontSize: 10, color: onSurfaceColor.withValues(alpha: 0.7)),
                     ),
                   );
                 }).toList(),
