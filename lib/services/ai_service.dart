@@ -120,6 +120,10 @@ class AiService {
       if (response.statusCode == 401) {
         throw 'AI_AUTH_401:${config.providerLabel}|${config.model}';
       }
+      if (response.statusCode == 402) {
+        throw 'AI 余额不足（402）。当前服务商「${config.providerLabel}」的 API 账户已欠费。'
+            '请在「设置 → AI 配置」中切换到免费服务商（如智谱 glm-4-flash），或充值后重试。';
+      }
       if (response.statusCode == 429) {
         throw '请求过于频繁（429）。请稍后再试。';
       }
