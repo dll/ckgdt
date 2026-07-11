@@ -8,8 +8,8 @@ const List<IconData> archivePeriodIcons = [
   Icons.wb_sunny_outlined,
   Icons.cloud_outlined,
   Icons.nights_stay_outlined,
-  Icons.workspaces_outlined,
   Icons.archive_outlined,
+  Icons.workspaces_outlined,
 ];
 
 const List<DocumentTypeDef> finalArchiveDocs = [

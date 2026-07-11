@@ -17,15 +17,15 @@ const List<String> archivePeriodKeys = [
   'beginning',
   'midterm',
   'final',
-  'workload',
   'archive',
+  'workload',
 ];
 const List<String> archivePeriodLabels = [
   '期初',
   '期中',
   '期末',
-  '工作量',
   '结课',
+  '工作量',
 ];
 
 String periodLabel(String key) => _periodLabels[key] ?? key;
