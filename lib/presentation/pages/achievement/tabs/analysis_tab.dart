@@ -145,6 +145,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
 
   Future<void> _loadBatches() async {
     try {
+      // 课程/班级/学期/教师均已确定时，自动生成达成度批次，无需用户点击
+      await widget.achievementDao.ensureBatchForActiveCourse();
       final batches = await widget.achievementDao.getBatches();
       if (mounted) {
         setState(() {

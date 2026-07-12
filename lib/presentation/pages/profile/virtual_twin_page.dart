@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../core/error_handler.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/course_context_service.dart';
+import '../../../services/course_terminology_service.dart';
 import '../../../services/twin_service.dart';
 import '../../../services/agent/agent_registry.dart';
 import '../../../data/models/twin_profile_model.dart';
@@ -52,6 +53,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
   late Animation<double> _headerFade;
 
   List<String> _chapterNames = [];
+  CourseTerms _terms = CourseTerms.fromPracticeLabel('实践任务');
   Color primary = const Color(0xFF1677FF);
 
   @override
@@ -66,6 +68,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
     _loadChapterNames();
+    _loadTerms();
     _headerFade = CurvedAnimation(
       parent: _headerAnimCtrl,
       curve: Curves.easeInOut,
@@ -89,6 +92,15 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
       }
     } catch (e, st) {
       swallowDebug(e, tag: 'VirtualTwinPage.loadChapterNames', stack: st);
+    }
+  }
+
+  Future<void> _loadTerms() async {
+    try {
+      final terms = await CourseTerminologyService().activeTerms();
+      if (mounted) setState(() => _terms = terms);
+    } catch (e, st) {
+      swallowDebug(e, tag: 'VirtualTwinPage.loadTerms', stack: st);
     }
   }
 
@@ -480,7 +492,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
     final items = <String>[];
     if (p.quizAvg > 0) items.add('测验${p.quizAvg.toStringAsFixed(0)}分');
     if (p.labCompletionRate > 0) {
-      items.add('实验${p.labCompletionRate.toStringAsFixed(0)}%');
+      items.add('${_terms.navLabel}${p.labCompletionRate.toStringAsFixed(0)}%');
     }
     if (p.conceptCoverage > 0) {
       items.add('覆盖${p.conceptCoverage.toStringAsFixed(0)}%');
@@ -717,7 +729,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                 ? Colors.green
                 : (p.quizAvg >= 60 ? Colors.blue : Colors.red),
             delta: p.trend?.quizAvgDelta),
-        _statCard('实验完成', '${p.labCompletionRate.toStringAsFixed(0)}%',
+        _statCard('${_terms.navLabel}完成', '${p.labCompletionRate.toStringAsFixed(0)}%',
             Icons.science, Colors.green,
             delta: p.trend?.labRateDelta),
         _statCard('错题消化', '${p.wrongDigestRate.toStringAsFixed(0)}%',
@@ -1150,8 +1162,8 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
       ),
       _TwinOrgan(
         name: '双手',
-        metaphor: '实验实践',
-        detail: '实验完成 ${p.labCompletionRate.toStringAsFixed(0)}%',
+        metaphor: _terms.practiceLabel,
+        detail: '${_terms.practiceLabel}完成 ${p.labCompletionRate.toStringAsFixed(0)}%',
         value: p.labCompletionRate.clamp(0, 100).toDouble(),
         icon: Icons.science,
       ),
@@ -1311,7 +1323,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
               const SizedBox(height: 6),
               if (p.deadlineWarnings > 0)
                 _alertRow(
-                    '${p.deadlineWarnings} 个实验任务即将截止（3天内）', Colors.red, isDark),
+                    '${p.deadlineWarnings} 个${_terms.taskLabel}即将截止（3天内）', Colors.red, isDark),
               if (p.pendingGrading > 0)
                 _alertRow('${p.pendingGrading} 份报告待批阅', Colors.orange, isDark),
               if (p.gradingTimeliness < 70 && p.gradingTimeliness > 0)

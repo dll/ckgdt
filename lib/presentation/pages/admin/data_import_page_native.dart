@@ -58,7 +58,7 @@ Future<Map<String, dynamic>> importStudentsFromFile(String filePath) async {
     int skippedCount = 0;
     int classesCreated = 0;
 
-    // 从文件名推断默认班级名（如 "软件23选88学生名单.xlsx" → "软件23选88"）
+    // 从文件名推断默认班级名（如 "软件23选88学生名单.xlsx" → "软件23选88"，不限定课程）
     String? defaultClassName;
     if (classCol < 0) {
       final baseName = p.basenameWithoutExtension(filePath);

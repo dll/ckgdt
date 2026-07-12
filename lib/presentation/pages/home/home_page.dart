@@ -22,6 +22,7 @@ import '../../../dev/demo_seed_service.dart';
 import '../notification/notification_list_page.dart';
 import '../notification/notification_manage_page.dart';
 import '../../widgets/agent_chat_overlay.dart';
+import '../agent/agent_directory_page.dart';
 import '../../widgets/screenshot_capture_page.dart';
 import '../login/login_page.dart';
 import '../graph/knowledge_graph_page.dart';
@@ -62,6 +63,7 @@ import '../profile/student_center_page.dart';
 import '../profile/teacher_workspace_page.dart';
 import '../help/handbook_page.dart';
 import '../skill/ai_skill_page.dart';
+import '../skill/skill_manage_page.dart';
 import '../sync/data_sync_page.dart';
 import 'teaching_hub_page.dart';
 import 'evaluation_hub_page.dart';
@@ -114,6 +116,7 @@ const _cardColors = {
   '数据导入': Color(0xFF8fd3f4),
   '数据导出': Color(0xFFa1c4fd),
   '仓库分析': Color(0xFFc2e9fb),
+  '智能体广场': Color(0xFF764ba2),
 };
 
 class HomePage extends StatefulWidget {
@@ -1018,6 +1021,14 @@ class _HomePageState extends State<HomePage> {
         status: _ModuleStatus.ready,
       ),
       const _HomeModule.page(
+        id: 'skill_manage',
+        icon: Icons.manage_accounts,
+        title: '技能管理',
+        description: '管理、导出、导入 AI 技能',
+        page: SkillManagePage(),
+        status: _ModuleStatus.ready,
+      ),
+      const _HomeModule.page(
         id: 'digital_twin',
         icon: Icons.auto_awesome,
         title: '数字孪生',
@@ -1083,6 +1094,14 @@ class _HomePageState extends State<HomePage> {
         page: isTeacherOrAdmin
             ? const NotificationManagePage()
             : const NotificationListPage(),
+        status: _ModuleStatus.ready,
+      ),
+      const _HomeModule.page(
+        id: 'agent_directory',
+        icon: Icons.auto_awesome,
+        title: '智能体广场',
+        description: '浏览所有智能体及使用指南',
+        page: AgentDirectoryPage(),
         status: _ModuleStatus.ready,
       ),
     ];

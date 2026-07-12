@@ -5,6 +5,7 @@ import '../../../data/local/achievement_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/achievement_context.dart';
 import '../../../services/course_context_service.dart';
+import '../../../services/course_terminology_service.dart';
 import '../../widgets/noir_page_shell.dart';
 import '../admin/course_objectives_manage_page.dart';
 
@@ -22,6 +23,7 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
   final _ctx = AchievementContext.instance;
   final _auth = AuthService();
   final _courseContext = CourseContextService();
+  CourseTerms _terms = CourseTerms.fromPracticeLabel('实践任务');
   List<Map<String, dynamic>> _objectives = [];
   String _courseName = '';
   bool _loading = true;
@@ -47,6 +49,7 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
       _courseName = await _courseContext.activeCourseName(
         fallback: CourseContextService.defaultCourseName,
       );
+      _terms = await CourseTerminologyService().activeTerms();
       _ctx.courseName = _courseName;
       _objectives = (await _dao.getCourseObjectives(_courseName))
           .where((o) => _asInt(o['idx']) >= 1)
@@ -194,7 +197,7 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
       '权重',
       '毕业要求',
       '平时',
-      '实验',
+      _terms.navLabel,
       '考核',
       ...extraColumns,
     ];
@@ -363,7 +366,7 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '章节：${o['chapters'] ?? ''}    实验：${o['experiments'] ?? ''}',
+                  '章节：${o['chapters'] ?? ''}    ${_terms.practiceLabel}：${o['experiments'] ?? ''}',
                   style: TextStyle(
                     color: color.withOpacity(0.86),
                     fontSize: 12,

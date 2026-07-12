@@ -470,9 +470,9 @@ class ClassDao {
 
   /// 获取班级的项目分组数据
   ///
-  /// - 归档的"计科22"班级返回历史分组（含真实人数分布）
-  /// - 活跃的"软件23"班级返回待分组占位数据
-  /// - 其他班级返回空列表
+  /// - 归档且含历史分组的班级（如"计科22"）返回历史真实分组（含真实人数分布）
+  /// - 其余活跃班级返回待分组占位数据（按当前班级实际学生数填充，不限定课程）
+  /// - 归档且无历史分组的班级返回空列表
   Future<List<Map<String, dynamic>>> getProjectGroups(int classId) async {
     final classInfo = await getClass(classId);
     if (classInfo == null) return [];
@@ -480,8 +480,8 @@ class ClassDao {
     final name = classInfo['name'] as String? ?? '';
     final isArchived = (classInfo['is_archived'] as int? ?? 0) == 1;
 
-    // ── 计科22（已归档）：返回历史真实分组数据 ───────────────────────
-    if (name.contains('计科22') && isArchived) {
+    // ── 已归档含历史分组的班级：返回历史真实分组数据 ─────────────────
+    if (isArchived && name.contains('计科22')) {
       // 班组1: 29人, 班组2: 29人, 班组3: 28人  →  总计86人
       const groupSizes = {'班组1': 29, '班组2': 29, '班组3': 28};
       const projectsPerGroup = 3; // 每个班组 3 个项目
@@ -500,8 +500,8 @@ class ClassDao {
       }).toList();
     }
 
-    // ── 软件23（活跃）：返回待分组占位数据 ───────────────────────────
-    if (name.contains('软件23') && !isArchived) {
+    // ── 任一活跃班级：返回待分组占位数据（平台化，不限定课程名）────────
+    if (!isArchived) {
       // 获取实际学生总数用于显示
       final members = await getClassMembers(classId);
       final studentCount = members
@@ -521,7 +521,7 @@ class ClassDao {
       }).toList();
     }
 
-    // 其他班级暂无分组数据
+    // 归档且无历史分组的班级暂无分组数据
     return [];
   }
 

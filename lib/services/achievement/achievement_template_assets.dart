@@ -17,17 +17,16 @@ class AchievementTemplateAssets {
   static const _assetDir = 'assets/achievement_templates';
 
   static Future<Map<String, String>> getBundledTemplates() async {
-    final courseName = await CourseContextService()
-        .activeCourseName(fallback: '当前课程');
-    // ignore: unused_local_variable
-    final shortName = courseName.length > 6
-        ? '${courseName.substring(0, 6)}…'
-        : courseName;
+    final course = await CourseContextService().getActiveCourse();
+    final courseName = course.name.trim().isNotEmpty ? course.name : '当前课程';
+    final courseId = course.id.trim().isNotEmpty ? course.id : 'COURSE';
+    // 文件名前缀使用当前激活课程的课程ID（如 CKGDT/SEB），取代旧的固定班级「计科22」，
+    // 使「课程-达成」导出文件属于当前课程，而非退回移动应用开发课程。
     return {
       'mobile_achievement_template_48.xlsx':
-          '计科22《$courseName》课程达成评价表格48.xlsx',
+          '$courseId《$courseName》课程达成评价表格48.xlsx',
       'mobile_achievement_report_template.docx':
-          '计科22《$courseName》课程达成评价表格-课程目标达成评价报告.docx',
+          '$courseId《$courseName》课程达成评价表格-课程目标达成评价报告.docx',
     };
   }
 

@@ -5,7 +5,7 @@
 把 `{agentId}.md` 文件放到这里（例如 `tutor.md`），运行时 `BaseAgent.loadEffectivePersona()`
 会**优先**加载这里的内容作为 system prompt，**回退**到代码中 `AgentConfig.persona`。
 
-## 已注册 agentId（18 个）
+## 已注册 agentId（{agentCount} 个）
 
 | ID | 名称 |
 |----|------|
@@ -14,7 +14,7 @@
 | `quiz` | 考官 |
 | `repo` | 仓管 |
 | `assessment` | 考务官 |
-| `lab` | 实验员 |
+| `lab` | {navLabel}辅导员 |
 | `works` | 评审团 |
 | `achievement` | OBE 专家 |
 | `courseware` | 备课大师 |
@@ -30,11 +30,11 @@
 
 ## 兼容 prompt 资产
 
-下列旧 prompt 文件保留给历史数据和迁移兼容，不计入当前 18 个注册智能体：`madkg`、`lab_grading`、`assessment_grading`、`works_grading`、`course_gen`、`learning`、`path`、`virtual_student`、`virtual_teacher`。
+下列旧 prompt 文件保留给历史数据和迁移兼容：`madkg`、`lab_grading`、`assessment_grading`、`works_grading`、`course_gen`、`learning`、`path`、`virtual_student`、`virtual_teacher`。
 
 ## 增量迁移建议
 
-不必一次把 18 个 prompt 全搬到 .md。优先级：
+不必一次把全部 prompt 全搬到 .md。优先级：
 1. **改动频繁**的 prompt（tutor / quiz / lab_grading）—— 抽出来便于教师团队迭代
 2. **教学场景敏感**的 prompt（virtual_student / virtual_teacher）—— 可让教研组直接修改人格设定
 3. 其它保持代码内 const，避免无意义拆分

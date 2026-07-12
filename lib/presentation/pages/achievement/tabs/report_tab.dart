@@ -136,6 +136,8 @@ class _ReportTabState extends State<ReportTab> {
 
   Future<void> _loadBatches() async {
     try {
+      // 课程/班级/学期/教师均已确定时，自动生成达成度批次，无需用户点击
+      await widget.achievementDao.ensureBatchForActiveCourse();
       final batches = await widget.achievementDao.getBatches();
       String? courseToLoad;
       if (mounted) {
@@ -993,7 +995,7 @@ class _ReportTabState extends State<ReportTab> {
         '表明学生自我评价与实际能力达成情况基本相符。';
   }
 
-  /// 导出 Excel 报告（对齐计科22模板：平时/实验/期末明细 + 个体达成度 + 目标点达成度 + 图表数据页）。
+  /// 导出 Excel 报告（对齐学校归档模板：平时/实验/期末明细 + 个体达成度 + 目标点达成度 + 图表数据页）。
   Future<void> _exportExcel() async {
     if (_calcResults == null || _selectedBatchId == null) return;
     try {
@@ -1329,7 +1331,7 @@ class _ReportTabState extends State<ReportTab> {
         r = rowOf(18);
         r[0] = t(sid);
         r[1] = t(s['student_name']);
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < _config.objectiveNames.length; i++) {
           final offset = 2 + i * 4;
           final pAch = i == 0
               ? val(p, 'class_activity_achievement')
@@ -1376,7 +1378,7 @@ class _ReportTabState extends State<ReportTab> {
         t('达成度')
       ]);
       const envNames = ['平时', '实验', '期末考试'];
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < _config.objectiveNames.length; i++) {
         final envWeight = i < envWeightsByObjective.length
             ? envWeightsByObjective[i]
             : const {};
@@ -1422,14 +1424,14 @@ class _ReportTabState extends State<ReportTab> {
       // 条形图 + 4 张散点趋势图数据页（对齐模板的 课程目标条形图 / 目标N散点趋势图）
       // 数值列用 DoubleCellValue，否则注入的图表无法把文本当数据绘制。
       final bar = excel['课程目标条形图'];
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < _config.objectiveNames.length; i++) {
         bar.appendRow([
           t(cf.objectiveNames[i]),
           xl.DoubleCellValue(
               double.parse(_objectiveAchievements[i].toStringAsFixed(4))),
         ]);
       }
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < _config.objectiveNames.length; i++) {
         final sh = excel['目标${i + 1}散点趋势图'];
         for (int k = 0; k < scores.length; k++) {
           final a =
@@ -1450,7 +1452,7 @@ class _ReportTabState extends State<ReportTab> {
       final specs = <ChartSpec>[
         const ChartSpec.bar(
             sheetName: '课程目标条形图', title: '课程目标达成度', rowCount: 4),
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < _config.objectiveNames.length; i++)
           ChartSpec.scatter(
               sheetName: '目标${i + 1}散点趋势图',
               title: '学生个体课程目标${i + 1}达成评价结果',
@@ -1492,7 +1494,7 @@ class _ReportTabState extends State<ReportTab> {
     }
 
     final activeObjectives = [
-      for (var i = 0; i < 4; i++)
+      for (var i = 0; i < _config.objectiveNames.length; i++)
         if (_objectiveWeights[i] > 0 || config.fullMarks[i] > 0) i
     ];
     final rawWeights = ((combined['weightsByObjective'] as List?) ?? const [])
@@ -1805,7 +1807,7 @@ class _ReportTabState extends State<ReportTab> {
                   const pw.BoxDecoration(color: PdfColors.grey300),
               headers: ['毕业要求指标点', '课程目标', '权重', '课程目标描述'],
               data: [
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < _config.objectiveNames.length; i++)
                   [
                     '指标点${objIndicators[i]}',
                     kObjectiveNames[i],
@@ -1832,7 +1834,7 @@ class _ReportTabState extends State<ReportTab> {
                 '期末成绩(50分)'
               ],
               data: [
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < _config.objectiveNames.length; i++)
                   [
                     kObjectiveNames[i],
                     _objectiveWeights[i].toStringAsFixed(2),
@@ -1993,7 +1995,7 @@ class _ReportTabState extends State<ReportTab> {
                 '指标点达成度'
               ],
               data: [
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < _config.objectiveNames.length; i++)
                   for (int j = 0; j < 3; j++) ...[
                     [
                       j == 0 ? '课程目标${i + 1}' : '',
@@ -2036,7 +2038,7 @@ class _ReportTabState extends State<ReportTab> {
                   const pw.BoxDecoration(color: PdfColors.grey300),
               headers: ['项目', '达成度', '预期阈值', '是否达成'],
               data: [
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < _config.objectiveNames.length; i++)
                   [
                     '课程目标${i + 1}（权重${(_objectiveWeights[i] * 100).toStringAsFixed(0)}%）',
                     _objectiveAchievements[i].toStringAsFixed(4),
@@ -2066,7 +2068,7 @@ class _ReportTabState extends State<ReportTab> {
                 data: ['平均分', '最高分', '最低分', '标准差'].asMap().entries.map((e) {
                   return [
                     e.value,
-                    for (int i = 0; i < 4; i++)
+                    for (int i = 0; i < _config.objectiveNames.length; i++)
                       (_statistics['objective${i + 1}']?[e.key] ?? 0)
                           .toStringAsFixed(2),
                   ];
@@ -2088,30 +2090,23 @@ class _ReportTabState extends State<ReportTab> {
                 '序号',
                 '学号',
                 '姓名',
-                '目标1达成度',
-                '目标2达成度',
-                '目标3达成度',
-                '目标4达成度',
+                for (int i = 0; i < _config.objectiveNames.length; i++)
+                  '目标${i + 1}达成度',
                 '综合达成度'
               ],
               data: scores.asMap().entries.map((e) {
                 final s = e.value;
-                final a1 = (s['obj1_achievement'] as num?)?.toDouble() ?? 0;
-                final a2 = (s['obj2_achievement'] as num?)?.toDouble() ?? 0;
-                final a3 = (s['obj3_achievement'] as num?)?.toDouble() ?? 0;
-                final a4 = (s['obj4_achievement'] as num?)?.toDouble() ?? 0;
-                final wt = a1 * _objectiveWeights[0] +
-                    a2 * _objectiveWeights[1] +
-                    a3 * _objectiveWeights[2] +
-                    a4 * _objectiveWeights[3];
+                final achs = [
+                  for (int i = 0; i < _config.objectiveNames.length; i++)
+                    (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0
+                ];
+                final wt = List.generate(achs.length, (i) => i)
+                    .fold<double>(0, (sum, i) => sum + achs[i] * _objectiveWeights[i]);
                 return [
                   '${e.key + 1}',
                   s['student_id']?.toString() ?? '',
                   s['student_name']?.toString() ?? '',
-                  a1.toStringAsFixed(4),
-                  a2.toStringAsFixed(4),
-                  a3.toStringAsFixed(4),
-                  a4.toStringAsFixed(4),
+                  for (final a in achs) a.toStringAsFixed(4),
                   wt.toStringAsFixed(4),
                 ];
               }).toList(),
@@ -2124,7 +2119,7 @@ class _ReportTabState extends State<ReportTab> {
 
             pw.Text('1. 定量评价情况分析', style: subHeaderStyle),
             pw.SizedBox(height: 6),
-            ...List.generate(4, (i) {
+            ...List.generate(_config.objectiveNames.length, (i) {
               final a = _objectiveAchievements[i];
               final pA = pingshiAvg['obj${i + 1}'] ?? 0;
               final eA = experimentAvg['obj${i + 1}'] ?? 0;
@@ -2195,7 +2190,7 @@ class _ReportTabState extends State<ReportTab> {
             pw.SizedBox(height: 6),
             pw.Text('后续教学持续改进措施：', style: boldStyle),
             pw.SizedBox(height: 2),
-            ...List.generate(4, (i) {
+            ...List.generate(_config.objectiveNames.length, (i) {
               final a = _objectiveAchievements[i];
               String suggestion;
               if (a < 0.60) {
@@ -2299,7 +2294,7 @@ class _ReportTabState extends State<ReportTab> {
     final header = bold.copyWith(fontSize: 14);
     final title = bold.copyWith(fontSize: 18);
     final activeObjectives = [
-      for (var i = 0; i < 4; i++)
+      for (var i = 0; i < _config.objectiveNames.length; i++)
         if (_objectiveWeights[i] > 0 || config.fullMarks[i] > 0) i
     ];
     final envLabels = {

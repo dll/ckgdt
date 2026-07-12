@@ -4,6 +4,7 @@ import '../../widgets/back_button_bar.dart';
 import '../../../data/local/notification_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/update_service.dart';
+import '../../../services/course_terminology_service.dart';
 import 'compose_notification_page.dart';
 import '../settings/update_dialog.dart';
 import '../assessment/defense/defense_broadcast_page.dart';
@@ -31,6 +32,7 @@ class _NotificationListPageState extends State<NotificationListPage> {
   List<Map<String, dynamic>> _notifications = [];
   int _unreadCount = 0;
   bool _isLoading = true;
+  CourseTerms _terms = CourseTerms.fromPracticeLabel('实践任务');
 
   // 批量选择
   bool _isSelectionMode = false;
@@ -39,7 +41,15 @@ class _NotificationListPageState extends State<NotificationListPage> {
   @override
   void initState() {
     super.initState();
+    _loadTerms();
     _loadNotifications();
+  }
+
+  Future<void> _loadTerms() async {
+    try {
+      final terms = await CourseTerminologyService().activeTerms();
+      if (mounted) setState(() => _terms = terms);
+    } catch (_) {}
   }
 
   /// 加载通知列表 + 未读计数
@@ -424,7 +434,7 @@ class _NotificationListPageState extends State<NotificationListPage> {
     }
 
     final hint = {
-      'lab_submission': '请到 实验 Tab 查看 AI 批阅 / 教师评分',
+      'lab_submission': '请到 ${_terms.navLabel} Tab 查看 AI 批阅 / 教师评分',
       'work_submission': '请到 作品 Tab 查看 AI 批阅 / 教师评分',
       'assessment_report': '请到 考核 Tab 查看 AI 批阅 / 教师评分',
       'feedback': '请到 反馈 Tab 查看',

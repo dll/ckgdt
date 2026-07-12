@@ -4,7 +4,7 @@ import '../../core/error_handler.dart';
 
 /// Agent system prompt 异步加载器（按 agentId）。
 ///
-/// **设计目标**：让 18 个 Agent 的 prompt 可以放在 `assets/agent_prompts/{id}.md`
+/// **设计目标**：让多个 Agent 的 prompt 可以放在 `assets/agent_prompts/{id}.md`
 /// 中维护，迭代 prompt 不再 = 改源码 + 发版。
 ///
 /// **加载顺序**：
@@ -19,7 +19,7 @@ class PromptLoader {
 
   static const String _basePath = 'assets/agent_prompts/';
 
-  /// 内存缓存上限。18 个 Agent + 一些动态扩展，48 足够覆盖。
+  /// 内存缓存上限。多个 Agent + 一些动态扩展，48 足够覆盖。
   static const int _maxCacheSize = 48;
 
   /// 内存缓存：agentId → prompt 文本（或 null 表示已确认 assets 中没有）

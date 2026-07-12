@@ -14,50 +14,10 @@ import '../../../data/local/ai_history_dao.dart';
 import '../../widgets/markdown_bubble.dart';
 import 'package:knowledge_graph_app/core/error_handler.dart';
 import '../../../core/build_info.dart';
+import '../../../data/models/skill_def_model.dart';
+import '../../../services/skill_registry.dart';
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 技能定义
-// ═══════════════════════════════════════════════════════════════════════════════
-
-class _SkillCase {
-  final String title;
-  final String userInput;
-  final String resultSummary;
-  const _SkillCase(
-      {required this.title,
-      required this.userInput,
-      required this.resultSummary});
-}
-
-class _SkillDef {
-  final String id;
-  final String name;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final String description;
-  final List<String> features;
-  final List<String> examples;
-  final String systemPrompt;
-  final List<String> usageSteps;
-  final List<_SkillCase> classicCases;
-
-  const _SkillDef({
-    required this.id,
-    required this.name,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-    required this.description,
-    required this.features,
-    required this.examples,
-    required this.systemPrompt,
-    this.usageSteps = const [],
-    this.classicCases = const [],
-  });
-}
-
-const _skills = <_SkillDef>[
+const _skills = <SkillDef>[]; /*
   _SkillDef(
     id: 'graph',
     name: '图谱技能',
@@ -337,47 +297,47 @@ const _skills = <_SkillDef>[
   ),
   _SkillDef(
     id: 'lab',
-    name: '实验技能',
-    subtitle: 'AI 设计实验任务',
+    name: '实践技能',
+    subtitle: 'AI 设计实践任务',
     icon: Icons.science,
     color: Colors.deepPurple,
-    description: '根据课程内容和教学进度，AI 自动设计实验任务方案。'
-        '包含实验目标、步骤指导、代码框架、验收标准和扩展挑战，'
+    description: '根据课程内容和教学进度，AI 自动设计实践任务方案。'
+        '包含实践目标、步骤指导、代码或操作框架、验收标准和扩展挑战，'
         '覆盖从入门到进阶的难度梯度。',
     features: [
-      '实验目标与知识点对应',
-      '分步骤操作指导（含代码框架）',
+      '实践目标与知识点对应',
+      '分步骤操作指导（含代码或操作框架）',
       '验收标准和评分要点',
       '扩展挑战任务（选做加分）',
     ],
     examples: [
-      '基础功能实现入门实验',
-      '数据存储与查询实验',
-      '自定义组件开发实验',
-      '接口对接与数据交互实验'
+      '基础功能实现入门实践',
+      '数据存储与查询实践',
+      '自定义模块开发实践',
+      '接口对接与数据交互实践'
     ],
-    systemPrompt: '你是课程实验设计专家。请根据用户给出的主题，设计一个实验任务。'
+    systemPrompt: '你是课程实践任务设计专家。请根据用户给出的主题，设计一个实践任务。'
         '输出格式为 Markdown，包含：\n'
-        '1. 实验名称和学时\n'
-        '2. 实验目标（3-4条）\n'
+        '1. 实践任务名称和学时\n'
+        '2. 实践目标（3-4条）\n'
         '3. 前置知识要求\n'
-        '4. 实验步骤（5-8步，每步含说明和关键代码片段）\n'
+        '4. 实践步骤（5-8步，每步含说明和关键代码片段或操作要点）\n'
         '5. 验收标准（必做项 + 选做加分项）\n'
         '6. 常见问题 FAQ（3-5个）\n'
         '请用中文回答，代码示例使用课程涉及的编程语言。',
     usageSteps: [
-      '进入 AI 技能中心，选择"实验技能"',
-      '输入实验主题（如"SQLite 数据库 CRUD 实验"）',
-      'AI 设计完整实验任务方案',
-      '查看实验步骤、代码框架和验收标准',
-      '保存方案用于实验教学',
+      '进入 AI 技能中心，选择"实践技能"',
+      '输入实践主题（如"数据存储与查询实践"）',
+      'AI 设计完整实践任务方案',
+      '查看实践步骤、代码或操作框架和验收标准',
+      '保存方案用于课程实践教学',
     ],
     classicCases: [
       _SkillCase(
-          title: '数据存储与查询实验',
-          userInput: '数据存储与查询实验',
+          title: '数据存储与查询实践',
+          userInput: '数据存储与查询实践',
           resultSummary:
-              '设计 4 学时实验：含环境配置、表创建、增删改查 4 步操作指导，每步含关键代码片段，验收标准 5 项 + 加分项 2 项。'),
+              '设计 4 学时实践：含环境配置、表创建、增删改查 4 步操作指导，每步含关键代码片段，验收标准 5 项 + 加分项 2 项。'),
     ],
   ),
   _SkillDef(
@@ -511,10 +471,9 @@ const _skills = <_SkillDef>[
           resultSummary: '生成包含命题质量评估、难度分布分析、审核意见的试卷审核表，适用于考试课程归档。'),
     ],
   ),
-];
-
-_SkillDef _getSkill(String id) =>
-    _skills.firstWhere((s) => s.id == id, orElse: () => _skills.first);
+*/
+SkillDef _getSkill(String id) =>
+    SkillRegistry.instance.get(id) ?? SkillRegistry.instance.getAll().first;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 技能中心页 — 展示所有 10 个 AI 技能
@@ -586,7 +545,7 @@ class _SkillsHubPageState extends State<SkillsHubPage> {
                     SizedBox(height: 8),
                     Text(
                       '利用 AI 为每个教学模块生成新内容，涵盖图谱构建、路径规划、'
-                      '自动出题、实验设计等 10 大技能，助力智慧教学。',
+                      '自动出题、实践设计等 10 大技能，助力智慧教学。',
                       style: TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                   ],
@@ -606,6 +565,7 @@ class _SkillsHubPageState extends State<SkillsHubPage> {
                     : constraints.maxWidth > 600
                         ? 3
                         : 2;
+                final skills = SkillRegistry.instance.getAll();
                 return GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -615,9 +575,9 @@ class _SkillsHubPageState extends State<SkillsHubPage> {
                     crossAxisSpacing: 10,
                     mainAxisSpacing: 10,
                   ),
-                  itemCount: _skills.length,
+                  itemCount: skills.length,
                   itemBuilder: (context, index) {
-                    final skill = _skills[index];
+                    final skill = skills[index];
                     final count = _counts[skill.id] ?? 0;
                     return _buildSkillCard(skill, count);
                   },
@@ -630,7 +590,7 @@ class _SkillsHubPageState extends State<SkillsHubPage> {
     );
   }
 
-  Widget _buildSkillCard(_SkillDef skill, int count) {
+  Widget _buildSkillCard(SkillDef skill, int count) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -708,7 +668,7 @@ class AiSkillPage extends StatefulWidget {
 class _AiSkillPageState extends State<AiSkillPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
-  late final _SkillDef _skill;
+  late final SkillDef _skill;
 
   final _aiService = AiService();
   final _skillDao = SkillDao();
@@ -826,9 +786,9 @@ $context
 $achievementAuditContext
 
 ## 技能执行要求
-- 必须围绕当前课程生成内容，优先使用本地课程章节、知识图谱、题库、实验、作品、考核和达成数据。
+- 必须围绕当前课程生成内容，优先使用本地课程章节、知识图谱、题库、实践、作品、考核和达成数据。
 - 不要沿用固定的旧课程示例，除非用户明确要求。
-- 面向教师时给出可落地的教学、评价、资源或改进动作；面向学生时给出可执行的学习、实验、考核和作品动作。
+- 面向教师时给出可落地的教学、评价、资源或改进动作；面向学生时给出可执行的学习、实践、考核和作品动作。
 ''';
   }
 
@@ -1262,7 +1222,7 @@ $achievementAuditContext
               TextField(
                 controller: _inputController,
                 decoration: InputDecoration(
-                  hintText: '例如：${_skill.examples.first}',
+                  hintText: _skill.examples.isNotEmpty ? '例如：${_skill.examples.first}' : '输入主题',
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12)),
                   contentPadding:

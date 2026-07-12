@@ -61,11 +61,8 @@ class AgentRegistry {
     _register(CoursewareAgent());
     _register(TutorAgent());
     _register(DocConverterAgent());
-    // mobile_expert_agent 仅在移动开发类课程时注册（平台化）
-    // 检查课程类型，非移动开发课程不注册此 agent
-    try {
-      _register(MobileExpertAgent());
-    } catch (_) {}
+    // 技术专家智能体 — 对技术类课程提供技术栈解答；对其他课程兜底为通用技术咨询
+    _register(MobileExpertAgent());
     _register(EthicsAgent());
     // 安全监控智能体（管理员专用）
     _register(SafetyAgent());

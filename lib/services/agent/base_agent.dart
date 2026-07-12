@@ -7,6 +7,8 @@ import 'teaching_context_service.dart';
 import '../ai_service.dart';
 import '../rag_service.dart';
 import '../course_context_service.dart';
+import '../course_terminology_service.dart';
+import '../../core/error_handler.dart';
 import '../../data/local/agent_call_log_dao.dart';
 
 /// 智能体抽象基类
@@ -37,6 +39,11 @@ abstract class BaseAgent {
   /// - `{chapterCount}` — 当前课程章节数
   /// - `{chapterName}` — 章节名称占位
   /// - `{topicName}` — 主题名称占位
+  /// - `{practiceLabel}` — 实践类型全称（实验项目/研读实践/训练实践/创作实践/案例实践/技能实践/实践任务）
+  /// - `{taskLabel}` — 任务类型（实验任务/研读任务/训练任务/创作任务/案例任务/任务）
+  /// - `{reportLabel}` — 报告类型（实验项目报告/研读实践报告/训练实践报告/……）
+  /// - `{submitVerbLabel}` — 提交短语（提交实验项目/提交研读实践/……）
+  /// - `{navLabel}` — 导航栏短标签（实验/研读/训练/创作/案例/技能/实践）
   /// - 其它 `{key}` 可传入 [extraVars] 覆盖。
   Future<String> promptWithCourse(String text,
       {Map<String, String>? extraVars}) async {
@@ -51,13 +58,26 @@ abstract class BaseAgent {
           .replaceAll('{chapterName}', 'X')
           .replaceAll('{topicName}', '课程主题');
 
+      final terms = CourseTerminologyService();
+      final t = await terms.activeTerms();
+      result = result
+          .replaceAll('{practiceLabel}', t.practiceLabel)
+          .replaceAll('{taskLabel}', t.taskLabel)
+          .replaceAll('{taskPluralLabel}', t.taskPluralLabel)
+          .replaceAll('{reportLabel}', t.reportLabel)
+          .replaceAll('{materialLabel}', t.materialLabel)
+          .replaceAll('{submitVerbLabel}', t.submitVerbLabel)
+          .replaceAll('{navLabel}', t.navLabel)
+          .replaceAll('{manageLabel}', t.manageLabel);
+
       if (extraVars != null) {
         for (final e in extraVars.entries) {
           result = result.replaceAll('{${e.key}}', e.value);
         }
       }
       return result;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'BaseAgent.promptWithCourse', stack: st);
       return text;
     }
   }

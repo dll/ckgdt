@@ -69,6 +69,8 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
         _currentCourseName = activeCourse.name.trim();
       }
       AchievementContext.instance.courseName = _currentCourseName;
+      // 课程/班级/学期/教师均已确定时，自动生成达成度批次，无需用户点击
+      await widget.achievementDao.ensureBatchForActiveCourse();
       final batches = await widget.achievementDao.getBatches();
       // 从已有批次推断当前课程名；无批次时使用课程管理中的激活课程
       if (batches.isNotEmpty && activeCourse == null) {
@@ -142,6 +144,13 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
           batch: batch,
           achievementDao: widget.achievementDao,
           scrollController: scrollCtrl,
+          objectiveCount: _objectives.length,
+          objectiveNames: _objectives
+              .map((o) =>
+                  (o['name'] as String?)?.trim().isNotEmpty == true
+                      ? o['name'] as String
+                      : '课程目标${_objectiveInt(o['idx'])}')
+              .toList(),
         ),
       ),
     );
@@ -508,12 +517,16 @@ class BatchDetailSheet extends StatefulWidget {
   final Map<String, dynamic> batch;
   final AchievementDao achievementDao;
   final ScrollController scrollController;
+  final int objectiveCount;
+  final List<String> objectiveNames;
 
   const BatchDetailSheet({
     super.key,
     required this.batch,
     required this.achievementDao,
     required this.scrollController,
+    this.objectiveCount = 4,
+    this.objectiveNames = const [],
   });
 
   @override
@@ -722,7 +735,7 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
             ),
             const SizedBox(height: 8),
             Row(
-              children: List.generate(4, (i) {
+              children: List.generate(widget.objectiveCount, (i) {
                 final key = 'obj${i + 1}_score';
                 final val = (score[key] ?? 0).toDouble();
                 return Expanded(
@@ -755,7 +768,7 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
   Widget _buildResultsSummary() {
     if (_results == null) return const SizedBox.shrink();
 
-    final objectives = List.generate(4, (i) {
+    final objectives = List.generate(widget.objectiveCount, (i) {
       final key = 'obj${i + 1}_achievement';
       return (_results![key] ?? 0.0) as double;
     });
@@ -768,9 +781,13 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
         child: Column(
           children: [
             ...List.generate(
-                4,
+                widget.objectiveCount,
                 (i) => _buildBarRow(
-                    kObjectiveNames[i], objectives[i], kObjectiveColors[i])),
+                    widget.objectiveNames.isNotEmpty
+                        ? widget.objectiveNames[i]
+                        : kObjectiveNames[i % kObjectiveNames.length],
+                    objectives[i],
+                    objectiveColor(i))),
             const Divider(height: 24),
             _buildBarRow(
                 '加权达成度', weighted, Theme.of(context).colorScheme.primary),

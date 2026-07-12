@@ -75,6 +75,8 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
 
   Future<void> _loadBatches() async {
     try {
+      // 课程/班级/学期/教师均已确定时，自动生成达成度批次，无需用户点击
+      await widget.achievementDao.ensureBatchForActiveCourse();
       final batches = await widget.achievementDao.getBatches();
       if (mounted) {
         setState(() {
@@ -1056,7 +1058,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
             Icon(Icons.warning_amber, size: 18, color: Colors.orange.shade700),
             const SizedBox(width: 8),
             const Expanded(
-              child: Text('暂无达成度批次，请先完成课程大纲导入',
+              child: Text('正在为当前课程自动创建达成度批次…（若长时间未出现，请到「达成概览」确认大纲已导入）',
                   style: TextStyle(fontSize: 13, color: Colors.black87)),
             ),
           ],
@@ -1167,6 +1169,8 @@ class _ComponentAchievementTabState extends State<ComponentAchievementTab> {
 
   Future<void> _loadBatches() async {
     try {
+      // 平台化：当前激活课程自动创建批次，无需手工新建
+      await widget.achievementDao.ensureBatchForActiveCourse();
       final batches = await widget.achievementDao.getBatches();
       if (!mounted) return;
       setState(() {
@@ -1578,6 +1582,8 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
   }
 
   Future<void> _loadBatches() async {
+    // 平台化：当前激活课程自动创建批次，无需手工新建
+    await widget.achievementDao.ensureBatchForActiveCourse();
     final batches = await widget.achievementDao.getBatches();
     if (mounted) {
       setState(() {

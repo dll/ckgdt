@@ -471,7 +471,7 @@ ${doc.content ?? '（文档无内容）'}''';
     const checklists = {
       'teaching_task': '''
 - 教师姓名是否与教学任务书原始数据一致
-- 课程名称、总学时、讲授/实验学时是否完整
+- 课程名称、总学时、讲授/实践学时是否完整
 - 教学班级、计划人数是否填写
 - 院（系）/教研室主任签章栏是否预留''',
       'syllabus': '''
@@ -486,11 +486,11 @@ ${doc.content ?? '（文档无内容）'}''';
 - 作息时间是否分冬季/夏季标注
 - 关键节点是否包含（考试周、暑假等）''',
       'course_schedule': '''
-- 理论课与实验课是否区分清晰
-- 实验分组是否合理，每组时间/地点是否明确
+- 理论课与实践课是否区分清晰
+- 实践分组是否合理，每组时间/地点是否明确
 - 周次、星期、节次是否连续无冲突''',
       'teaching_schedule': '''
-- 理论教学进度与实验教学进度是否分别列出
+- 理论教学进度与实践教学进度是否分别列出
 - 周次、日期、章节、教学内容是否完整对应
 - 教学方式是否多样化（讲授/讨论/实践等）
 - 与教学大纲的学时分配是否一致''',
@@ -572,10 +572,10 @@ ${doc.content ?? '（文档无内容）'}''';
     String teacherName = '(从参考数据中提取实际教师名)';
     String courseName = '{courseName}';
     String classInfo = '示例班级';
-    const semesterLabel = '2025-2026学年第二学期';
-    String totalHours = '96';
-    String theoryHours = '24';
-    String labHours = '72';
+    var semesterLabel = '${DateTime.now().year}-${DateTime.now().year + 1}学年${DateTime.now().month >= 8 ? '第一' : DateTime.now().month >= 2 ? '第二' : '第一'}学期';
+    String totalHours = '（总学时）';
+    String theoryHours = '（讲授学时）';
+    String labHours = '（实践学时）';
     if (context != null && context.containsKey('teaching_task_content')) {
       final task = context['teaching_task_content'] as String;
       final tMatch = RegExp(r'\*\*教师\*\*[：:]\s*(.+?)[\n|]').firstMatch(task);
@@ -604,7 +604,7 @@ ${doc.content ?? '（文档无内容）'}''';
       buf.writeln('班级：$classInfo');
       buf.writeln('教师：$teacherName');
       buf.writeln('学期：$semesterLabel');
-      buf.writeln('总学时：$totalHours（理论$theoryHours/实验$labHours）');
+      buf.writeln('总学时：$totalHours（理论$theoryHours/实践$labHours）');
       buf.writeln('课程类型：$courseTypeLabel（考试或考查，与选择的类型一致）');
     }
 
@@ -646,14 +646,14 @@ ${doc.content ?? '（文档无内容）'}''';
 **课程名称：** $courseName
 **教师：** $teacherName（必须与参考数据一致！）
 **班级：** $classInfo
-**总学时：** $totalHours学时 （理论$theoryHours学时 / 实验$labHours学时）
+**总学时：** $totalHours学时 （理论$theoryHours学时 / 实践$labHours学时）
 **课程类型：** $courseTypeLabel
 
 ### 理论教学进度
 | 周次 | 日期 | 章节 | 教学内容 | 学时 | 教学方式 | 地点 |
 
-### 实验教学进度
-| 周次 | 日期 | 班级 | 实验内容 | 学时 | 地点 |''',
+### 实践教学进度
+| 周次 | 日期 | 班级 | 实践内容 | 学时 | 地点 |''',
       'lesson_plan': '''
 === 教学教案格式要求 ===
 参考已有的 lesson_plans 表数据和教学进度表，生成规范的教学教案。

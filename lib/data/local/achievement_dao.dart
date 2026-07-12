@@ -5,6 +5,8 @@ import 'active_student_scope.dart';
 import 'database_helper.dart';
 import 'ordinary_score_dao.dart';
 import '../../core/error_handler.dart';
+import '../../core/init_logger.dart';
+import '../../services/auth_service.dart';
 import '../../services/course_context_service.dart';
 import '../../services/achievement_context.dart';
 
@@ -427,13 +429,19 @@ class AchievementDao {
       for (final row in objectiveRows)
         if (_asInt(row['idx']) > 0) _asInt(row['idx']): row
     };
+    final objectiveCount = _objectiveCount(
+      weights: weights,
+      fullMarks: fullMarks,
+    );
     final activeIndexes = [
-      for (var i = 0; i < 4; i++)
+      for (var i = 0; i < objectiveCount; i++)
         if ((i < weights.length && weights[i] > 0) ||
             (i < fullMarks.length && fullMarks[i] > 0))
           i
     ];
-    if (activeIndexes.isEmpty) activeIndexes.addAll([0, 1, 2, 3]);
+    if (activeIndexes.isEmpty) {
+      activeIndexes.addAll(List<int>.generate(objectiveCount, (i) => i));
+    }
 
     String objectiveName(int index) {
       final row = objectiveByIdx[index + 1];
@@ -658,6 +666,65 @@ class AchievementDao {
       'syllabus_version': effectiveVersion,
       'status': 'draft',
     });
+  }
+
+  /// 自动为该激活课程生成达成度批次（无需用户点击）。
+  ///
+  /// 平台化要求：批次必须随当前激活课程自动创建，绝不应要求用户手工新建，
+  /// 也不应因大纲已导入而仍提示"请先导入大纲"。
+  /// 当课程、班级、学期、教师信息均已确定时，若当前激活课程尚无批次，
+  /// 则依据激活课程名/活跃班级/当前学期/当前登录教师自动创建一个草稿批次，
+  /// 返回其 id（已存在则直接返回首个批次 id）。
+  Future<int> ensureBatchForActiveCourse() async {
+    try {
+      // 解析课程名：优先当前激活课程，回退到 AchievementContext，最后用占位名，
+      // 确保即使上下文暂时为空也能创建批次（不再因空课程名而静默放弃）。
+      var courseName = (await _courseContext.activeCourseName()).trim();
+      if (courseName.isEmpty) {
+        courseName = AchievementContext.instance.courseName.trim();
+      }
+      if (courseName.isEmpty) courseName = '当前课程';
+
+      // 用与 getBatches() 完全一致的过滤（当前激活课程）判断是否存在批次，
+      // 避免 getBatchesByCourse 与 UI 过滤因课程名不一致而误判"已存在"。
+      final existing = await getBatches();
+      if (existing.isNotEmpty) return existing.first['id'] as int;
+
+      final semester = await _currentSemester();
+      final teacherId = AuthService().currentUser?.userId ?? '';
+      final id = await addBatch(
+        batchName: '达成度批次·$courseName',
+        courseName: courseName,
+        className: '',
+        semester: semester,
+        teacherId: teacherId,
+      );
+      if (id <= 0) {
+        InitLogger.error('achievement',
+            'ensureBatchForActiveCourse: 批次创建失败 courseName=$courseName id=$id');
+      }
+      return id;
+    } catch (e, st) {
+      InitLogger.error('achievement', e, st);
+      return -1;
+    }
+  }
+
+  Future<String> _currentSemester() async {
+    try {
+      final db = await DatabaseHelper.instance.database;
+      final batch = await db.query('achievement_batches',
+          columns: ['semester'],
+          where: 'semester IS NOT NULL AND semester <> ?',
+          whereArgs: [''],
+          orderBy: 'id DESC',
+          limit: 1);
+      final last = batch.isNotEmpty ? batch.first['semester']?.toString() : null;
+      if (last != null && last.isNotEmpty) return last;
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementDao.currentSemester', stack: st);
+    }
+    return normalizeAcademicSemester(null);
   }
 
   Future<String> _defaultActiveClassName() async {
@@ -1995,13 +2062,19 @@ class AchievementDao {
       for (final row in objectives)
         if (_asInt(row['idx']) > 0) _asInt(row['idx']): row
     };
+    final objectiveCount = _objectiveCount(
+      weights: weights,
+      fullMarks: fullMarks,
+    );
     final activeIndexes = [
-      for (var i = 0; i < 4; i++)
+      for (var i = 0; i < objectiveCount; i++)
         if ((i < weights.length && weights[i] > 0) ||
             (i < fullMarks.length && fullMarks[i] > 0))
           i
     ];
-    if (activeIndexes.isEmpty) activeIndexes.addAll([0, 1, 2, 3]);
+    if (activeIndexes.isEmpty) {
+      activeIndexes.addAll(List<int>.generate(objectiveCount, (i) => i));
+    }
 
     String objectiveName(int index) {
       final name = objectiveByIdx[index + 1]?['name']?.toString().trim() ?? '';

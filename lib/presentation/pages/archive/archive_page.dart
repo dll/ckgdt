@@ -1,6 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
+import '../../../core/dev_paths.dart';
 import '../../../core/error_handler.dart';
 import '../../../services/agent/agents/archive_agent.dart';
+import '../../../services/archive/archive_template_source_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../../data/local/archive_dao.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../../widgets/inner_tab_request_mixin.dart';
@@ -43,7 +48,29 @@ class _ArchivePageState extends State<ArchivePage>
       if (!_tabController.indexIsChanging) setState(() {});
     });
     bindInnerTabRequest();
-    _detectCourseTypeFromSyllabus();
+    // 先绑定当前激活课程的归档根（设为首选），再检测课程类型，确保取用当前课程资料
+    _bindActiveCourseArchiveRoot().then((_) {
+      if (mounted) _detectCourseTypeFromSyllabus();
+    });
+  }
+
+  /// 平台化：把当前激活课程自己的归档模板目录（data/<课程ID>/归档）设为首选归档根，
+  /// 使归档文档取用当前课程（如 CKGDT）的资料，而非退回 MAD 的通用 data/归档。
+  Future<void> _bindActiveCourseArchiveRoot() async {
+    try {
+      final courseId = await CourseContextService().activeCourseId();
+      if (courseId.trim().isEmpty) return;
+      final archiveRoot =
+          Directory(p.join(DevPaths.projectRoot, 'data', courseId, '归档'));
+      if (!archiveRoot.existsSync()) return;
+      ArchiveTemplateSourceService.registerCourseArchiveRoot(
+        courseId: courseId,
+        archiveRoot: archiveRoot.path,
+        prefer: true,
+      );
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchivePage.bindActiveCourseArchiveRoot', stack: st);
+    }
   }
 
   @override

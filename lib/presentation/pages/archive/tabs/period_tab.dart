@@ -24,6 +24,7 @@ import '../../../../services/archive/importers/archive_importers.dart';
 import '../../../../services/archive_package_service.dart';
 import '../../../../data/local/course_dao.dart';
 import '../../../../data/local/archive_dao.dart';
+import '../../../../data/local/class_dao.dart';
 import '../../../../services/course_context_service.dart';
 import '../../../../data/models/archive_document_model.dart';
 import '../../../../presentation/widgets/markdown_bubble.dart';
@@ -61,6 +62,10 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   List<ArchiveDocument> _documents = [];
   bool _loading = true;
 
+  /// 历史模板识别 token：来自非当前课程的其他班级/学期，用于提醒教师替换旧模板残留数据。
+  /// 不再硬编码《移动应用开发》的班级名，改为按当前激活课程动态推断。
+  List<String> _legacyClassTokens = const [];
+
   @override
   void initState() {
     super.initState();
@@ -88,9 +93,32 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
           _loading = false;
         });
       }
+      _legacyClassTokens = await _loadLegacyClassTokens();
     } catch (e, st) {
       swallowDebug(e, tag: 'ArchivePeriodTab._load', stack: st);
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// 动态计算历史模板识别 token：收集数据库中所有「非当前激活课程」的班级名与学期，
+  /// 若归档正文出现这些 token，说明可能沿用了其他课程的旧模板数据，提醒教师替换。
+  Future<List<String>> _loadLegacyClassTokens() async {
+    try {
+      final activeCourse = await CourseContextService().getActiveCourse();
+      final all = await ClassDao().getAllClasses();
+      final tokens = <String>{};
+      for (final c in all) {
+        final courseId = (c['course_id'] as String?) ?? '';
+        if (courseId == activeCourse.id) continue;
+        final name = (c['name'] as String?)?.trim() ?? '';
+        final semester = (c['semester'] as String?)?.trim() ?? '';
+        if (name.isNotEmpty) tokens.add(name);
+        if (semester.isNotEmpty) tokens.add(semester);
+      }
+      return tokens.toList();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchivePeriodTab._loadLegacyClassTokens', stack: st);
+      return const [];
     }
   }
 
@@ -750,7 +778,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     }
 
     final oldDataHints = <String>[];
-    for (final token in const ['计科22', '软件23', '202321', '2025版']) {
+    for (final token in _legacyClassTokens) {
       if (content.contains(token)) oldDataHints.add(token);
     }
     if (oldDataHints.isNotEmpty) {
@@ -2456,7 +2484,7 @@ ${_templateExcerpt(parsed.content)}
   <th>课程名称</th><th>课程类别</th><th>总学时</th><th>讲授</th><th>实验</th><th>实践</th><th>课外自主</th><th>教学班级</th><th>计划人数</th><th>备注</th>
 </tr>
 <tr>
-  <td>$courseName</td><td>考试</td><td>64</td><td>32</td><td>16</td><td>8</td><td>8</td><td>计科22</td><td>40</td><td></td>
+  <td>$courseName</td><td>考试</td><td>64</td><td>32</td><td>16</td><td>8</td><td>8</td><td>[教学班级]</td><td>40</td><td></td>
 </tr>
 </table>
 </body>
@@ -2582,7 +2610,7 @@ ${_templateExcerpt(parsed.content)}
 | 上课时间 | 时间安排 | 周一1-2节 |
 | 上课地点 | 教室/实验室 | YF3404 |
 | 教学周次 | 起止周 | 1-16 |
-| 教学班级 | 班级名称 | 计科22 |
+| 教学班级 | 班级名称 | [班级名称] |
 
 **注意事项：**
 1. 请从教务系统直接导出XLSX文件
@@ -2679,8 +2707,8 @@ ${_templateExcerpt(parsed.content)}
 <p><b>学期：</b>[请填写]</p>
 <table border="1" cellpadding="4" style="border-collapse:collapse;width:100%">
 <tr><th>序号</th><th>学号</th><th>姓名</th><th>班级</th><th>第1周</th><th>第2周</th><th>...</th><th>备注</th></tr>
-<tr><td>1</td><td>20220101</td><td>[姓名]</td><td>计科22</td><td>✓</td><td>✓</td><td></td><td></td></tr>
-<tr><td>2</td><td>20220102</td><td>[姓名]</td><td>计科22</td><td>✓</td><td>请假</td><td></td><td></td></tr>
+<tr><td>1</td><td>20220101</td><td>[姓名]</td><td>[班级]</td><td>✓</td><td>✓</td><td></td><td></td></tr>
+<tr><td>2</td><td>20220102</td><td>[姓名]</td><td>[班级]</td><td>✓</td><td>请假</td><td></td><td></td></tr>
 </table>
 </body>
 </html>''';

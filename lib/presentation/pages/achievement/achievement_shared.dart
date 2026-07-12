@@ -5,8 +5,36 @@ import 'achievement_config.dart';
 
 /// 达成度模块共享常量与工具函数
 
-const kObjectiveColors = [Colors.red, Colors.blue, Colors.green, Colors.orange];
-List<String> get kObjectiveNames => AchievementConfig.defaults.objectiveNames;
+// 课程目标配色：覆盖到 10 个目标，避免 5+ 目标时 kObjectiveColors[i] 越界。
+const kObjectiveColors = [
+  Colors.red,
+  Colors.blue,
+  Colors.green,
+  Colors.orange,
+  Colors.purple,
+  Colors.teal,
+  Colors.indigo,
+  Colors.pink,
+  Colors.cyan,
+  Colors.brown,
+];
+
+/// 按目标序号返回安全颜色（序号超出调色板时循环取色，绝不越界）。
+Color objectiveColor(int index) => kObjectiveColors[index % kObjectiveColors.length];
+
+/// 课程目标默认名称（覆盖到 10 个，避免 5+ 目标时 kObjectiveNames[i] 越界）。
+const kObjectiveNames = [
+  '课程目标1',
+  '课程目标2',
+  '课程目标3',
+  '课程目标4',
+  '课程目标5',
+  '课程目标6',
+  '课程目标7',
+  '课程目标8',
+  '课程目标9',
+  '课程目标10',
+];
 List<double> get kDefaultWeights => AchievementConfig.defaults.weights;
 
 Color statusColor(String? status) {

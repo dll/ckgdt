@@ -2,6 +2,7 @@
 import '../../../core/constants/app_theme.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/course_resource_service.dart';
+import '../../../services/course_terminology_service.dart';
 import '../../widgets/agent_entry_button.dart';
 import 'package:knowledge_graph_app/core/error_handler.dart';
 
@@ -702,8 +703,28 @@ class _StudentRepoPageState extends State<StudentRepoPage>
 // Tab 2: 提交规范（复用自 git_repo_page.dart 中的内容）
 // ══════════════════════════════════════════════════════════════════════════════
 
-class _SubmissionGuidelinesTab extends StatelessWidget {
+class _SubmissionGuidelinesTab extends StatefulWidget {
   const _SubmissionGuidelinesTab();
+
+  @override
+  State<_SubmissionGuidelinesTab> createState() => _SubmissionGuidelinesTabState();
+}
+
+class _SubmissionGuidelinesTabState extends State<_SubmissionGuidelinesTab> {
+  CourseTerms _terms = CourseTerms.fromPracticeLabel('实践任务');
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTerms();
+  }
+
+  Future<void> _loadTerms() async {
+    try {
+      final terms = await CourseTerminologyService().activeTerms();
+      if (mounted) setState(() => _terms = terms);
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -748,12 +769,12 @@ class _SubmissionGuidelinesTab extends StatelessWidget {
         _buildSection(
           context,
           icon: Icons.assignment,
-          title: '4. 实验提交流程',
+          title: '4. ${_terms.practiceLabel}提交流程',
           color: Colors.purple,
-          items: const [
+          items: [
             '① 在个人分支上完成开发',
             '② 提交代码并推送到远程仓库',
-            '③ 在本系统「实验」页面提交实验报告',
+            '③ 在本系统「${_terms.navLabel}」页面提交${_terms.reportLabel}',
             '④ 等待教师评阅反馈',
           ],
         ),

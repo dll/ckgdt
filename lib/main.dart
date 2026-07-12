@@ -1,5 +1,5 @@
 ﻿import 'dart:async';
-import 'dart:io' show Platform;
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
@@ -24,10 +24,12 @@ import 'services/voice_assistant_controller.dart';
 import 'services/tts_flutter_service.dart';
 import 'services/archive/processor_registry.dart';
 import 'services/archive/base_document_processor.dart';
+import 'services/archive/archive_template_source_service.dart';
 import 'services/archive_package_service.dart';
 import 'services/auth_service.dart';
 import 'services/update_service.dart';
 import 'services/notification_service.dart';
+import 'services/skill_definitions.dart';
 import 'core/app_localization.dart';
 import 'presentation/pages/profile/virtual_twin_page.dart';
 
@@ -117,6 +119,8 @@ void main() async {
   unawaited(_initArchivePaths());
   unawaited(_checkAppUpdate());
 
+  initializeSkills();
+
   runApp(MyApp(dbLocked: dbLocked, dbError: dbError));
 }
 
@@ -153,6 +157,23 @@ Future<void> _initArchivePaths() async {
     BaseDocumentProcessor.archiveDataRoot = templates;
     ArchivePackageService.outputRoot = outDir;
     InitLogger.log('archive', 'templates=$templates outDir=$outDir');
+    // 平台化：把每个课程自己的归档模板目录（data/<课程ID>/归档）登记为课程级归档根，
+    // 使归档文档按当前激活课程取用对应课程资料，而非退回 MAD 的通用 data/归档。
+    final dataDir = Directory(p.join(root, 'data'));
+    if (dataDir.existsSync()) {
+      for (final ent in dataDir.listSync()) {
+        if (ent is! Directory) continue;
+        final archiveSub = Directory(p.join(ent.path, '归档'));
+        if (!archiveSub.existsSync()) continue;
+        // 不在此处设为首选（prefer=false）：当前激活课程由归档页打开时再设为首选，
+        // 避免把遍历到的最后一个课程错当成首选归档根。
+        ArchiveTemplateSourceService.registerCourseArchiveRoot(
+          courseId: p.basename(ent.path),
+          archiveRoot: archiveSub.path,
+          prefer: false,
+        );
+      }
+    }
   } catch (e, st) {
     InitLogger.error('archive', e, st);
   }

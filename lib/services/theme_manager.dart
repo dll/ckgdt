@@ -80,7 +80,7 @@ class ThemeManager {
       ),
 
       // ── 卡片：1px hairline + 极小圆角 + 0 elevation ────────────────────
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: cardBg,
         elevation: 0,
         margin: EdgeInsets.zero,
@@ -198,7 +198,7 @@ class ThemeManager {
       ),
 
       // ── 弹窗 ─────────────────────────────────────────────────────────
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: cardBg,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -234,7 +234,7 @@ class ThemeManager {
       ),
 
       // ── Tab ──────────────────────────────────────────────────────────
-      tabBarTheme: TabBarTheme(
+      tabBarTheme: TabBarThemeData(
         labelColor: onCard,
         unselectedLabelColor: onCard.withOpacity(0.45),
         indicatorColor: accent,

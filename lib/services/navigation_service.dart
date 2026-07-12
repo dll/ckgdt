@@ -30,6 +30,7 @@ import '../presentation/pages/profile/student_center_page.dart';
 import '../presentation/pages/profile/teacher_workspace_page.dart';
 import '../presentation/pages/profile/chat_history_page.dart';
 import '../presentation/pages/skill/ai_skill_page.dart';
+import '../presentation/pages/skill/skill_manage_page.dart';
 import '../presentation/pages/feedback/feedback_manage_page.dart';
 import '../presentation/pages/settings/voice_settings_page.dart';
 import '../presentation/pages/settings/course_manage_page.dart';
@@ -59,6 +60,7 @@ import '../presentation/pages/analytics/agent_calls_dashboard_page.dart';
 import '../presentation/pages/privacy/privacy_policy_page.dart';
 import '../presentation/pages/privacy/my_data_page.dart';
 import '../presentation/pages/cases/cases_page.dart';
+import '../presentation/pages/agent/agent_directory_page.dart';
 import '../services/auth_service.dart';
 
 /// 全局导航服务 — 跨页面 Tab 切换 + 子页面跳转 + 返回
@@ -514,7 +516,12 @@ class NavigationService {
       case 'chat_history':
         return const ChatHistoryPage();
       case 'ai_skill':
-        return const AiSkillPage(skillId: 'tutor');
+        return const AiSkillPage(skillId: 'graph');
+      case 'skill_manage':
+        return const SkillManagePage();
+      case 'skill_export':
+      case '技能导出':
+        return const SkillManagePage();
       case 'feedback':
         return const FeedbackManagePage();
       case 'class_qa':
@@ -535,6 +542,8 @@ class NavigationService {
         return const ClassTokenPage();
       case 'agent_calls':
         return const AgentCallsDashboardPage();
+      case 'agent_directory':
+        return const AgentDirectoryPage();
       case 'privacy':
         return const PrivacyPolicyPage();
       case 'my_data':

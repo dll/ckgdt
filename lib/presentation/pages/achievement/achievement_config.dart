@@ -53,19 +53,35 @@ class AchievementConfig {
   );
 
   /// 基于课程模型动态生成默认配置，替代硬编码的 MAD 默认值。
+  ///
+  /// 当目标数 > 4 时，按比例重新分配权重和满分，确保每个目标都有非零值，
+  /// 避免页面过滤器将权重/满分为 0 的目标静默隐藏。
   static Map<String, dynamic> defaultsForCourse(CourseModel course) {
     final chapterCount = course.chapters.isNotEmpty
         ? course.chapters.length
         : course.chapterCount;
     final objectiveCount = chapterCount <= 3 ? chapterCount : chapterCount.clamp(4, 10);
-    final defaultWeights = [0.15, 0.25, 0.30, 0.30];
-    final defaultMarks = [15.0, 25.0, 30.0, 30.0];
-    final weights = objectiveCount <= defaultWeights.length
-        ? defaultWeights.sublist(0, objectiveCount)
-        : [...defaultWeights, ...List.filled(objectiveCount - defaultWeights.length, 0.0)];
-    final marks = objectiveCount <= defaultMarks.length
-        ? defaultMarks.sublist(0, objectiveCount)
-        : [...defaultMarks, ...List.filled(objectiveCount - defaultMarks.length, 0.0)];
+    final baseWeights = [0.15, 0.25, 0.30, 0.30];
+    final baseMarks = [15.0, 25.0, 30.0, 30.0];
+    List<double> weights;
+    List<double> marks;
+    if (objectiveCount <= baseWeights.length) {
+      weights = baseWeights.sublist(0, objectiveCount);
+      marks = baseMarks.sublist(0, objectiveCount);
+    } else {
+      // 超出基础目标数时，按比例均匀分配，确保所有目标都有非零权重/满分
+      final totalWeight = baseWeights.reduce((a, b) => a + b);
+      final totalMarks = baseMarks.reduce((a, b) => a + b);
+      final perWeight = totalWeight / objectiveCount;
+      final perMark = totalMarks / objectiveCount;
+      weights = List.generate(objectiveCount, (i) => double.parse(perWeight.toStringAsFixed(4)));
+      marks = List.generate(objectiveCount, (i) => double.parse(perMark.toStringAsFixed(2)));
+      // 补偿浮点误差使总和精确
+      final weightDiff = totalWeight - weights.reduce((a, b) => a + b);
+      final markDiff = totalMarks - marks.reduce((a, b) => a + b);
+      if (weightDiff.abs() > 1e-9) weights[0] += weightDiff;
+      if (markDiff.abs() > 1e-9) marks[0] += markDiff;
+    }
     return {
       'objectiveCount': objectiveCount,
       'chapterCount': chapterCount,
@@ -106,10 +122,11 @@ class AchievementConfig {
       List<T> pick<T>(T Function(Map<String, dynamic>?, int) f) =>
           List<T>.generate(count, (i) => f(byIdx[i + 1], i));
       return AchievementConfig(
-        weights: pick((r, i) =>
-            r == null ? 0 : _asRatio(r['weight'], _at(fallback.weights, i))),
+        weights: pick((r, i) => r == null
+            ? _at(fallback.weights, i)
+            : _asRatio(r['weight'], _at(fallback.weights, i))),
         fullMarks: pick((r, i) => r == null
-            ? 0
+            ? _at(fallback.fullMarks, i)
             : _asDouble(r['full_mark'], _at(fallback.fullMarks, i))),
         objectiveNames: pick((r, i) =>
             (r?['name'] as String?)?.trim().isNotEmpty == true

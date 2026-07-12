@@ -59,7 +59,9 @@ class AchievementExcelTemplatePayload {
 /// Coordinates for a concrete achievement workbook template.
 ///
 /// Different courses can provide different profiles. The current default is
-/// inferred from the school sample "计科22《移动应用开发》课程达成评价表格48.xlsx".
+/// inferred from the school sample achievement table (e.g. the bundled
+/// "课程达成评价表格48.xlsx"). The profile is course-agnostic and only
+/// describes how the columns/sections are laid out.
 class AchievementExcelTemplateProfile {
   final String examSheet;
   final String experimentSheet;
