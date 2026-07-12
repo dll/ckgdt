@@ -173,7 +173,8 @@ class DatabaseHelper {
     await _ensureAllTables(db);
     await _importStudents(db);
     await _importTeacherRoster(db);
-    await _importStudentRoster(db);
+    // _importStudentRoster 已禁用 — students.json 是唯一学生来源
+    // await _importStudentRoster(db);
     await _cleanupLegacyUsers(db);
     await _cleanupDuplicateResources(db);
 
@@ -246,7 +247,8 @@ class DatabaseHelper {
     // Import students if needed
     await _importStudents(db);
     await _importTeacherRoster(db);
-    await _importStudentRoster(db);
+    // _importStudentRoster 已禁用 — students.json 是唯一学生来源
+    // await _importStudentRoster(db);
 
     // 清理旧课程（MAD/软件231/232等）残留用户，只保留当前课程名单中的用户
     await _cleanupLegacyUsers(db);
@@ -278,13 +280,12 @@ class DatabaseHelper {
       final gCount = (gc.first['c'] as int?) ?? 0;
       InitLogger.log('db', 'seed-check questions=$qCount graphs=$gCount');
 
-      // 题目阈值：种子 52 道，< 30 视为异常（容忍少量删除 / 同步差异）
-      // 图谱阈值：种子 23 个，< 20 视为异常（学生反馈 graphs=7 也通过了旧阈值 5
-      // 但缺了 16 个图谱 → 知识图谱页大量空白；提到 20 让 _onUpgrade 误删触发修复）
-      if (qCount >= 30 && gCount >= 20) return;
+      // 题目阈值：种子 80 道，< 30 视为异常（容忍少量删除 / 同步差异）
+      // 图谱阈值：CKGDT 种子 11 个，< 10 触发修复（平台化课程图谱数可能不同）
+      if (qCount >= 30 && gCount >= 10) return;
 
       InitLogger.log(
-          'db', 'seed below threshold (Q<30 or G<20) — importing via SQL');
+          'db', 'seed below threshold (Q<30 or G<10) — importing via SQL');
       await _importSeedDataViaSql(db);
 
       // 最终验证 — 修复后还是空就明确告诉 UI
@@ -293,9 +294,9 @@ class DatabaseHelper {
       final q2 = (qc2.first['c'] as int?) ?? 0;
       final g2 = (gc2.first['c'] as int?) ?? 0;
       InitLogger.log('db', 'after repair questions=$q2 graphs=$g2');
-      if (q2 < 30 || g2 < 20) {
+      if (q2 < 30 || g2 < 10) {
         lastInitError =
-            'seed-repair-incomplete: questions=$q2 graphs=$g2 (expected ≥30/≥20)';
+            'seed-repair-incomplete: questions=$q2 graphs=$g2 (expected ≥30/≥10)';
         InitLogger.log('db', lastInitError!);
       }
     } catch (e, st) {
@@ -899,18 +900,8 @@ class DatabaseHelper {
       // 从 teacher roster 收集（不解析 xlsx，直接用已知 ID）
       // 教师 ID 从 students.json 已包含（203014/203045/206004/419116）
 
-      // 从学生名单 DB 表收集（如果 _importStudentRoster 已成功导入）
-      try {
-        final rosterRows = await db.rawQuery(
-            "SELECT user_id FROM users WHERE role = 'student' AND user_id LIKE '2023211%'");
-        for (final row in rosterRows) {
-          final uid = row['user_id']?.toString();
-          if (uid != null && uid.isNotEmpty) allowedIds.add(uid);
-        }
-        InitLogger.log('db', 'cleanup: total allowed IDs = ${allowedIds.length}');
-      } catch (e, st) {
-        InitLogger.error('db', 'cleanup: failed to query existing students: $e', st);
-      }
+      // 从学生名单 DB 表收集 — 不做，students.json 已包含全部合法用户
+      // 删除旧的 LIKE '2023211%' 查询（会误匹配旧 MAD 学生 2023210xxx）
 
       // 教师花名册（xlsx 解析不可靠，硬编码兜底）
       allowedIds.addAll(['910910', '203014', '203045', '206004']);

@@ -171,7 +171,7 @@ class _LearningHubPageState extends State<LearningHubPage>
   Future<void> _loadPPTs() async {
     try {
       final db = await DatabaseHelper.instance.database;
-      final whereParts = <String>['file_type = ?'];
+      final whereParts = <String>['file_type = ?', "source_type != 'script'"];
       final whereArgs = <Object?>['ppt'];
       if (_resourceMode == 'preset') {
         whereParts.add("(source_type = 'preset' OR source_type IS NULL)");

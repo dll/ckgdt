@@ -58,11 +58,19 @@ class AchievementConfig {
         ? course.chapters.length
         : course.chapterCount;
     final objectiveCount = chapterCount <= 3 ? chapterCount : chapterCount.clamp(4, 10);
+    final defaultWeights = [0.15, 0.25, 0.30, 0.30];
+    final defaultMarks = [15.0, 25.0, 30.0, 30.0];
+    final weights = objectiveCount <= defaultWeights.length
+        ? defaultWeights.sublist(0, objectiveCount)
+        : [...defaultWeights, ...List.filled(objectiveCount - defaultWeights.length, 0.0)];
+    final marks = objectiveCount <= defaultMarks.length
+        ? defaultMarks.sublist(0, objectiveCount)
+        : [...defaultMarks, ...List.filled(objectiveCount - defaultMarks.length, 0.0)];
     return {
       'objectiveCount': objectiveCount,
       'chapterCount': chapterCount,
-      'weights': [0.15, 0.25, 0.30, 0.30].sublist(0, objectiveCount),
-      'fullMarks': [15.0, 25.0, 30.0, 30.0].sublist(0, objectiveCount),
+      'weights': weights,
+      'fullMarks': marks,
       'pingshi_ratio': 0.20,
       'experiment_ratio': 0.30,
       'exam_ratio': 0.50,

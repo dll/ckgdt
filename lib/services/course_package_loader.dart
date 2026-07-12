@@ -773,7 +773,7 @@ class CoursePackageLoader {
       await txn.insert(
         'users',
         data,
-        conflictAlgorithm: ConflictAlgorithm.replace,
+        conflictAlgorithm: ConflictAlgorithm.ignore,
       );
       count++;
     }

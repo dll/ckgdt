@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../data/local/knowledge_graph_dao.dart';
 import '../data/local/course_dao.dart';
+import '../data/local/database_helper.dart';
 import '../data/models/course_model.dart';
 
 /// Provides seed data (~120 concepts, ~200 relations) covering all 6 chapters
@@ -22,33 +23,51 @@ class KnowledgeSeedService {
   /// Seeds concepts and relations only when the `knowledge_concepts` table is
   /// empty, making it safe to call on every app launch.
   Future<void> seedIfEmpty() async {
+    // 先清理 homework 类型的概念（不是真正的知识图谱节点）
+    try {
+      final db = await DatabaseHelper.instance.database;
+      await db.rawDelete("DELETE FROM knowledge_concepts WHERE concept_type = 'homework' OR node_type = 'homework'");
+    } catch (_) {}
+
     final count = await _dao.conceptCount();
-    if (count > 0) {
-      debugPrint('[KnowledgeSeedService] 已有 $count 个概念，跳过种子数据');
+    final relCount = await _dao.relationCount();
+    // 跳过条件：概念和关系都有（说明已完整初始化）
+    // 如果只有概念没有关系，仍然需要种子关系
+    if (count > 0 && relCount > 0) {
+      debugPrint('[KnowledgeSeedService] 已有 $count 个概念 + $relCount 条关系，跳过种子数据');
       return;
     }
-
-    debugPrint('[KnowledgeSeedService] 概念表为空，开始写入种子数据...');
+    if (count > 0 && relCount == 0) {
+      debugPrint('[KnowledgeSeedService] 已有 $count 个概念但无关系，补充种子关系...');
+    }
 
     final course = await _courseDao.getActiveCourse();
     if (_shouldSeedGenericCourse(course)) {
-      await _seedGenericCourse(course!);
+      // 如果概念已存在，只补充关系
+      if (count > 0) {
+        debugPrint('[KnowledgeSeedService] 概念已存在，只补充关系');
+        await _seedGenericRelations(course!);
+      } else {
+        await _seedGenericCourse(course!);
+      }
       final conceptCount = await _dao.conceptCount();
-      final relCount = await _dao.relationCount();
+      final relCount2 = await _dao.relationCount();
       debugPrint(
         '[KnowledgeSeedService] 已为《${course.name}》生成通用课程图谱：'
-        '$conceptCount 个概念，$relCount 条关系',
+        '$conceptCount 个概念，$relCount2 条关系',
       );
       return;
     }
 
-    await _seedConcepts();
-    final conceptCount = await _dao.conceptCount();
-    debugPrint('[KnowledgeSeedService] 概念写入完成，共 $conceptCount 条');
+    if (count == 0) {
+      await _seedConcepts();
+      final conceptCount = await _dao.conceptCount();
+      debugPrint('[KnowledgeSeedService] 概念写入完成，共 $conceptCount 条');
+    }
 
     await _seedRelations();
-    final relCount = await _dao.relationCount();
-    debugPrint('[KnowledgeSeedService] 关系写入完成，共 $relCount 条');
+    final relCount3 = await _dao.relationCount();
+    debugPrint('[KnowledgeSeedService] 关系写入完成，共 $relCount3 条');
 
     debugPrint('[KnowledgeSeedService] 种子数据初始化完毕 ✓');
   }
@@ -189,6 +208,82 @@ class KnowledgeSeedService {
         );
       }
     }
+  }
+
+  /// 当概念已存在但关系为空时，从现有概念补充关系
+  Future<void> _seedGenericRelations(CourseModel course) async {
+    final allConcepts = await _dao.getAllConcepts();
+    if (allConcepts.isEmpty) return;
+
+    // 建立 name → id 映射
+    final nameToId = <String, int>{};
+    for (final c in allConcepts) {
+      final name = c['concept_name']?.toString() ?? '';
+      final id = c['id'] as int?;
+      if (id != null) nameToId[name] = id;
+    }
+
+    // 章节标题列表
+    final chapterTitles = course.chapters.isNotEmpty
+        ? course.chapters
+        : List.generate(course.chapterCount, (i) => '第${i + 1}章');
+
+    Future<void> rel(String sourceName, String targetName, String type, String label, [double weight = 1.0]) async {
+      final sourceId = nameToId[sourceName];
+      final targetId = nameToId[targetName];
+      if (sourceId == null || targetId == null) return;
+      await _dao.addRelation({
+        'source_concept_id': sourceId,
+        'target_concept_id': targetId,
+        'relation_type': type,
+        'relation_label': label,
+        'description': '$sourceName → $targetName ($label)',
+        'bidirectional': 0,
+        'weight': weight,
+        'ai_generated': 0,
+        'confidence': 0.8,
+      });
+    }
+
+    // 课程 → 章节
+    for (var i = 0; i < chapterTitles.length; i++) {
+      final ch = _normalizeChapterTitle(chapterTitles[i], i + 1);
+      await rel(course.name, ch, 'contains', '课程章节');
+    }
+
+    // 章节间前置关系
+    for (var i = 1; i < chapterTitles.length; i++) {
+      final prev = _normalizeChapterTitle(chapterTitles[i - 1], i);
+      final curr = _normalizeChapterTitle(chapterTitles[i], i + 1);
+      await rel(prev, curr, 'prerequisite', '前置章节', 0.7);
+    }
+
+    // 按 concept_type 建立章节内关系
+    for (final c in allConcepts) {
+      final name = c['concept_name']?.toString() ?? '';
+      final type = c['concept_type']?.toString() ?? '';
+      final chapter = c['chapter'] as int? ?? 0;
+      if (chapter == 0 || name.isEmpty) continue;
+
+      final ch = _normalizeChapterTitle(
+          chapterTitles.length >= chapter ? chapterTitles[chapter - 1] : '第$chapter章',
+          chapter);
+
+      // 同章节的 concept 之间建立 related_to 关系
+      final sameChapter = allConcepts.where((o) =>
+          o['chapter'] == chapter &&
+          o['concept_name']?.toString() != name &&
+          (o['concept_type']?.toString() ?? '') != 'homework');
+      for (final other in sameChapter) {
+        final otherName = other['concept_name']?.toString() ?? '';
+        if (otherName.isNotEmpty && otherName != name) {
+          await rel(name, otherName, 'related_to', '相关概念', 0.5);
+        }
+      }
+    }
+
+    final relCount = await _dao.relationCount();
+    debugPrint('[KnowledgeSeedService] 补充关系完成，共 $relCount 条');
   }
 
   String _normalizeChapterTitle(String raw, int chapterNo) {

@@ -317,7 +317,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
   void _showAddTaskDialog({Map<String, dynamic>? existingTask}) async {
     final isEditing = existingTask != null;
     // 动态加载课程章节列表
-    final chapterTitles = await CourseContextService().chapterTitles();
+    final chapterTitles = await CourseContextService().shortChapterTitles();
     final chapterOptions = chapterTitles.isNotEmpty
         ? chapterTitles
         : ['第1章', '第2章', '第3章', '第4章', '第5章', '第6章'];

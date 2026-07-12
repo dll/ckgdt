@@ -59,16 +59,11 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   List<Map<String, dynamic>> _scores = [];
   int? _selectedBatchId;
   bool _loading = true;
-  List<double> _classAvgAchievements = [0, 0, 0, 0];
+  List<double> _classAvgAchievements = [];
   double _weightedAchievement = 0;
   String _currentCourseName = '课程';
   AchievementConfig _config = AchievementConfig.defaults;
-  List<Map<String, double>> _envWeightsByObjective = const [
-    {'pingshi': 0.2, 'experiment': 0.3, 'exam': 0.5},
-    {'pingshi': 0.2, 'experiment': 0.3, 'exam': 0.5},
-    {'pingshi': 0.2, 'experiment': 0.3, 'exam': 0.5},
-    {'pingshi': 0.2, 'experiment': 0.3, 'exam': 0.5},
-  ];
+  List<Map<String, double>> _envWeightsByObjective = [];
   int _selectedComponentTab = 0;
   final CourseContextService _courseContext = CourseContextService();
 
@@ -96,10 +91,12 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
 
   List<int> get _activeObjectiveIndexes {
     final indexes = [
-      for (var i = 0; i < 4; i++)
+      for (var i = 0; i < _config.weights.length; i++)
         if (_config.weights[i] > 0 || _config.fullMarks[i] > 0) i
     ];
-    return indexes.isEmpty ? [0, 1, 2, 3] : indexes;
+    return indexes.isEmpty
+        ? [for (var i = 0; i < _config.weights.length; i++) i]
+        : indexes;
   }
 
   Future<void> _saveChartAsPng(String id, String name) async {
@@ -187,17 +184,18 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
       final envWeights = await widget.achievementDao
           .resolveObjectiveAssessmentWeights(_selectedBatchId!);
       if (scores.isNotEmpty) {
-        final avgs = List<double>.filled(4, 0);
+        final objCount = cfg.weights.length;
+        final avgs = List<double>.filled(objCount, 0);
         for (final s in scores) {
-          for (int i = 0; i < 4; i++) {
+          for (int i = 0; i < objCount; i++) {
             avgs[i] += (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
           }
         }
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < objCount; i++) {
           avgs[i] /= scores.length;
         }
         double weighted = 0;
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < objCount; i++) {
           weighted += avgs[i] * objectiveWeights[i];
         }
         _classAvgAchievements = avgs;
@@ -371,7 +369,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
 
   Widget _buildAssessmentStructure(Color primary) {
     final activeObjectives = [
-      for (var i = 0; i < 4; i++)
+      for (var i = 0; i < _config.weights.length; i++)
         if (_config.weights[i] > 0 || _config.fullMarks[i] > 0) i
     ];
     bool uses(String env) =>

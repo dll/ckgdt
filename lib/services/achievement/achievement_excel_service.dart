@@ -2350,7 +2350,7 @@ $rawText
     final marks = List<double>.filled(10, 0);
     for (final row in rows) {
       final idx = (row['idx'] as num?)?.toInt() ?? 0;
-      if (idx < 1 || idx > 4) continue;
+      if (idx < 1 || idx > 10) continue;
       marks[idx - 1] = (row['full_mark'] as num?)?.toDouble() ?? 0;
     }
     return marks;
@@ -2361,7 +2361,7 @@ $rawText
     final items = <_TemplateAssessmentItem>[];
     for (final row in rows) {
       final idx = (row['idx'] as num?)?.toInt() ?? 0;
-      if (idx < 1 || idx > 4) continue;
+      if (idx < 1 || idx > 10) continue;
       final rawJson = (row['assessment_items_json'] ?? '').toString();
       if (rawJson.trim().isNotEmpty) {
         try {

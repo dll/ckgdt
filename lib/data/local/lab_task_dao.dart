@@ -621,14 +621,14 @@ class LabTaskDao {
   Future<void> _insertGenericTasksForActiveCourse(Database db) async {
     final course = await _courseContext.getActiveCourse();
     final courseId = course.id;
-    final chapters = await _courseContext.chapterTitles();
+    final shortChapters = await _courseContext.shortChapterTitles();
     final now = DateTime.now().toIso8601String();
 
-    for (var i = 0; i < chapters.length; i++) {
-      final chapter = chapters[i];
+    for (var i = 0; i < shortChapters.length; i++) {
+      final chapter = shortChapters[i];
       await db.insert('lab_tasks', {
         'course_id': courseId,
-        'title': '实验${i + 1} $chapter实践任务',
+        'title': '实验${i + 1} $chapter',
         'chapter': chapter,
         'description':
             '围绕《${course.name}》$chapter 设计一次课程实践任务，要求学生完成资料查阅、问题分析、过程记录和结果展示。',
@@ -637,7 +637,7 @@ class LabTaskDao {
             '3. 保留关键过程证据、截图、数据或文档；\n'
             '4. 说明遇到的问题、解决方法和改进方向。',
         'deliverables': '实验报告、过程记录、结果材料或演示文件',
-        'difficulty': i == chapters.length - 1 ? '较难' : '中等',
+        'difficulty': i == shortChapters.length - 1 ? '较难' : '中等',
         'max_score': 100,
         'due_date':
             DateTime.now().add(Duration(days: 14 + i * 7)).toIso8601String(),
