@@ -28,7 +28,6 @@ import 'services/archive_package_service.dart';
 import 'services/auth_service.dart';
 import 'services/update_service.dart';
 import 'services/notification_service.dart';
-import 'l10n/gen/app_localizations.dart';
 import 'core/app_localization.dart';
 import 'presentation/pages/profile/virtual_twin_page.dart';
 

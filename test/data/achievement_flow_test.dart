@@ -40,6 +40,7 @@ Future<Database> _createAchievementDb() async {
       obj2_score REAL DEFAULT 0, obj2_achievement REAL DEFAULT 0,
       obj3_score REAL DEFAULT 0, obj3_achievement REAL DEFAULT 0,
       obj4_score REAL DEFAULT 0, obj4_achievement REAL DEFAULT 0,
+      obj5_score REAL DEFAULT 0, obj5_achievement REAL DEFAULT 0,
       total_score REAL DEFAULT 0, created_at TEXT, updated_at TEXT,
       UNIQUE(batch_id, student_id))''');
   await db.execute('''
@@ -60,6 +61,7 @@ Future<Database> _createAchievementDb() async {
       exp7_score REAL DEFAULT 0,
       obj1_achievement REAL DEFAULT 0, obj2_achievement REAL DEFAULT 0,
       obj3_achievement REAL DEFAULT 0, obj4_achievement REAL DEFAULT 0,
+      obj5_achievement REAL DEFAULT 0,
       total_score REAL DEFAULT 0, created_at TEXT, updated_at TEXT,
       UNIQUE(batch_id, student_id))''');
   await db.execute('''
@@ -70,6 +72,7 @@ Future<Database> _createAchievementDb() async {
       individual_score REAL DEFAULT 0, defense_score REAL DEFAULT 0,
       obj1_achievement REAL DEFAULT 0, obj2_achievement REAL DEFAULT 0,
       obj3_achievement REAL DEFAULT 0, obj4_achievement REAL DEFAULT 0,
+      obj5_achievement REAL DEFAULT 0,
       total_score REAL DEFAULT 0, created_at TEXT, updated_at TEXT,
       UNIQUE(batch_id, student_id))''');
   await db.execute('''
@@ -613,10 +616,7 @@ void main() {
       batchId: batchId,
       studentId: '2023001',
       studentName: '张三',
-      objective1Score: 86,
-      objective2Score: 82,
-      objective3Score: 78,
-      objective4Score: 0,
+      objectiveScores: [86, 82, 78, 0],
       totalScore: 82,
     );
 
@@ -653,20 +653,14 @@ void main() {
       batchId: batchId,
       studentId: '2022210332',
       studentName: '陈晨',
-      objective1Score: 13,
-      objective2Score: 22,
-      objective3Score: 24,
-      objective4Score: 27,
+      objectiveScores: [13, 22, 24, 27],
       totalScore: 86,
     );
     await dao.addScore(
       batchId: batchId,
       studentId: '2022210333',
       studentName: '陈创东',
-      objective1Score: 12,
-      objective2Score: 20,
-      objective3Score: 21,
-      objective4Score: 24,
+      objectiveScores: [12, 20, 21, 24],
       totalScore: 77,
     );
 

@@ -1,4 +1,4 @@
-﻿part of '../assessment_page.dart';
+part of '../assessment_page.dart';
 
 enum _GroupDimension {
   repo('仓库', 'repo', Icons.folder_copy, Colors.blue),
@@ -231,7 +231,7 @@ class _GroupTabState extends State<_GroupTab>
             controller: _dimTabController,
             isScrollable: true,
             labelColor: _currentDim.color,
-            unselectedLabelColor: Colors.grey,
+            unselectedLabelColor: Colors.white70,
             indicatorColor: _currentDim.color,
             labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             tabs: _GroupDimension.values

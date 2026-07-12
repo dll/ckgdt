@@ -172,7 +172,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: typeColor.withValues(alpha: 0.1),
+                    color: typeColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(item.typeLabel,
@@ -268,9 +268,9 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.05),
+                color: Colors.green.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+                border: Border.all(color: Colors.green.withOpacity(0.2)),
               ),
               child: Text(sub!.answerText!,
                   style: const TextStyle(fontSize: 14)),
@@ -281,7 +281,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.08),
+                color: Colors.blue.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -363,7 +363,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -435,7 +435,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.08),
+                color: Colors.blue.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Row(
@@ -525,7 +525,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.indigo.withValues(alpha: 0.05),
+                color: Colors.indigo.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(item.referenceAnswer!,
@@ -545,7 +545,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
             width: double.infinity,
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha: 0.05),
+              color: Colors.grey.withOpacity(0.05),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(sub.answerText ?? '(未填写)',

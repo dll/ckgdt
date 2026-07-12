@@ -105,24 +105,22 @@ class AchievementExcelService {
       }
       final name = cells.length > 1 ? cells[1].trim() : '';
       final ach = List<double>.generate(
-          4,
+          achCols.length,
           (k) =>
               double.tryParse(cells[achCols[k]].trim())?.clamp(0.0, 1.0) ??
               0.0);
-      results.add({
+      final row = <String, dynamic>{
         'student_id': sid,
         'student_name': name,
-        'obj1_score': ach[0] * fm[0],
-        'obj1_achievement': ach[0],
-        'obj2_score': ach[1] * fm[1],
-        'obj2_achievement': ach[1],
-        'obj3_score': ach[2] * fm[2],
-        'obj3_achievement': ach[2],
-        'obj4_score': ach[3] * fm[3],
-        'obj4_achievement': ach[3],
-        'total_score':
-            ach[0] * fm[0] + ach[1] * fm[1] + ach[2] * fm[2] + ach[3] * fm[3],
-      });
+      };
+      double total = 0;
+      for (int k = 0; k < ach.length && k < fm.length; k++) {
+        row['obj${k + 1}_score'] = ach[k] * fm[k];
+        row['obj${k + 1}_achievement'] = ach[k];
+        total += ach[k] * fm[k];
+      }
+      row['total_score'] = total;
+      results.add(row);
     }
     return results;
   }
@@ -637,13 +635,15 @@ class AchievementExcelService {
       if (v != null) scores.add(v);
     }
 
-    // 如果有4个课程目标+总评
-    if (scores.length >= 4) {
-      grade['obj1_score'] = scores[0];
-      grade['obj2_score'] = scores[1];
-      grade['obj3_score'] = scores[2];
-      grade['obj4_score'] = scores[3];
-      if (scores.length >= 5) grade['total_score'] = scores[4];
+    // 写入课程目标分数（动态数量）
+    for (int i = 0; i < scores.length && i < 10; i++) {
+      grade['obj${i + 1}_score'] = scores[i];
+    }
+    // 总评列（如果有，紧跟最后一列目标之后）
+    if (scores.length > 10) {
+      grade['total_score'] = scores[10];
+    } else if (scores.length >= 5) {
+      grade['total_score'] = scores[4];
     }
 
     return grade;
@@ -2134,6 +2134,7 @@ $rawText
     final rows = await db.query('course_objectives',
         where: 'course_name = ?', whereArgs: [courseName], orderBy: 'idx ASC');
     if (rows.isNotEmpty) {
+      var maxIdx = 0;
       final marks = List<double>.filled(10, 0);
       var hasMark = false;
       for (final r in rows) {
@@ -2141,10 +2142,11 @@ $rawText
         final mark = (r['full_mark'] as num?)?.toDouble() ?? 0;
         if (idx >= 1 && idx <= 10 && mark > 0) {
           marks[idx - 1] = mark;
+          if (idx > maxIdx) maxIdx = idx;
           hasMark = true;
         }
       }
-      if (hasMark) return marks;
+      if (hasMark) return marks.sublist(0, maxIdx);
     }
     return AchievementConfig.defaults.fullMarks;
   }
@@ -2164,52 +2166,81 @@ $rawText
 
     // 单事务批量写入：避免每行一次 fsync/commit（N 行 → 1 次提交）
     await db.transaction((txn) async {
-      await txn.delete('achievement_component_scores',
-          where: 'batch_id = ?', whereArgs: [batchId]);
+      // 清空所有分项表，防止混合导入路径产生脏数据
+      for (final t in [
+        'achievement_component_scores',
+        'achievement_pingshi_scores',
+        'achievement_experiment_scores',
+        'achievement_exam_scores',
+      ]) {
+        await txn.delete(t, where: 'batch_id = ?', whereArgs: [batchId]);
+      }
       for (final g in grades) {
         final studentId = g['student_id'] as String;
         if (studentId.isEmpty) continue;
 
-        final obj1 = (g['obj1_score'] as num?)?.toDouble() ?? 0;
-        final obj2 = (g['obj2_score'] as num?)?.toDouble() ?? 0;
-        final obj3 = (g['obj3_score'] as num?)?.toDouble() ?? 0;
-        final obj4 = (g['obj4_score'] as num?)?.toDouble() ?? 0;
-        final total = (g['total_score'] as num?)?.toDouble() ??
-            (obj1 + obj2 + obj3 + obj4);
         double achOrScore(Object? achievement, double score, double fullMark) {
           final direct = (achievement as num?)?.toDouble();
           if (direct != null) return direct.clamp(0.0, 1.0);
           return fullMark > 0 ? (score / fullMark).clamp(0.0, 1.0) : 0.0;
         }
 
-        final ach1 = (g['obj1_achievement'] as num?)?.toDouble() ??
-            achOrScore(null, obj1, fm[0]);
-        final ach2 = (g['obj2_achievement'] as num?)?.toDouble() ??
-            achOrScore(null, obj2, fm[1]);
-        final ach3 = (g['obj3_achievement'] as num?)?.toDouble() ??
-            achOrScore(null, obj3, fm[2]);
-        final ach4 = (g['obj4_achievement'] as num?)?.toDouble() ??
-            achOrScore(null, obj4, fm[3]);
+        // 从第一个条目推断实际目标数量（obj1_score..objN_score 或 _components）
+        int objCount = 0;
+        for (int i = 1; i <= fm.length; i++) {
+          if (grades.first.containsKey('obj${i}_score')) objCount = i;
+        }
+        // 若 grades 条目缺少高序号 objN_score，尝试从 _components 推断
+        if (hasDynamicComponents && objCount < fm.length) {
+          final components = g['_components'] as List? ?? const [];
+          for (final c in components) {
+            final obj = (c as Map)['objective'] as num?;
+            if (obj != null && obj.toInt() > objCount) {
+              objCount = obj.toInt();
+            }
+          }
+        }
+        if (objCount < 1) objCount = fm.length;
+        objCount = objCount.clamp(1, fm.length);
+        final row = <String, dynamic>{
+          'batch_id': batchId,
+          'student_id': studentId,
+          'student_name': g['student_name'] ?? '',
+          'created_at': now,
+          'updated_at': now,
+        };
+        // 按 objective 构建 _components 查找表
+        final compByObj = <int, Map>{};
+        if (hasDynamicComponents) {
+          for (final c in (g['_components'] as List? ?? const [])) {
+            final m = c as Map;
+            final obj = (m['objective'] as num?)?.toInt() ?? 0;
+            if (obj >= 1) compByObj[obj] = m;
+          }
+        }
+
+        double total = 0;
+        for (int i = 1; i <= objCount; i++) {
+          final directScore = (g['obj${i}_score'] as num?)?.toDouble();
+          final directAch = (g['obj${i}_achievement'] as num?)?.toDouble();
+          final comp = compByObj[i];
+          final objScore = directScore ??
+              (comp?['score'] as num?)?.toDouble() ??
+              0;
+          final objAch = directAch ??
+              (comp?['achievement'] as num?)?.toDouble() ??
+              achOrScore(null, objScore, fm[i - 1]);
+          row['obj${i}_score'] = objScore;
+          row['obj${i}_achievement'] = objAch.clamp(0.0, 1.0);
+          total += objScore;
+        }
+        row['total_score'] =
+            (g['total_score'] as num?)?.toDouble() ?? total;
 
         try {
           await txn.insert(
             'achievement_scores',
-            {
-              'batch_id': batchId,
-              'student_id': studentId,
-              'student_name': g['student_name'] ?? '',
-              'obj1_score': obj1,
-              'obj1_achievement': ach1.clamp(0.0, 1.0),
-              'obj2_score': obj2,
-              'obj2_achievement': ach2.clamp(0.0, 1.0),
-              'obj3_score': obj3,
-              'obj3_achievement': ach3.clamp(0.0, 1.0),
-              'obj4_score': obj4,
-              'obj4_achievement': ach4.clamp(0.0, 1.0),
-              'total_score': total,
-              'created_at': now,
-              'updated_at': now,
-            },
+            row,
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
           if (hasDynamicComponents) {

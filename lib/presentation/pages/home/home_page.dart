@@ -15,6 +15,7 @@ import '../../../services/unread_count_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/settings_service.dart';
+import '../../../services/course_terminology_service.dart';
 import '../assessment/defense/defense_broadcast_page.dart';
 import '../../../services/default_class_service.dart';
 import '../../../dev/demo_seed_service.dart';
@@ -136,6 +137,7 @@ class _HomePageState extends State<HomePage> {
   final _courseDao = CourseDao();
   late int _selectedIndex;
   Map<String, int> _tabIndexByLabel = {};
+  CourseTerms? _terms;
 
   String? _defenseServerIp;
   int _defenseServerPort = 8766;
@@ -298,11 +300,25 @@ class _HomePageState extends State<HomePage> {
   Future<void> _loadActiveCourse() async {
     try {
       final course = await _courseDao.getActiveCourse();
-      if (mounted && course != null) {
+      if (mounted) {
         setState(() {});
+        if (course != null) {
+          _loadTerminology();
+        }
       }
     } catch (e, st) {
       swallowDebug(e, tag: 'HomePage._loadActiveCourse', stack: st);
+    }
+  }
+
+  Future<void> _loadTerminology() async {
+    try {
+      final terms = await CourseTerminologyService().activeTerms();
+      if (mounted) {
+        setState(() => _terms = terms);
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'HomePage._loadTerms', stack: st);
     }
   }
 
@@ -389,14 +405,16 @@ class _HomePageState extends State<HomePage> {
 
       // 6: 管理（仅管理员）
       if (isAdmin) {
+        final adminManageLabel = _terms?.manageLabel ?? '实验管理';
         destinations.add(const NavigationDestination(
           icon: Icon(Icons.admin_panel_settings_outlined),
           selectedIcon: Icon(Icons.admin_panel_settings),
           label: '管理',
         ));
-        bodyMap[destinations.length - 1] = () => const _AdminToolsPage();
+        bodyMap[destinations.length - 1] = () => _AdminToolsPage(manageLabel: adminManageLabel);
       }
     } else {
+      final practiceLabel = _terms?.practiceLabel ?? '实验';
       // ── 学生导航 ────────────────────────────────────────────────
       // 2: 案例
       destinations.add(const NavigationDestination(
@@ -422,11 +440,11 @@ class _HomePageState extends State<HomePage> {
       ));
       bodyMap[4] = () => const HomeworkListPage();
 
-      // 5: 实验
-      destinations.add(const NavigationDestination(
+      // 5: 实践（术语驱动）
+      destinations.add(NavigationDestination(
         icon: Icon(Icons.science_outlined),
         selectedIcon: Icon(Icons.science),
-        label: '实验',
+        label: practiceLabel,
       ));
       bodyMap[5] = () => const LabTasksPage();
 
@@ -733,8 +751,8 @@ class _HomePageState extends State<HomePage> {
                   user?.role == 'admin'
                       ? '系统级权限 · 管理员视角 · 全局可视'
                       : user?.role == 'teacher'
-                          ? '教学视角 · 班级 / 实验 / 考核 / 达成'
-                          : '学习视角 · 图谱 / 路径 / 实验 / 测验',
+                          ? '教学视角 · 班级 / ${_terms?.heroPracticeRef ?? '实验'} / 考核 / 达成'
+                          : '学习视角 · 图谱 / 路径 / ${_terms?.heroPracticeRef ?? '实验'} / 测验',
                   style: TextStyle(
                     color: NoirTokens.paper.withOpacity(0.85),
                     fontSize: 12,
@@ -1596,7 +1614,9 @@ class _ModuleStatusPill extends StatelessWidget {
 
 /// 管理员工具面板 — 以网格方式集中管理功能入口
 class _AdminToolsPage extends StatelessWidget {
-  const _AdminToolsPage();
+  final String manageLabel;
+
+  const _AdminToolsPage({required this.manageLabel});
 
   @override
   Widget build(BuildContext context) {
@@ -1631,7 +1651,7 @@ class _AdminToolsPage extends StatelessWidget {
               MaterialPageRoute(builder: (_) => const TeachingManagePage()))),
       _AdminTool(
           Icons.science,
-          '实验管理',
+          manageLabel,
           () => Navigator.push(context,
               MaterialPageRoute(builder: (_) => const LabTaskManagePage()))),
       _AdminTool(

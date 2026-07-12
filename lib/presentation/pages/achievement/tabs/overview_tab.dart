@@ -859,7 +859,7 @@ class _SyllabusMatrixEditResult {
 
 class _ObjectiveEditRow {
   _ObjectiveEditRow(Map<String, dynamic> row)
-      : idx = _objectiveInt(row['idx']).clamp(1, 4),
+      : idx = _objectiveInt(row['idx']).clamp(1, 10),
         description =
             TextEditingController(text: (row['description'] ?? '').toString()),
         weight = TextEditingController(text: (row['weight'] ?? 0).toString()),
@@ -1020,7 +1020,7 @@ class _SyllabusAssessmentMatrixDialogState
   }
 
   void _addRow() {
-    if (_rows.length >= 4) return;
+    if (_rows.length >= 10) return;
     setState(() {
       _rows.add(_ObjectiveEditRow({
         'idx': _rows.length + 1,
@@ -1241,7 +1241,7 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
   late final List<Map<String, dynamic>> _rows = widget.rows
       .map((e) => Map<String, dynamic>.from(e))
       .where(
-          (o) => _objectiveInt(o['idx']) >= 1 && _objectiveInt(o['idx']) <= 4)
+          (o) => _objectiveInt(o['idx']) >= 1 && _objectiveInt(o['idx']) <= 10)
       .toList();
   late final List<TextEditingController> _weightCtrls;
   late final List<TextEditingController> _indicatorCtrls;

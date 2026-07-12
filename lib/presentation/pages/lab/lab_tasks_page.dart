@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -519,7 +519,7 @@ class _LabTasksPageState extends State<LabTasksPage>
                   controller: _tabController,
                   isScrollable: true,
                   labelColor: primary,
-                  unselectedLabelColor: Colors.grey,
+                  unselectedLabelColor: Colors.white70,
                   labelStyle: const TextStyle(
                       fontSize: 13, fontWeight: FontWeight.w600),
                   indicatorColor: primary,

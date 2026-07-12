@@ -924,7 +924,7 @@ $achievementAuditContext
         bottom: TabBar(
           controller: _tabController,
           labelColor: primary,
-          unselectedLabelColor: Colors.grey,
+          unselectedLabelColor: Colors.white70,
           tabs: const [
             Tab(icon: Icon(Icons.info_outline), text: '说明'),
             Tab(icon: Icon(Icons.play_arrow), text: '使用'),

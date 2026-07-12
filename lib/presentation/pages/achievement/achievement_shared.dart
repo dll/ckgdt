@@ -121,10 +121,11 @@ Widget achievementTabHeader(
 }) {
   final primary = Theme.of(context).colorScheme.primary;
   final activeIndexes = [
-    for (var i = 0; i < 4; i++)
+    for (var i = 0; i < classAvg.length; i++)
       if (classAvg.containsKey('obj${i + 1}')) i
   ];
-  if (activeIndexes.isEmpty) activeIndexes.addAll([0, 1, 2, 3]);
+  if (activeIndexes.isEmpty) activeIndexes.addAll(
+      [for (var i = 0; i < classAvg.length; i++) i]);
 
   final avgCard = Card(
     margin: EdgeInsets.zero,

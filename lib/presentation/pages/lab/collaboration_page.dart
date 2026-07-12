@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '../../../data/local/collaboration_dao.dart';
@@ -205,7 +205,7 @@ class _CollaborationPageState extends State<CollaborationPage>
         bottom: TabBar(
           controller: _tabController,
           labelColor: Theme.of(context).colorScheme.primary,
-          unselectedLabelColor: Colors.grey,
+          unselectedLabelColor: Colors.white70,
           labelStyle:
               const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           indicatorColor: Theme.of(context).colorScheme.primary,

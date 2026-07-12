@@ -1,9 +1,9 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
 import '../../../../data/local/achievement_dao.dart';
-import '../../../../data/local/class_dao.dart';
 import '../../../../data/local/database_helper.dart';
 import '../../../../data/local/score_audit_dao.dart';
 import '../../../../services/auth_service.dart';
@@ -125,19 +125,21 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
         .resolveObjectiveFullMarks(_selectedBatchId!);
     final objectiveWeights =
         await widget.achievementDao.resolveObjectiveWeights(_selectedBatchId!);
+    final objCount = math.max(fullMarks.length, objectiveWeights.length);
     final activeObjectives = [
-      for (var i = 0; i < 4; i++)
+      for (var i = 0; i < objCount; i++)
         if ((i < fullMarks.length && fullMarks[i] > 0) ||
             (i < objectiveWeights.length && objectiveWeights[i] > 0))
           i
     ];
-    if (activeObjectives.isEmpty) activeObjectives.addAll([0, 1, 2, 3]);
+    if (activeObjectives.isEmpty) activeObjectives.addAll(
+        [for (var i = 0; i < objCount; i++) i]);
     final studentIdCtrl = TextEditingController(
         text: isEdit ? (existing['student_id'] ?? '').toString() : '');
     final studentNameCtrl = TextEditingController(
         text: isEdit ? (existing['student_name'] ?? '').toString() : '');
     final objectiveCtrls = List.generate(
-      4,
+      objCount,
       (i) => TextEditingController(
         text: isEdit
             ? ((existing['obj${i + 1}_score'] ?? 0).toString())
@@ -215,7 +217,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
                 await widget.achievementDao.updateScore(existing['id'] as int, {
                   'student_id': studentIdCtrl.text.trim(),
                   'student_name': studentNameCtrl.text.trim(),
-                  for (var i = 0; i < 4; i++) ...{
+                  for (var i = 0; i < values.length; i++) ...{
                     'obj${i + 1}_score': values[i],
                     'obj${i + 1}_achievement': fullMarks[i] > 0
                         ? (values[i] / fullMarks[i]).clamp(0.0, 1.0)
@@ -228,10 +230,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
                   batchId: _selectedBatchId!,
                   studentId: studentIdCtrl.text.trim(),
                   studentName: studentNameCtrl.text.trim(),
-                  objective1Score: values[0],
-                  objective2Score: values[1],
-                  objective3Score: values[2],
-                  objective4Score: values[3],
+                  objectiveScores: values,
                   totalScore: total,
                 );
               }
@@ -304,12 +303,13 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('模板已生成：${file.path}'),
-            action: SnackBarAction(
-                label: '打开', onPressed: () => OpenFilex.open(file.path)),
-            duration: const Duration(seconds: 5),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
+      // 打开所在目录并直接打开文件
+      await OpenFilex.open(dir.path);
+      await OpenFilex.open(file.path);
     } catch (e, st) {
       swallowDebug(e, tag: 'ScoresTab.downloadTemplate', stack: st);
       if (mounted) {
@@ -691,16 +691,18 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
           .resolveObjectiveWeights(_selectedBatchId!);
       final fullMarks = await widget.achievementDao
           .resolveObjectiveFullMarks(_selectedBatchId!);
+      final objCount = math.max(objectiveWeights.length, fullMarks.length);
       final activeObjectives = [
-        for (var i = 0; i < 4; i++)
+        for (var i = 0; i < objCount; i++)
           if ((i < objectiveWeights.length && objectiveWeights[i] > 0) ||
               (i < fullMarks.length && fullMarks[i] > 0))
             i
       ];
-      if (activeObjectives.isEmpty) activeObjectives.addAll([0, 1, 2, 3]);
+      if (activeObjectives.isEmpty) activeObjectives.addAll(
+          [for (var i = 0; i < objCount; i++) i]);
       bool close(double a, double b) => (a - b).abs() < 0.0001;
-      final standardThreePart = activeObjectives.length == 4 &&
-          weights.length >= 4 &&
+      final standardThreePart = activeObjectives.isNotEmpty &&
+          weights.length >= objCount &&
           activeObjectives.every((i) {
             final w = weights[i];
             return close(w['pingshi'] ?? 0, 0.2) &&
@@ -1054,16 +1056,8 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
             Icon(Icons.warning_amber, size: 18, color: Colors.orange.shade700),
             const SizedBox(width: 8),
             const Expanded(
-              child: Text('暂无达成度批次，请先创建',
+              child: Text('暂无达成度批次，请先完成课程大纲导入',
                   style: TextStyle(fontSize: 13, color: Colors.black87)),
-            ),
-            FilledButton.tonal(
-              onPressed: _createBatch,
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                visualDensity: VisualDensity.compact,
-              ),
-              child: const Text('创建批次', style: TextStyle(fontSize: 12)),
             ),
           ],
         ),
@@ -1093,70 +1087,6 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
         ),
       ),
     );
-  }
-
-  Future<void> _createBatch() async {
-    final activeCourse = await CourseContextService().getActiveCourse();
-    final courseName = activeCourse.name.trim().isNotEmpty
-        ? activeCourse.name.trim()
-        : AchievementContext.instance.courseName;
-    final today = DateTime.now();
-      final classes = await ClassDao().getActiveClasses(courseId: activeCourse.id);
-      final selectedClass = AchievementDao.selectClassForBatch(classes);
-
-      if (selectedClass.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('没有可用班级，请先在班级管理中创建或导入班级'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-      return;
-    }
-
-      final semester = AchievementDao.semesterForClass(classes, selectedClass, today);
-     final syllabusVersion =
-         await widget.achievementDao.currentSyllabusVersion(courseName);
-     final rawTeacherName =
-         widget.authService.currentUser?.realName?.trim() ?? '';
-     final teacherName = rawTeacherName.isNotEmpty ? rawTeacherName : '任课教师';
-     final teacherId = widget.authService.getCurrentUserId() ?? '';
-      final batchName = AchievementDao.buildBatchName(
-        courseName: courseName,
-        className: selectedClass,
-        semester: semester,
-        teacherName: teacherName,
-      );
-     try {
-      final id = await widget.achievementDao.addBatch(
-        batchName: batchName,
-        courseName: courseName,
-        className: selectedClass,
-        semester: semester,
-        teacherId: teacherId.isNotEmpty ? teacherId : teacherName,
-        syllabusVersion: syllabusVersion,
-      );
-      await _loadBatches();
-      setState(() => _selectedBatchId = id);
-      _loadComponentScores();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('已自动创建批次：$batchName'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e, st) {
-      swallowDebug(e, tag: 'ScoresTab.createBatch', stack: st);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('创建失败: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
   }
 
   Future<int> _dynamicComponentRowCount() async {
@@ -1263,13 +1193,15 @@ class _ComponentAchievementTabState extends State<ComponentAchievementTab> {
           .resolveObjectiveFullMarks(_selectedBatchId!);
       final envWeights = await widget.achievementDao
           .resolveObjectiveAssessmentWeights(_selectedBatchId!);
+      final objCount = math.max(weights.length, fullMarks.length);
       final activeObjectives = [
-        for (var i = 0; i < 4; i++)
+        for (var i = 0; i < objCount; i++)
           if ((i < weights.length && weights[i] > 0) ||
               (i < fullMarks.length && fullMarks[i] > 0))
             i
       ];
-      if (activeObjectives.isEmpty) activeObjectives.addAll([0, 1, 2, 3]);
+      if (activeObjectives.isEmpty) activeObjectives.addAll(
+          [for (var i = 0; i < objCount; i++) i]);
       final usesEnv = activeObjectives.any(
           (i) => i < envWeights.length && (envWeights[i][widget.env] ?? 0) > 0);
 
@@ -1344,7 +1276,7 @@ class _ComponentAchievementTabState extends State<ComponentAchievementTab> {
 
   bool _isStandardThreePart(
       List<int> activeObjectives, List<Map<String, double>> envWeights) {
-    if (activeObjectives.length != 4 || envWeights.length < 4) return false;
+    if (activeObjectives.isEmpty || envWeights.length < activeObjectives.length) return false;
     bool close(double a, double b) => (a - b).abs() < 0.0001;
     return activeObjectives.every((i) {
       final w = envWeights[i];

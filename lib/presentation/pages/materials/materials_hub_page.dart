@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
@@ -215,7 +215,7 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
           bottom: TabBar(
             indicatorColor: primary,
             labelColor: primary,
-            unselectedLabelColor: Colors.grey,
+            unselectedLabelColor: Colors.white70,
             tabs: const [
               Tab(icon: Icon(Icons.menu_book_outlined), text: '课程资料'),
               Tab(icon: Icon(Icons.auto_awesome_outlined), text: 'AI生成'),
@@ -249,7 +249,7 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
           TabBar(
             indicatorColor: primary,
             labelColor: primary,
-            unselectedLabelColor: Colors.grey,
+            unselectedLabelColor: Colors.white70,
             tabs: [
               Tab(text: 'PDF (${_pdfFiles.length})'),
               Tab(text: 'PPT (${_pptFiles.length})'),

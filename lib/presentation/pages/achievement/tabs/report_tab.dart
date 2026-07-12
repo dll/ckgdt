@@ -100,11 +100,8 @@ class _ReportTabState extends State<ReportTab> {
   ]) {
     final resolvedWeights = weights ?? _objectiveWeights;
     final count = max(
-      4,
-      max(
-        resolvedWeights.length,
-        max(config.fullMarks.length, _objectiveAchievements.length),
-      ),
+      resolvedWeights.length,
+      max(config.fullMarks.length, _objectiveAchievements.length),
     );
     final indexes = [
       for (var i = 0; i < count; i++)
@@ -1035,15 +1032,15 @@ class _ReportTabState extends State<ReportTab> {
           ((w['experiment'] ?? 0) - 0.3).abs() < 0.0001 &&
           ((w['exam'] ?? 0) - 0.5).abs() < 0.0001;
       final activeObjectives = _activeObjectiveIndexesFor(cf);
-      final standardThreePart = activeObjectives.length == 4 &&
-          envWeightsByObjective.length >= 4 &&
+      final standardThreePart = activeObjectives.length == cf.weights.length &&
+          envWeightsByObjective.length >= cf.weights.length &&
           activeObjectives.every((i) => defaultLike(envWeightsByObjective[i]));
       final pById = {for (final r in pingshi) '${r['student_id']}': r};
       final eById = {for (final r in experiment) '${r['student_id']}': r};
       final xById = {for (final r in exam) '${r['student_id']}': r};
 
       Map<String, double> avgMap(Map source) => {
-            for (int i = 1; i <= 4; i++)
+            for (int i = 1; i <= cf.weights.length; i++)
               'obj$i': (source['obj$i'] as num?)?.toDouble() ?? 0,
           };
 
@@ -1695,8 +1692,8 @@ class _ReportTabState extends State<ReportTab> {
           ((w['experiment'] ?? 0) - 0.3).abs() < 0.0001 &&
           ((w['exam'] ?? 0) - 0.5).abs() < 0.0001;
       final activeObjectiveIndexes = _activeObjectiveIndexesFor(cfg);
-      final standardThreePart = activeObjectiveIndexes.length == 4 &&
-          envWeightsByObjective.length >= 4 &&
+      final standardThreePart = activeObjectiveIndexes.length == cfg.weights.length &&
+          envWeightsByObjective.length >= cfg.weights.length &&
           activeObjectiveIndexes
               .every((i) => defaultLike(envWeightsByObjective[i]));
       if (!standardThreePart) {

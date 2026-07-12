@@ -1,4 +1,4 @@
-// ignore_for_file: unnecessary_brace_in_string_interps
+﻿// ignore_for_file: unnecessary_brace_in_string_interps
 
 import 'dart:convert';
 import 'dart:io';
@@ -67,7 +67,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                  color: theme.colorScheme.onSurface.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -86,7 +86,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
             Text(
               '上传课程大纲，自动识别课程名称并快速创建资源包',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
               ),
               textAlign: TextAlign.center,
             ),
@@ -148,7 +148,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                               _logs[_logs.length - 1 - i],
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurface
-                                    .withValues(alpha: 0.6),
+                                    .withOpacity(0.6),
                                 fontSize: 11,
                               ),
                             ),
@@ -198,15 +198,15 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: hasOutline
-              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
+              ? theme.colorScheme.primaryContainer.withOpacity(0.3)
               : theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: _outlineError != null
                 ? theme.colorScheme.error
                 : hasOutline
-                    ? theme.colorScheme.primary.withValues(alpha: 0.4)
-                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                    ? theme.colorScheme.primary.withOpacity(0.4)
+                    : theme.colorScheme.outlineVariant.withOpacity(0.4),
             width: 1.5,
           ),
         ),
@@ -217,7 +217,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
               size: 36,
               color: hasOutline
                   ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                  : theme.colorScheme.onSurface.withOpacity(0.4),
             ),
             const SizedBox(height: 8),
             Text(
@@ -231,7 +231,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
             Text(
               hasOutline ? '点击重新选择' : '支持 Markdown / Word / Excel / CSV',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                color: theme.colorScheme.onSurface.withOpacity(0.5),
               ),
             ),
             if (_outlineError != null) ...[
@@ -257,7 +257,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+          color: theme.colorScheme.outlineVariant.withOpacity(0.5),
         ),
       ),
       child: Row(
@@ -271,7 +271,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                 Text(
                   '课程名称',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -280,7 +280,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: name.isEmpty
-                        ? theme.colorScheme.onSurface.withValues(alpha: 0.5)
+                        ? theme.colorScheme.onSurface.withOpacity(0.5)
                         : theme.colorScheme.onSurface,
                   ),
                 ),
@@ -512,12 +512,36 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
     }
     final version =
         AchievementExcelService.instance.syllabusVersionFromText(outline);
-    await AchievementDao().saveCourseObjectives(
+    final dao = AchievementDao();
+    await dao.saveCourseObjectives(
       result.courseName,
       rows,
       syllabusVersion: version,
     );
     _log('已保存 ${rows.length} 个课程目标到课程目标管理（$version）');
+
+    // 自动创建达成度批次（课程+学期唯一）
+    final now = DateTime.now();
+    final semester =
+        '${now.year}-${now.year + 1}-${now.month >= 2 && now.month <= 7 ? 2 : 1}';
+    final batchName = AchievementDao.buildBatchName(
+      courseName: result.courseName,
+      className: '',
+      semester: semester,
+      teacherName: '',
+    );
+    try {
+      await dao.addBatch(
+        batchName: batchName,
+        courseName: result.courseName,
+        className: '',
+        semester: semester,
+        syllabusVersion: version,
+      );
+      _log('已自动创建达成度批次：$batchName');
+    } catch (e) {
+      _log('批次自动创建跳过：${e.toString().substring(0, 80)}（可能已存在）');
+    }
   }
 
   /// 保存到数据库

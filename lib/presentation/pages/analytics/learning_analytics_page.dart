@@ -1,8 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../core/design/noir_tokens.dart';
 import '../../../core/error_handler.dart';
 import '../../../data/local/active_student_scope.dart';
+import '../../../data/local/achievement_dao.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/course_context_service.dart';
 import '../learning/ordinary_score_tab.dart';
@@ -22,13 +23,21 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
   late TabController _tabController;
   bool _isLoading = true;
 
+  final AchievementDao _achievementDao = AchievementDao();
+
   // ── 班级概览数据 ────────────────────────────────────────────
   int _totalStudents = 0;
   int _activeStudents = 0; // 有学习记录的
   int _totalQuizAttempts = 0;
   double _classAvgScore = 0.0;
 
-  // ── 成绩分布数据 ────────────────────────────────────────────
+  // ── 综合成绩（从 achievement_scores 聚合） ─────────────────
+  int _achievementScoredStudents = 0;
+  double _achievementAvgScore = 0.0;
+  Map<String, int> _achievementDist = {};
+  String? _activeBatchName;
+
+  // ── 成绩分布数据（quiz） ────────────────────────────────────
   Map<String, int> _scoreDistribution = {};
 
   // ── 章节掌握度 ──────────────────────────────────────────────
@@ -114,6 +123,9 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
 
       // ── 6. 学生成绩排行 ──────────────────────────────────
       _studentRanking = await _computeStudentRanking(db);
+
+      // ── 7. 综合成绩（从 achievement_scores 聚合） ───────
+      await _loadAchievementStats(db);
 
       setState(() => _isLoading = false);
     } catch (e) {
@@ -329,6 +341,39 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
     }
   }
 
+  /// 加载综合成绩（从 achievement_scores 聚合）
+  Future<void> _loadAchievementStats(dynamic db) async {
+    try {
+      final batches = await _achievementDao.getBatches();
+      if (batches.isEmpty) return;
+      final latestBatch = batches.first;
+      _activeBatchName = latestBatch['name']?.toString();
+      final batchId = latestBatch['id'] as int;
+
+      final scores = await _achievementDao.getScoresByBatch(batchId);
+      if (scores.isEmpty) return;
+
+      double sumTotal = 0;
+      final dist = <String, int>{
+        '0-59': 0, '60-69': 0, '70-79': 0, '80-89': 0, '90-100': 0,
+      };
+      for (final s in scores) {
+        final total = (s['total_score'] as num?)?.toDouble() ?? 0;
+        sumTotal += total;
+        if (total >= 90) { dist['90-100'] = dist['90-100']! + 1; }
+        else if (total >= 80) { dist['80-89'] = dist['80-89']! + 1; }
+        else if (total >= 70) { dist['70-79'] = dist['70-79']! + 1; }
+        else if (total >= 60) { dist['60-69'] = dist['60-69']! + 1; }
+        else { dist['0-59'] = dist['0-59']! + 1; }
+      }
+      _achievementScoredStudents = scores.length;
+      _achievementAvgScore = sumTotal / scores.length;
+      _achievementDist = dist;
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LearningAnalytics.achievement', stack: st);
+    }
+  }
+
   // ══════════════════════════════════════════════════════════
   //  Build
   // ══════════════════════════════════════════════════════════
@@ -351,7 +396,7 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
           controller: _tabController,
           isScrollable: true,
           labelColor: primary,
-          unselectedLabelColor: Colors.grey,
+          unselectedLabelColor: Colors.white70,
           tabs: const [
             Tab(icon: Icon(Icons.dashboard, size: 18), text: '总览'),
             Tab(icon: Icon(Icons.fact_check, size: 18), text: '平时成绩'),
@@ -461,6 +506,11 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
             ),
           ),
           const SizedBox(height: 20),
+
+          // 综合成绩卡片
+          if (_achievementScoredStudents > 0)
+            _buildAchievementCard(),
+          if (_achievementScoredStudents > 0) const SizedBox(height: 20),
 
           // 章节掌握度
           const Text('章节掌握度',
@@ -1157,6 +1207,80 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
                         : avgScore >= 60
                             ? Colors.orange
                             : Colors.red)),
+      ),
+    );
+  }
+
+  Widget _buildAchievementCard() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [Colors.deepPurple, Colors.deepPurple.withOpacity(0.7)],
+          ),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('综合成绩（${_activeBatchName ?? ''}）',
+                style: const TextStyle(fontSize: 16,
+                    fontWeight: FontWeight.bold, color: Colors.white)),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _overviewItem('已评学生', '$_achievementScoredStudents',
+                    Icons.assignment_turned_in, Colors.white),
+                _divider(),
+                _overviewItem('平均分',
+                    _achievementAvgScore.toStringAsFixed(1),
+                    Icons.trending_up, Colors.white),
+                _divider(),
+                _overviewItem('不及格',
+                    '${_achievementDist['0-59'] ?? 0}人',
+                    Icons.warning_amber, Colors.orange[200]!),
+              ],
+            ),
+            if (_achievementDist.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              const Text('成绩分布',
+                  style: TextStyle(color: Colors.white70, fontSize: 12)),
+              const SizedBox(height: 6),
+              ..._achievementDist.entries.map((e) {
+                final total = _achievementScoredStudents;
+                final pct = total > 0 ? e.value / total : 0.0;
+                final color = int.parse(e.key.split('-').first) >= 80
+                    ? Colors.green[300]!
+                    : int.parse(e.key.split('-').first) >= 60
+                        ? Colors.orange[300]!
+                        : Colors.red[300]!;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(children: [
+                    SizedBox(width: 50,
+                        child: Text(e.key, style: const TextStyle(
+                            color: Colors.white70, fontSize: 11))),
+                    Expanded(child: ClipRRect(
+                      borderRadius: BorderRadius.circular(3),
+                      child: LinearProgressIndicator(
+                        value: pct,
+                        minHeight: 10,
+                        backgroundColor: Colors.white.withOpacity(0.15),
+                        valueColor: AlwaysStoppedAnimation(color),
+                      ),
+                    )),
+                    const SizedBox(width: 6),
+                    Text('${e.value}人',
+                        style: TextStyle(fontSize: 11, color: color)),
+                  ]),
+                );
+              }),
+            ],
+          ],
+        ),
       ),
     );
   }

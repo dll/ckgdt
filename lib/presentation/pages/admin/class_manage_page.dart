@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' as xl;
+import '../../../core/design/noir_tokens.dart';
 import '../../../core/error_handler.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../data/local/course_dao.dart';
@@ -160,9 +161,9 @@ class _ClassManagePageState extends State<ClassManagePage>
         ],
         bottom: TabBar(
           controller: _tabController,
-          labelColor: theme.colorScheme.primary,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: theme.colorScheme.primary,
+          labelColor: NoirTokens.paper,
+          unselectedLabelColor: NoirTokens.paper.withOpacity(0.55),
+          indicatorColor: NoirTokens.accent,
           tabs: [
             Tab(
               child: Row(
@@ -170,7 +171,7 @@ class _ClassManagePageState extends State<ClassManagePage>
                 children: [
                   const Text('进行中'),
                   const SizedBox(width: 6),
-                  _buildBadge(_activeClasses.length, theme.colorScheme.primary),
+                  _buildBadge(_activeClasses.length, NoirTokens.accent),
                 ],
               ),
             ),
@@ -1272,7 +1273,7 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
                           label: const Text('导入'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: theme.colorScheme.primary,
-                            side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+                            side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.5)),
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             textStyle: const TextStyle(fontSize: 13),
                           ),
@@ -1444,7 +1445,7 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
                   IconButton(
                     icon: Icon(
                       Icons.edit_outlined,
-                      color: Colors.blue.withValues(alpha: 0.7),
+                      color: Colors.blue.withOpacity(0.7),
                       size: 18,
                     ),
                     tooltip: '编辑成员',
@@ -1453,7 +1454,7 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
                   IconButton(
                     icon: Icon(
                       Icons.remove_circle_outline,
-                      color: Colors.red.withValues(alpha: 0.7),
+                      color: Colors.red.withOpacity(0.7),
                       size: 18,
                     ),
                     tooltip: '移除成员',
@@ -2012,7 +2013,7 @@ class _EditMemberDialogState extends State<_EditMemberDialog> {
               });
             },
             style: SegmentedButton.styleFrom(
-              selectedBackgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
+              selectedBackgroundColor: theme.colorScheme.primary.withOpacity(0.12),
               selectedForegroundColor: theme.colorScheme.primary,
             ),
           ),

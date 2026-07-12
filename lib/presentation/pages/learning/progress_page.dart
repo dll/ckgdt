@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/quiz_dao.dart';
 import '../../../data/local/learning_record_dao.dart';
@@ -69,7 +69,7 @@ class _ProgressPageState extends State<ProgressPage> with SingleTickerProviderSt
         bottom: TabBar(
           controller: _tabController,
           labelColor: Theme.of(context).colorScheme.primary,
-          unselectedLabelColor: Colors.grey,
+          unselectedLabelColor: Colors.white70,
           tabs: const [
             Tab(text: '测验成绩'),
             Tab(text: '学习记录'),

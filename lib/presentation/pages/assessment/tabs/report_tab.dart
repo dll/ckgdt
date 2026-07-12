@@ -130,7 +130,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
           child: TabBar(
             controller: _subTabController,
             labelColor: indigo[700],
-            unselectedLabelColor: Colors.grey,
+            unselectedLabelColor: Colors.white70,
             labelStyle:
                 const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             unselectedLabelStyle: const TextStyle(fontSize: 11),

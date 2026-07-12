@@ -13,6 +13,7 @@ class _RepoStatsTab extends StatefulWidget {
 class _RepoStatsTabState extends State<_RepoStatsTab>
     with AutomaticKeepAliveClientMixin {
   List<Map<String, dynamic>> _repos = [];
+  List<Map<String, dynamic>> _courseCodeRepos = [];
   Map<String, Map<String, dynamic>> _repoDetails = {};
   bool _isLoading = true;
   bool _isLoadingDetails = false;
@@ -34,9 +35,16 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
   Future<void> _loadStats({bool force = false}) async {
     setState(() { _isLoading = true; _error = null; });
     try {
-      final repos = await widget.resource.getStudentRepos(forceRefresh: force);
+      final results = await Future.wait([
+        widget.resource.getStudentRepos(forceRefresh: force),
+        widget.resource.getCourseCodeRepos(),
+      ]);
       if (mounted) {
-        setState(() { _repos = repos; _isLoading = false; });
+        setState(() {
+          _repos = results[0] as List<Map<String, dynamic>>;
+          _courseCodeRepos = results[1] as List<Map<String, dynamic>>;
+          _isLoading = false;
+        });
         _loadRepoDetails();
       }
     } catch (e) {
@@ -213,6 +221,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
 
   Widget _buildAggregateStats() {
     final gradient = AppGradientTheme.of(context);
+    final totalRepos = _repos.length + _courseCodeRepos.length;
     return Card(
       child: Container(
         width: double.infinity,
@@ -228,13 +237,15 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
                     color: Colors.white)),
             const SizedBox(height: 16),
             LayoutBuilder(builder: (ctx, c) {
-              final cols = c.maxWidth > 600 ? 6 : 3;
+              final cols = c.maxWidth > 600 ? 7 : 4;
               final items = [
-                _StatItem('${_repos.length}', '仓库', Icons.folder_copy),
+                _StatItem('$totalRepos', '仓库', Icons.folder_copy),
                 _StatItem('$_totalStars', '星标', Icons.star),
                 _StatItem('$_totalForks', 'Fork', Icons.fork_right),
                 _StatItem('$_totalWatchers', '关注', Icons.visibility),
                 _StatItem('$_totalOpenIssues', 'Issues', Icons.bug_report),
+                _StatItem('${_courseCodeRepos.length}',
+                    '课程代码', Icons.code),
                 _StatItem(_isLoadingDetails ? '...' : '${_repoDetails.length}',
                     '已获详情', Icons.check_circle),
               ];
@@ -303,6 +314,19 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
               ],
             ),
             _buildFlowArrow(),
+            if (_courseCodeRepos.isNotEmpty)
+              _buildFlowItem(
+                icon: Icons.code,
+                color: Colors.deepPurple,
+                title: '${_courseCodeRepos.first['_courseName'] ?? '课程'} 代码仓库 (${CourseResourceService.courseCodeRepos.entries.first.value})',
+                subtitle: '${_courseCodeRepos.length} 个 — 课程项目代码',
+                items: [
+                  'lib/ → Flutter 应用源代码',
+                  'docs/ → 课程文档',
+                  'test/ → 单元测试',
+                ],
+              ),
+            if (_courseCodeRepos.isNotEmpty) _buildFlowArrow(),
             _buildFlowItem(
               icon: Icons.group_work,
               color: Colors.teal,
@@ -474,7 +498,18 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
     );
   }
 
+  /// 合并学生仓库和课程代码仓库至 repoDetails
+  void _mergeRepoDetails() {
+    for (final repo in _courseCodeRepos) {
+      final path = repo['path']?.toString() ?? repo['name']?.toString() ?? '';
+      if (path.isNotEmpty && !_repoDetails.containsKey(path)) {
+        _repoDetails[path] = repo;
+      }
+    }
+  }
+
   Widget _buildRepoDetailList() {
+    _mergeRepoDetails();
     if (_repoDetails.isEmpty) {
       return Card(
         child: Padding(
@@ -524,8 +559,10 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
     final language = detail['language']?.toString() ?? '—';
     final updatedAt = detail['updated_at']?.toString() ?? '';
     final desc = detail['description']?.toString() ?? '';
-    final groupNum = CourseResourceService.extractGroupNumber(name);
-    final groupColor = {'1': Colors.blue, '2': Colors.green, '3': Colors.orange}[groupNum] ?? Colors.grey;
+    final isCourseCode = detail['_isCourseCode'] == true;
+    final groupNum = isCourseCode ? null : CourseResourceService.extractGroupNumber(name);
+    final groupColor = isCourseCode ? Colors.deepPurple
+        : ({'1': Colors.blue, '2': Colors.green, '3': Colors.orange}[groupNum] ?? Colors.grey);
 
     String timeAgo = '';
     if (updatedAt.isNotEmpty) {
@@ -552,7 +589,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
                   color: groupColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Text('CG${groupNum ?? "?"}',
+                child: Text(isCourseCode ? '课程' : 'CG${groupNum ?? "?"}',
                     style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold,
                         color: groupColor)),
               ),

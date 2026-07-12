@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:sqflite/sqflite.dart';
 import 'database_helper.dart';
 
 /// AI 批阅结果持久化 DAO
@@ -38,7 +39,7 @@ class GradingResultDao {
       'ai_flag': aiFlag ? 1 : 0,
       'status': 'pending',
       'created_at': DateTime.now().toIso8601String(),
-    });
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   /// 获取指定域名的待审核批阅结果

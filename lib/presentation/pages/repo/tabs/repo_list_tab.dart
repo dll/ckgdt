@@ -18,6 +18,7 @@ class _RepoListTab extends StatefulWidget {
 class _RepoListTabState extends State<_RepoListTab>
     with AutomaticKeepAliveClientMixin {
   List<Map<String, dynamic>> _repos = [];
+  List<Map<String, dynamic>> _courseCodeRepos = [];
   bool _isLoading = true;
   String? _error;
 
@@ -46,10 +47,14 @@ class _RepoListTabState extends State<_RepoListTab>
         return;
       }
 
-      final repos = await widget.resource.getStudentRepos(forceRefresh: force);
+      final results = await Future.wait([
+        widget.resource.getStudentRepos(forceRefresh: force),
+        widget.resource.getCourseCodeRepos(),
+      ]);
       if (mounted) {
         setState(() {
-          _repos = repos;
+          _repos = results[0] as List<Map<String, dynamic>>;
+          _courseCodeRepos = results[1] as List<Map<String, dynamic>>;
           _isLoading = false;
         });
       }
@@ -90,24 +95,27 @@ class _RepoListTabState extends State<_RepoListTab>
       );
     }
 
-    if (_repos.isEmpty) {
+    final hasCourseCode = _courseCodeRepos.isNotEmpty;
+    final hasStudentRepos = _repos.isNotEmpty;
+
+    // 按 CG1/CG2/CG3 分组
+    final grouped = widget.resource.groupByPrefix(_repos);
+
+    if (!hasCourseCode && !hasStudentRepos) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.inbox, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
-            Text('未找到学生项目仓库', style: TextStyle(color: Colors.grey[600])),
+            Text('未找到任何仓库', style: TextStyle(color: Colors.grey[600])),
             const SizedBox(height: 8),
-            Text('请确认企业(chzuczldl)下存在 cg1-/cg2-/cg3- 前缀仓库',
+            Text('请确认企业下存在 cg1-/cg2-/cg3- 前缀仓库或已配置课程代码仓库',
                 style: TextStyle(fontSize: 12, color: Colors.grey[500])),
           ],
         ),
       );
     }
-
-    // 按 CG1/CG2/CG3 分组
-    final grouped = widget.resource.groupByPrefix(_repos);
 
     return RefreshIndicator(
       onRefresh: () => _loadRepos(force: true),
@@ -117,15 +125,129 @@ class _RepoListTabState extends State<_RepoListTab>
           // 统计卡片
           _buildStatsCard(),
           const SizedBox(height: 12),
-          // 分组仓库列表
-          ...grouped.entries.map((entry) => _buildGroupSection(entry.key, entry.value)),
+          // 课程代码仓库
+          if (hasCourseCode) ...[
+            _buildCourseCodeSection(),
+            const SizedBox(height: 8),
+          ],
+          // 分组学生仓库列表
+          if (hasStudentRepos)
+            ...grouped.entries.map((entry) => _buildGroupSection(entry.key, entry.value)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCourseCodeSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '课程代码仓库 · ${_courseCodeRepos.length}个',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, color: Colors.deepPurple, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+        ),
+        ..._courseCodeRepos.map((repo) => _buildCourseCodeCard(repo)),
+      ],
+    );
+  }
+
+  Widget _buildCourseCodeCard(Map<String, dynamic> repo) {
+    final name = repo['name']?.toString() ?? repo['path']?.toString() ?? '未知';
+    final desc = repo['description']?.toString() ?? '';
+    final owner = repo['owner']?['login']?.toString() ?? '';
+    final path = repo['path']?.toString() ?? name;
+    final stars = repo['stargazers_count'] ?? 0;
+    final language = repo['language']?.toString() ?? '';
+    final updatedAt = repo['updated_at']?.toString() ?? '';
+    final courseName = repo['_courseName']?.toString() ?? '';
+
+    String timeAgo = '';
+    if (updatedAt.isNotEmpty) {
+      final dt = DateTime.tryParse(updatedAt);
+      if (dt != null) {
+        final diff = DateTime.now().difference(dt);
+        timeAgo = diff.inDays > 0 ? '${diff.inDays}天前'
+            : diff.inHours > 0 ? '${diff.inHours}小时前'
+            : '${diff.inMinutes}分钟前';
+      }
+    }
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: InkWell(
+        onTap: () => widget.onRepoSelected(owner, path, name),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.code, color: Colors.deepPurple, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 15)),
+                        if (courseName.isNotEmpty)
+                          Text(courseName,
+                              style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                      ],
+                    ),
+                  ),
+                  if (timeAgo.isNotEmpty)
+                    Text(timeAgo,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                ],
+              ),
+              if (desc.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(desc,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 13, color: Colors.grey[500])),
+              ],
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  _buildMetaBadge(Icons.star, '$stars', Colors.amber),
+                  const SizedBox(width: 12),
+                  if (language.isNotEmpty)
+                    _buildMetaBadge(Icons.code, language, Colors.purple),
+                  const Spacer(),
+                  Icon(Icons.arrow_forward_ios,
+                      size: 14, color: Colors.grey[400]),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildStatsCard() {
     final gradient = AppGradientTheme.of(context);
+    final total = _repos.length + _courseCodeRepos.length;
     return Card(
       child: Container(
         width: double.infinity,
@@ -139,10 +261,20 @@ class _RepoListTabState extends State<_RepoListTab>
             Expanded(
               child: Column(
                 children: [
-                  Text('${_repos.length}',
+                  Text('$total',
                       style: const TextStyle(
                           fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
                   const Text('仓库总数', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Column(
+                children: [
+                  Text('${_courseCodeRepos.length}',
+                      style: const TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+                  const Text('课程代码', style: TextStyle(color: Colors.white70, fontSize: 12)),
                 ],
               ),
             ),

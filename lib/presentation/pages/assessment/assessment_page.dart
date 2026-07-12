@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -295,7 +295,7 @@ class _AssessmentPageState extends State<AssessmentPage>
             isScrollable: true,
             dividerColor: Colors.transparent,
             labelColor: primary,
-            unselectedLabelColor: Colors.grey,
+            unselectedLabelColor: Colors.white70,
             indicator: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../data/local/puml_dao.dart';
 import '../../../data/models/puml_file_model.dart';
@@ -531,7 +531,7 @@ stop
           controller: _tabController,
           indicatorColor: primary,
           labelColor: primary,
-          unselectedLabelColor: Colors.grey,
+          unselectedLabelColor: Colors.white70,
           tabs: const [
             Tab(icon: Icon(Icons.code, size: 18), text: '代码'),
             Tab(icon: Icon(Icons.tune, size: 18), text: '属性'),

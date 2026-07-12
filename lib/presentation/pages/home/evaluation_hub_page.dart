@@ -9,6 +9,8 @@ import '../../../data/local/assessment_dao.dart';
 import '../../../data/local/classroom_dao.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/course_context_service.dart';
+import '../../../services/course_terminology_service.dart';
+import '../../../services/achievement_context.dart';
 import '../../../core/error_handler.dart';
 import '../../../services/navigation_service.dart';
 
@@ -22,29 +24,50 @@ class EvaluationHubPage extends StatefulWidget {
 
 class _EvaluationHubPageState extends State<EvaluationHubPage> {
   int _subIndex = 0;
-
-  static const _subLabels = ['实验', '考核', '作业', '作品'];
+  CourseTerms? _terms;
 
   @override
   void initState() {
     super.initState();
     NavigationService.instance.innerTabSeq.addListener(_applyInnerTab);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _applyInnerTab());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _applyInnerTab();
+      _loadTerminology();
+    });
+    AchievementContext.instance.courseNameNotifier.addListener(_onCourseChanged);
   }
 
   @override
   void dispose() {
     NavigationService.instance.innerTabSeq.removeListener(_applyInnerTab);
+    AchievementContext.instance.courseNameNotifier.removeListener(_onCourseChanged);
     super.dispose();
+  }
+
+  void _onCourseChanged() {
+    _loadTerminology();
+  }
+
+  Future<void> _loadTerminology() async {
+    try {
+      final terms = await CourseTerminologyService().activeTerms();
+      if (mounted) setState(() => _terms = terms);
+    } catch (_) {}
+  }
+
+  List<String> get _subLabels {
+    final practice = _terms?.practiceLabel ?? '实验';
+    return [practice, '考核', '作业', '作品'];
   }
 
   void _applyInnerTab() {
     if (!mounted) return;
     final req = NavigationService.instance.consumeInnerTab('evaluation');
     if (req == null) return;
-    for (int i = 0; i < _subLabels.length; i++) {
-      if (req.tabKeyword.contains(_subLabels[i]) ||
-          _subLabels[i].contains(req.tabKeyword)) {
+    final labels = _subLabels;
+    for (int i = 0; i < labels.length; i++) {
+      if (req.tabKeyword.contains(labels[i]) ||
+          labels[i].contains(req.tabKeyword)) {
         setState(() => _subIndex = i);
         return;
       }
@@ -169,20 +192,20 @@ class _EvaluationHubPageState extends State<EvaluationHubPage> {
             children: [
               Expanded(
                 child: SegmentedButton<int>(
-                  segments: const [
+                  segments: [
                     ButtonSegment(
                         value: 0,
-                        icon: Icon(Icons.science, size: 16),
-                        label: Text('实验')),
-                    ButtonSegment(
+                        icon: const Icon(Icons.science, size: 16),
+                        label: Text(_terms?.practiceLabel ?? '实验')),
+                    const ButtonSegment(
                         value: 1,
                         icon: Icon(Icons.assessment, size: 16),
                         label: Text('考核')),
-                    ButtonSegment(
+                    const ButtonSegment(
                         value: 2,
                         icon: Icon(Icons.assignment, size: 16),
                         label: Text('作业')),
-                    ButtonSegment(
+                    const ButtonSegment(
                         value: 3,
                         icon: Icon(Icons.workspace_premium, size: 16),
                         label: Text('作品')),
@@ -201,7 +224,7 @@ class _EvaluationHubPageState extends State<EvaluationHubPage> {
               const SizedBox(width: 8),
               IconButton(
                 icon: const Icon(Icons.upload_file, size: 20),
-                tooltip: '导入实验分组Excel',
+                tooltip: '导入${_terms?.taskLabel ?? '实验'}分组Excel',
                 onPressed: _importExperimentGroups,
                 style: IconButton.styleFrom(foregroundColor: primary),
               ),

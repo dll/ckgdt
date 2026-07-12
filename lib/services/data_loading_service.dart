@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -39,6 +40,7 @@ class DataLoadingService {
       await _importCkgdtQuizzes();
       await _cleanEmptyGraphs();
       await _initGiteeToken();
+      await CourseResourceService.loadFromConfig();
       await _prefetchRemoteConfigs();
       InitLogger.log('ds', 'Initialization complete');
     } catch (e, st) {
@@ -49,16 +51,28 @@ class DataLoadingService {
 
   // ── Gitee Token 自动初始化 ──────────────────────────────────────────
 
-  /// 如果 Gitee Token 尚未配置，提示用户在设置中配置
+  /// 如果 Gitee Token 尚未配置，尝试从配置加载
   Future<void> _initGiteeToken() async {
     try {
       final gitee = GiteeService();
       final existing = await gitee.getToken();
-      if (existing == null || existing.isEmpty) {
-        InitLogger.log('ds', 'Gitee token not configured, sync disabled');
+      if (existing != null && existing.isNotEmpty) return;
+      InitLogger.log('ds', 'Gitee token not configured, checking config file...');
+      try {
+        final content = await rootBundle.loadString('data/配置/resource_repos.json');
+        final json = jsonDecode(content) as Map<String, dynamic>;
+        if (json.containsKey('giteeToken')) {
+          final token = json['giteeToken'] as String;
+          if (token.isNotEmpty) {
+            await gitee.saveToken(token);
+            InitLogger.log('ds', 'Gitee token auto-configured from resource_repos.json');
+          }
+        }
+      } catch (_) {
+        InitLogger.log('ds', 'No resource_repos.json, sync disabled');
       }
     } catch (e) {
-      InitLogger.log('ds', 'Gitee token check error: $e');
+      InitLogger.log('ds', 'Gitee token init error: $e');
     }
   }
 

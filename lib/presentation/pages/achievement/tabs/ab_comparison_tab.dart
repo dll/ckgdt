@@ -97,10 +97,11 @@ class _AbComparisonTabState extends State<AbComparisonTab> {
   }
 
   List<double> _calcBatchAvgs(List<Map<String, dynamic>> scores) {
-    if (scores.isEmpty) return [0, 0, 0, 0];
-    final sums = List<double>.filled(4, 0);
+    final objCount = _config.weights.length;
+    if (scores.isEmpty) return [for (var i = 0; i < objCount; i++) 0.0];
+    final sums = List<double>.filled(objCount, 0);
     for (final s in scores) {
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < objCount; i++) {
         sums[i] += (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
       }
     }
@@ -109,11 +110,12 @@ class _AbComparisonTabState extends State<AbComparisonTab> {
   }
 
   List<int> get _activeObjectiveIndexes {
+    final maxIdx = _config.weights.length;
     final indexes = [
-      for (var i = 0; i < 4; i++)
+      for (var i = 0; i < maxIdx; i++)
         if (_config.weights[i] > 0 || _config.fullMarks[i] > 0) i
     ];
-    return indexes.isEmpty ? [0, 1, 2, 3] : indexes;
+    return indexes.isEmpty ? [for (var i = 0; i < maxIdx; i++) i] : indexes;
   }
 
   double _passRate(List<Map<String, dynamic>> scores) {

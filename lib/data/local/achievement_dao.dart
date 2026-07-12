@@ -15,7 +15,7 @@ class AchievementDao {
   /// 默认课程目标满分数值（与大纲第六节、AchievementConfig.defaults 一致）。
   /// DAO 属数据层，不能依赖 presentation 层的 AchievementConfig，故在此独立维护。
   /// 优先使用 course_objectives 表中的满分值，此处仅作兜底。
-  static const List<double> _kFullMarks = [15.0, 25.0, 30.0, 30.0];
+  static const List<double> _kFullMarks = [15.0, 20.0, 25.0, 20.0, 20.0];
 
   static int _asInt(Object? value, [int fallback = 0]) {
     if (value is int) return value;
@@ -700,34 +700,30 @@ class AchievementDao {
     return '未标注版本';
   }
 
-  /// addScore — 命名参数便捷方法（计算达成度后插入）
+  /// addScore — 便捷方法（计算达成度后插入）
+  /// [objectiveScores] 索引 0 对应目标1，可扩展至 N 个目标。
   Future<int> addScore({
     required int batchId,
     required String studentId,
     required String studentName,
-    required double objective1Score,
-    required double objective2Score,
-    required double objective3Score,
-    required double objective4Score,
+    required List<double> objectiveScores,
     required double totalScore,
   }) async {
     final fullMarks = await resolveObjectiveFullMarks(batchId);
     double achievement(double score, double fullMark) =>
         fullMark > 0 ? (score / fullMark).clamp(0.0, 1.0) : 0.0;
-    return insertScore({
+    final data = <String, dynamic>{
       'batch_id': batchId,
       'student_id': studentId,
       'student_name': studentName,
-      'obj1_score': objective1Score,
-      'obj1_achievement': achievement(objective1Score, fullMarks[0]),
-      'obj2_score': objective2Score,
-      'obj2_achievement': achievement(objective2Score, fullMarks[1]),
-      'obj3_score': objective3Score,
-      'obj3_achievement': achievement(objective3Score, fullMarks[2]),
-      'obj4_score': objective4Score,
-      'obj4_achievement': achievement(objective4Score, fullMarks[3]),
-      'total_score': totalScore,
-    });
+    };
+    for (int i = 0; i < objectiveScores.length && i < fullMarks.length; i++) {
+      data['obj${i + 1}_score'] = objectiveScores[i];
+      data['obj${i + 1}_achievement'] =
+          achievement(objectiveScores[i], fullMarks[i]);
+    }
+    data['total_score'] = totalScore;
+    return insertScore(data);
   }
 
   /// updateBatchStatus — 更新批次状态
@@ -788,10 +784,10 @@ class AchievementDao {
     }
   }
 
-  /// 解析批次应使用的 4 个课程目标权重。
+  /// 解析批次应使用的课程目标权重。
   /// 优先级：course_objectives 表（大纲导入）> 批次 objective_weights_json 快照 > 默认。
   Future<List<double>> resolveObjectiveWeights(int batchId) async {
-    const fallback = [0.15, 0.25, 0.30, 0.30];
+    const fallback = [0.15, 0.20, 0.25, 0.20, 0.20];
     try {
       final batch = await getBatch(batchId);
       // 1. course_objectives（大纲权威源）
@@ -817,13 +813,16 @@ class AchievementDao {
       final json = batch?['objective_weights_json'] as String?;
       if (json != null && json.isNotEmpty) {
         final m = jsonDecode(json) as Map<String, dynamic>;
-        final w = [
-          _asDouble(m['目标1'], fallback[0]),
-          _asDouble(m['目标2'], fallback[1]),
-          _asDouble(m['目标3'], fallback[2]),
-          _asDouble(m['目标4'], fallback[3]),
-        ];
-        if (w.every((x) => x > 0)) return w;
+        final w = <double>[];
+        for (int i = 1; i <= 10; i++) {
+          final key = '目标$i';
+          if (m.containsKey(key)) {
+            w.add(_asDouble(m[key], i <= fallback.length ? fallback[i - 1] : 0));
+          } else {
+            break;
+          }
+        }
+        if (w.length >= 4 && w.every((x) => x > 0)) return w;
       }
     } catch (e, st) {
       swallowDebug(e, tag: 'AchievementDao.resolveObjectiveWeights', stack: st);
@@ -868,7 +867,7 @@ class AchievementDao {
   Future<List<Map<String, double>>> resolveObjectiveAssessmentWeights(
       int batchId) async {
     final fallback = List<Map<String, double>>.generate(
-      4,
+      5,
       (_) => {'pingshi': 0.20, 'experiment': 0.30, 'exam': 0.50},
     );
     try {
@@ -881,7 +880,7 @@ class AchievementDao {
         final idx = _asInt(o['idx']);
         return idx > m ? idx : m;
       });
-      final count = maxIdx > 0 ? maxIdx : 4;
+      final count = maxIdx > 0 ? maxIdx : 5;
       final result = List<Map<String, double>>.generate(
         count,
         (_) => {'pingshi': 0, 'experiment': 0, 'exam': 0},
@@ -1065,7 +1064,8 @@ class AchievementDao {
 
         // 合成总表：目标i达成度 = Σ(环节i达成度 × 大纲环节比例)。
         // 无实验课程的 experiment_ratio 为 0，不会因为缺实验表被扣分。
-        final objAch = List<double>.generate(4, (k) {
+        final objCount = envWeights.length;
+        final objAch = List<double>.generate(objCount, (k) {
           final key = 'obj${k + 1}_achievement';
           final pv = pAch?[key] ?? 0;
           final ev = eAch?[key] ?? 0;
@@ -1076,27 +1076,22 @@ class AchievementDao {
                   xv * (w['exam'] ?? 0))
               .clamp(0.0, 1.0);
         });
+        final scoreMap = <String, dynamic>{
+          'batch_id': batchId,
+          'student_id': sid,
+          'student_name': name,
+          'created_at': now,
+          'updated_at': now,
+        };
+        double total = 0;
+        for (int k = 0; k < objCount && k < fm.length; k++) {
+          scoreMap['obj${k + 1}_score'] = objAch[k] * fm[k];
+          scoreMap['obj${k + 1}_achievement'] = objAch[k];
+          total += objAch[k] * fm[k];
+        }
+        scoreMap['total_score'] = total;
         await txn.insert(
-            'achievement_scores',
-            {
-              'batch_id': batchId,
-              'student_id': sid,
-              'student_name': name,
-              'obj1_score': objAch[0] * fm[0],
-              'obj1_achievement': objAch[0],
-              'obj2_score': objAch[1] * fm[1],
-              'obj2_achievement': objAch[1],
-              'obj3_score': objAch[2] * fm[2],
-              'obj3_achievement': objAch[2],
-              'obj4_score': objAch[3] * fm[3],
-              'obj4_achievement': objAch[3],
-              'total_score': objAch[0] * fm[0] +
-                  objAch[1] * fm[1] +
-                  objAch[2] * fm[2] +
-                  objAch[3] * fm[3],
-              'created_at': now,
-              'updated_at': now,
-            },
+            'achievement_scores', scoreMap,
             conflictAlgorithm: ConflictAlgorithm.replace);
         count++;
       }
@@ -1595,31 +1590,34 @@ class AchievementDao {
       final correctRate =
           totalQuestions > 0 ? totalCorrect / totalQuestions : 0.0;
 
-      // 映射到四个课程目标
-      final obj1Score = avgScore * 0.15;
-      final obj2Score = correctRate * 25;
-      final obj3Score = avgScore * 0.30;
-      final obj4Score = correctRate * 30;
-      final totalScore = obj1Score + obj2Score + obj3Score + obj4Score;
-
+      const fm = _kFullMarks;
+      final objCount = fm.length;
+      final rawScores = <double>[
+        avgScore * 0.15,
+        correctRate * 25,
+        avgScore * 0.30,
+        correctRate * 30,
+      ];
+      while (rawScores.length < objCount) {
+        rawScores.add(rawScores.last * 0.5);
+      }
+      final scoreMap = <String, dynamic>{
+        'batch_id': batchId,
+        'student_id': userId,
+        'student_name': userName,
+        'created_at': now,
+        'updated_at': now,
+      };
+      double totalScore = 0;
+      for (int i = 0; i < objCount; i++) {
+        scoreMap['obj${i + 1}_score'] = rawScores[i];
+        scoreMap['obj${i + 1}_achievement'] =
+            (rawScores[i] / (fm[i] > 0 ? fm[i] : 1)).clamp(0.0, 1.0);
+        totalScore += rawScores[i];
+      }
+      scoreMap['total_score'] = totalScore;
       batchOp.insert(
-          'achievement_scores',
-          {
-            'batch_id': batchId,
-            'student_id': userId,
-            'student_name': userName,
-            'obj1_score': obj1Score,
-            'obj1_achievement': (obj1Score / _kFullMarks[0]).clamp(0.0, 1.0),
-            'obj2_score': obj2Score,
-            'obj2_achievement': (obj2Score / _kFullMarks[1]).clamp(0.0, 1.0),
-            'obj3_score': obj3Score,
-            'obj3_achievement': (obj3Score / _kFullMarks[2]).clamp(0.0, 1.0),
-            'obj4_score': obj4Score,
-            'obj4_achievement': (obj4Score / _kFullMarks[3]).clamp(0.0, 1.0),
-            'total_score': totalScore,
-            'created_at': now,
-            'updated_at': now,
-          },
+          'achievement_scores', scoreMap,
           conflictAlgorithm: ConflictAlgorithm.replace);
     }
 
@@ -2280,10 +2278,9 @@ class AchievementDao {
                 'created_at': now,
                 'updated_at': now,
               },
-              conflictAlgorithm: ConflictAlgorithm.ignore);
+              conflictAlgorithm: ConflictAlgorithm.replace);
         }
         if (!eHas && usesExperiment) {
-          // 实验：1,2→目标1, 3,4→目标2, 5→目标3, 6→目标4
           await txn.insert(
               'achievement_experiment_scores',
               {
@@ -2305,10 +2302,9 @@ class AchievementDao {
                 'created_at': now,
                 'updated_at': now,
               },
-              conflictAlgorithm: ConflictAlgorithm.ignore);
+              conflictAlgorithm: ConflictAlgorithm.replace);
         }
         if (!xHas && usesExam) {
-          // 期末：项目→目标1, 小组→目标2, 个人→目标3, 答辩→目标4
           await txn.insert(
               'achievement_exam_scores',
               {
@@ -2327,7 +2323,7 @@ class AchievementDao {
                 'created_at': now,
                 'updated_at': now,
               },
-              conflictAlgorithm: ConflictAlgorithm.ignore);
+              conflictAlgorithm: ConflictAlgorithm.replace);
         }
       }
     });
@@ -2615,8 +2611,9 @@ class AchievementDao {
         'experiment', () => calculateExperimentClassAverage(batchId));
     final exam =
         await envAverage('exam', () => calculateExamClassAverage(batchId));
+    final objCount = envWeights.length;
     final combined = <String, double>{
-      for (int i = 1; i <= 4; i++) 'obj$i': aggregateAvg['课程目标$i'] ?? 0,
+      for (int i = 1; i <= objCount; i++) 'obj$i': aggregateAvg['课程目标$i'] ?? 0,
     };
 
     return {
@@ -2639,9 +2636,8 @@ class AchievementDao {
     String env,
   ) {
     return {
-      for (int i = 1; i <= 4; i++)
-        if (i - 1 < envWeights.length &&
-            ((envWeights[i - 1][env] ?? 0) > 0.0001))
+      for (int i = 1; i <= envWeights.length; i++)
+        if ((envWeights[i - 1][env] ?? 0) > 0.0001)
           'obj$i': aggregateAvg['课程目标$i'] ?? 0,
     };
   }
@@ -2749,6 +2745,16 @@ class AchievementDao {
     return result;
   }
 
+  /// 从 aggregate 行推断课程目标数量（obj1_achievement ~ objN_achievement）。
+  int _inferObjectiveCount(Map<String, dynamic>? row) {
+    if (row == null) return 4;
+    var count = 0;
+    for (int i = 1; i <= 10; i++) {
+      if (row.containsKey('obj${i}_achievement')) count = i;
+    }
+    return count > 0 ? count : 4;
+  }
+
   Future<bool> _componentRowsAreAggregateBackfill(
       int batchId, String env) async {
     final db = await DatabaseHelper.instance.database;
@@ -2790,15 +2796,9 @@ class AchievementDao {
           }
           break;
         case 'experiment':
-          for (var i = 1; i <= 4; i++) {
-            if (!close(
-                row['obj${i}_achievement'], aggregate['obj${i}_achievement'])) {
-              return false;
-            }
-          }
-          break;
         default:
-          for (var i = 1; i <= 4; i++) {
+          final objCount = _inferObjectiveCount(aggregate);
+          for (var i = 1; i <= objCount; i++) {
             if (!close(
                 row['obj${i}_achievement'], aggregate['obj${i}_achievement'])) {
               return false;

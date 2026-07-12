@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../data/local/classroom_dao.dart';
@@ -116,7 +116,7 @@ class _ClassroomPageState extends State<ClassroomPage>
           child: TabBar(
             controller: _tabController,
             labelColor: primary,
-            unselectedLabelColor: Colors.grey,
+            unselectedLabelColor: Colors.white70,
             indicatorColor: primary,
             indicatorWeight: 3,
             tabs: const [

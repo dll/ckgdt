@@ -70,6 +70,23 @@ class CourseTerms {
     required this.submitVerbLabel,
   });
 
+  /// 导航栏短标签（2-3字）：实验、研读、训练、创作、案例、技能、实践
+  String get navLabel {
+    if (practiceLabel.contains('实验')) return '实验';
+    if (practiceLabel.contains('研读')) return '研读';
+    if (practiceLabel.contains('训练')) return '训练';
+    if (practiceLabel.contains('创作')) return '创作';
+    if (practiceLabel.contains('案例')) return '案例';
+    if (practiceLabel.contains('技能')) return '技能';
+    return '实践';
+  }
+
+  /// 管理入口标签：实验管理、研读实践管理、训练实践管理……
+  String get manageLabel => '${practiceLabel}管理';
+
+  /// 英雄区描述中的实践术语（含斜杠前后缀）
+  String get heroPracticeRef => practiceLabel;
+
   factory CourseTerms.fromTemplateProfile(String profile) {
     switch (profile) {
       case 'engineering_experiment':
@@ -91,15 +108,25 @@ class CourseTerms {
 
   factory CourseTerms.fromPracticeLabel(String label) {
     final normalized = label.trim().isEmpty ? '实践任务' : label.trim();
-    final isExperiment = normalized.contains('实验');
-    final base = isExperiment ? '实验' : normalized;
+    // Derive short task base: "实验项目" → "实验", "研读实践" → "研读", "实践任务" → "实践"
+    String base;
+    if (normalized.contains('项目')) {
+      base = normalized.replaceAll('项目', '').trim();
+    } else if (normalized.endsWith('实践')) {
+      base = normalized.substring(0, normalized.length - 2);
+    } else if (normalized.endsWith('任务')) {
+      base = normalized.substring(0, normalized.length - 2);
+    } else {
+      base = normalized;
+    }
+    if (base.isEmpty) base = normalized;
     return CourseTerms(
       practiceLabel: normalized,
-      taskLabel: isExperiment ? '实验任务' : '$base任务',
-      taskPluralLabel: isExperiment ? '实验任务' : '$base任务',
-      reportLabel: isExperiment ? '实验报告' : '$base报告',
-      materialLabel: isExperiment ? '实验材料' : '$base材料',
-      submitVerbLabel: isExperiment ? '提交实验' : '提交$base',
+      taskLabel: '${base}任务',
+      taskPluralLabel: '${base}任务',
+      reportLabel: '$normalized报告',
+      materialLabel: '$normalized材料',
+      submitVerbLabel: '提交$normalized',
     );
   }
 }

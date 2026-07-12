@@ -426,10 +426,10 @@ class AchievementTemplateExcelService {
       ws.number(avgRow, 13, _avgF(rows, 'total_score'), 1);
       // 倒数第一行：课程目标达成度（E/H/K/M/N = 4/7/10/12/13）
       ws.text(achRow, 0, '课程目标达成度');
-      ws.number(achRow, 4, _avg(p.experimentAverage, 0), 4);
-      ws.number(achRow, 7, _avg(p.experimentAverage, 1), 4);
-      ws.number(achRow, 10, _avg(p.experimentAverage, 2), 4);
-      ws.number(achRow, 12, _avg(p.experimentAverage, 3), 4);
+      final expCols = [4, 7, 10, 12];
+      for (int i = 0; i < p.objectiveWeights.length && i < expCols.length; i++) {
+        ws.number(achRow, expCols[i], _avg(p.experimentAverage, i), 4);
+      }
       ws.number(achRow, 13, _averageTotal(rows, 'total_score') / 100, 4);
     });
   }
@@ -444,7 +444,7 @@ class AchievementTemplateExcelService {
       ws.text(1, 0, _title(p, '课程目标达成度计算表（期末考核）'));
       ws.text(2, 0, '班级：${p.className}');
       ws.text(2, 1, '评价方式:期末考核（大作业）');
-      for (int i = 0; i < math.min(4, p.objectiveWeights.length); i++) {
+      for (int i = 0; i < p.objectiveWeights.length; i++) {
         ws.text(4, 1 + i * 2, '满分${_fmtInt(_fullMarkFor(p, i))}');
       }
       final start = profile.componentDataStartRow;
@@ -481,10 +481,10 @@ class AchievementTemplateExcelService {
       ws.number(avgRow, 10, _avgF(rows, 'total_score'), 1);
       // 倒数第一行：课程目标达成度（D/F/H/J/K = 3/5/7/9/10）
       ws.text(achRow, 0, '课程目标达成度');
-      ws.number(achRow, 3, _avg(p.examAverage, 0), 4);
-      ws.number(achRow, 5, _avg(p.examAverage, 1), 4);
-      ws.number(achRow, 7, _avg(p.examAverage, 2), 4);
-      ws.number(achRow, 9, _avg(p.examAverage, 3), 4);
+      final examCols = [3, 5, 7, 9];
+      for (int i = 0; i < p.objectiveWeights.length && i < examCols.length; i++) {
+        ws.number(achRow, examCols[i], _avg(p.examAverage, i), 4);
+      }
       ws.number(achRow, 10, _averageTotal(rows, 'total_score') / 100, 4);
     });
   }

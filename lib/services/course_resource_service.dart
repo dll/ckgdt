@@ -27,6 +27,11 @@ class CourseResourceService {
   /// 学生仓库前缀分组
   static List<String> cgPrefixes = ['cg1-', 'cg2-', 'cg3-'];
 
+  /// 按课程名映射的代码仓库（key=课程名, value=owner/repo）
+  static Map<String, String> courseCodeRepos = {
+    '课程知识图谱与数字孪生平台': 'chzcldl/cg1-ckgdt',
+  };
+
   /// 从配置文件加载仓库设置
   static Future<void> loadFromConfig() async {
     try {
@@ -216,6 +221,28 @@ class CourseResourceService {
       }
     } catch (e) { swallowDebug(e, tag: 'course_resource_service'); }
     return null;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // 课程代码仓库（按 courseCodeRepos 映射）
+  // ══════════════════════════════════════════════════════════════════════
+
+  /// 获取所有课程代码仓库详情（如 chzcldl/cg1-ckgdt）
+  Future<List<Map<String, dynamic>>> getCourseCodeRepos() async {
+    final list = <Map<String, dynamic>>[];
+    for (final entry in courseCodeRepos.entries) {
+      final parts = entry.value.split('/');
+      if (parts.length != 2) continue;
+      try {
+        final detail = await _gitee.getRepoDetail(parts[0], parts[1]);
+        detail['_courseName'] = entry.key;
+        detail['_isCourseCode'] = true;
+        list.add(detail);
+      } catch (e) {
+        swallowDebug(e, tag: 'course_resource_service');
+      }
+    }
+    return list;
   }
 
   // ══════════════════════════════════════════════════════════════════════

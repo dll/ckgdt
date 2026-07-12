@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
@@ -345,7 +345,7 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.08),
+                color: Colors.red.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(20),
               ),
               child:
@@ -1259,7 +1259,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
       decoration: BoxDecoration(
         color: surfaceColor,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
+        border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1270,7 +1270,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
               // 序号
               CircleAvatar(
                 radius: 12,
-                backgroundColor: primary.withValues(alpha: 0.1),
+                backgroundColor: primary.withOpacity(0.1),
                 child: Text(
                   '$seq',
                   style: TextStyle(
@@ -1428,11 +1428,11 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
+                      border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.3)),
                     ),
                     child: Text(
                       opt,
-                      style: TextStyle(fontSize: 10, color: onSurfaceColor.withValues(alpha: 0.7)),
+                      style: TextStyle(fontSize: 10, color: onSurfaceColor.withOpacity(0.7)),
                     ),
                   );
                 }).toList(),

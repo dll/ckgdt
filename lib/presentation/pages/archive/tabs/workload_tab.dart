@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:excel/excel.dart' as xl;
@@ -115,7 +115,7 @@ class _WorkloadTabState extends State<WorkloadTab> {
       _buildSectionHeader('审核反馈', Icons.feedback_outlined, primary),
       const SizedBox(height: 8),
       ...feedbacks.map((w) => Card(
-            color: Colors.amber.withValues(alpha: 0.05),
+            color: Colors.amber.withOpacity(0.05),
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -291,7 +291,7 @@ class _WorkloadTabState extends State<WorkloadTab> {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: DataTable(
-          headingRowColor: WidgetStateProperty.all(primary.withValues(alpha: 0.08)),
+          headingRowColor: WidgetStateProperty.all(primary.withOpacity(0.08)),
           columns: const [
             DataColumn(label: Text('课程名称', style: TextStyle(fontSize: 12))),
             DataColumn(label: Text('教学班', style: TextStyle(fontSize: 12))),
@@ -341,7 +341,7 @@ class _WorkloadTabState extends State<WorkloadTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(label,
@@ -355,7 +355,7 @@ class _WorkloadTabState extends State<WorkloadTab> {
         dense: true,
         leading: CircleAvatar(
           radius: 16,
-          backgroundColor: primary.withValues(alpha: 0.1),
+          backgroundColor: primary.withOpacity(0.1),
           child: Text(w.otherCategory?.substring(0, 1) ?? '其',
               style: TextStyle(fontSize: 12, color: primary)),
         ),
@@ -409,8 +409,7 @@ class _WorkloadTabState extends State<WorkloadTab> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              DropdownButtonFormField<String>(
-                initialValue: selected,
+              DropdownButtonFormField<String>(value: selected,
                 items: categories.map((c) {
                   return DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 13)));
                 }).toList(),

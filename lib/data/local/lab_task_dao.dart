@@ -582,6 +582,17 @@ class LabTaskDao {
     }
   }
 
+  /// 清空当前课程所有任务并重新初始化（删除重复 + 保留一份）
+  Future<int> clearAndReinitializeLabTasks() async {
+    final db = await _dbHelper.database;
+    final course = await _courseContext.getActiveCourse();
+    final courseId = course.id;
+    final deleted = await db.delete('lab_tasks',
+        where: 'course_id = ?', whereArgs: [courseId]);
+    await _insertGenericTasksForActiveCourse(db);
+    return deleted;
+  }
+
   /// 初始化报告模板（优先远程）
   Future<void> _initReportTemplates(Database db) async {
     final tCount =
@@ -645,7 +656,7 @@ class LabTaskDao {
         'creator_id': '206004',
         'created_at': now,
         'updated_at': now,
-      });
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
   }
 

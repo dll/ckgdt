@@ -26,7 +26,7 @@ class AchievementChartService {
     double height = 400,
   }) async {
     final spots = <BarChartGroupData>[];
-    for (var i = 0; i < 4 && i < achievements.length; i++) {
+    for (var i = 0; i < achievements.length; i++) {
       spots.add(BarChartGroupData(
         x: i,
         barRods: [

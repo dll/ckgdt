@@ -266,7 +266,7 @@ class AchievementDocxService {
     _setCell(table, 5, 1, '定量评价+定性评价');
     _setCell(table, 6, 1, '课程教学大纲、课程过程性考核合理性审核表、教学过程性评价数据以及考试成绩');
 
-    for (int i = 0; i < objectives.length && i < 4; i++) {
+    for (int i = 0; i < objectives.length; i++) {
       final row = 9 + i;
       final obj = objectives[i];
       _setCell(table, row, 0, (obj['description'] ?? '').toString());
@@ -282,7 +282,7 @@ class AchievementDocxService {
 
   void _fillDocxAssessmentTable(
       XmlElement table, List<Map<String, dynamic>> objectives) {
-    for (int i = 0; i < objectives.length && i < 4; i++) {
+    for (int i = 0; i < objectives.length; i++) {
       final row = 2 + i;
       final obj = objectives[i];
       final idx = (obj['objective'] as num?)?.toInt() ?? i + 1;
@@ -304,7 +304,7 @@ class AchievementDocxService {
 
   void _fillDocxStandardTable(
       XmlElement table, List<Map<String, dynamic>> objectives) {
-    for (int i = 0; i < objectives.length && i < 4; i++) {
+    for (int i = 0; i < objectives.length; i++) {
       final row = 2 + i;
       final obj = objectives[i];
       final idx = (obj['objective'] as num?)?.toInt() ?? i + 1;
@@ -317,7 +317,7 @@ class AchievementDocxService {
 
   void _fillDocxExamContentTable(
       XmlElement table, List<Map<String, dynamic>> objectives) {
-    for (int i = 0; i < objectives.length && i < 4; i++) {
+    for (int i = 0; i < objectives.length; i++) {
       final row = 1 + i;
       final obj = objectives[i];
       final idx = (obj['objective'] as num?)?.toInt() ?? i + 1;
@@ -338,7 +338,7 @@ class AchievementDocxService {
     List<Map<String, dynamic>> objectives,
     double expectation,
   ) {
-    for (int i = 0; i < objectives.length && i < 4; i++) {
+    for (int i = 0; i < objectives.length; i++) {
       final obj = objectives[i];
       final idx = (obj['objective'] as num?)?.toInt() ?? i + 1;
       final weight = (obj['weight'] as num?)?.toDouble() ?? 0;
@@ -372,9 +372,10 @@ class AchievementDocxService {
             ((env['weight'] as num?)?.toDouble() ?? 0).toStringAsFixed(1));
       }
     }
-    _setCell(table, 17, 0, '课程总体目标期望值');
-    _setCell(table, 17, 1, expectation.toStringAsFixed(1));
-    _setCell(table, 17, 2, '课程总体目标达成度(cc)');
+    final totalRow = 5 + objectives.length * 3 + 2;
+    _setCell(table, totalRow, 0, '课程总体目标期望值');
+    _setCell(table, totalRow, 1, expectation.toStringAsFixed(1));
+    _setCell(table, totalRow, 2, '课程总体目标达成度(cc)');
   }
 
   void _fillDocxAnalysisTable(
@@ -909,7 +910,7 @@ class AchievementDocxService {
     double expectation,
   ) {
     _updateBarChartFile(files, 'word/charts/chart1.xml', objectives);
-    for (int i = 0; i < 4 && i < objectives.length; i++) {
+    for (int i = 0; i < objectives.length; i++) {
       _updateScatterChartFile(files, 'word/charts/chart${i + 2}.xml',
           objectives[i], students, expectation, i + 1);
     }
@@ -923,7 +924,7 @@ class AchievementDocxService {
 
     final categories = <String>[];
     final values = <double>[];
-    for (int i = 0; i < objectives.length && i < 4; i++) {
+    for (int i = 0; i < objectives.length; i++) {
       final idx = (objectives[i]['objective'] as num?)?.toInt() ?? (i + 1);
       final ach = (objectives[i]['achievement'] as num?)?.toDouble() ?? 0;
       categories.add('\u8bfe\u7a0b\u76ee\u6807$idx');

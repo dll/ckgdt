@@ -1567,6 +1567,15 @@ class DatabaseHelper {
     if (oldVersion < 36) {
       await _migrateToV36(db);
     }
+    if (oldVersion < 37) {
+      await _migrateToV37(db);
+    }
+    if (oldVersion < 38) {
+      await _migrateToV38(db);
+    }
+    if (oldVersion < 39) {
+      await _migrateToV39(db);
+    }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
   }
@@ -2372,6 +2381,8 @@ class DatabaseHelper {
         obj3_achievement REAL DEFAULT 0,
         obj4_score REAL DEFAULT 0,
         obj4_achievement REAL DEFAULT 0,
+        obj5_score REAL DEFAULT 0,
+        obj5_achievement REAL DEFAULT 0,
         total_score REAL DEFAULT 0,
         created_at TEXT,
         updated_at TEXT,
@@ -2491,6 +2502,7 @@ class DatabaseHelper {
         obj2_achievement REAL DEFAULT 0,
         obj3_achievement REAL DEFAULT 0,
         obj4_achievement REAL DEFAULT 0,
+        obj5_achievement REAL DEFAULT 0,
         total_score REAL DEFAULT 0,
         created_at TEXT,
         updated_at TEXT,
@@ -2515,6 +2527,7 @@ class DatabaseHelper {
         obj2_achievement REAL DEFAULT 0,
         obj3_achievement REAL DEFAULT 0,
         obj4_achievement REAL DEFAULT 0,
+        obj5_achievement REAL DEFAULT 0,
         total_score REAL DEFAULT 0,
         created_at TEXT,
         updated_at TEXT,
@@ -3543,6 +3556,58 @@ class DatabaseHelper {
     await _addTextColumnIfMissing(db, 'classes', 'course_id', 'V36.classes');
     // Backfill existing CKGDT classes with the active course ID.
     await _backfillDefaultCourseId(db, 'classes');
+  }
+
+  Future<void> _migrateToV37(Database db) async {
+    // Add obj5_score/achievement to achievement_scores
+    await _addRealColumnIfMissing(db, 'achievement_scores', 'obj5_score', 'REAL DEFAULT 0');
+    await _addRealColumnIfMissing(db, 'achievement_scores', 'obj5_achievement', 'REAL DEFAULT 0');
+    // Add obj5_achievement to experiment/exam sub-tables
+    await _addRealColumnIfMissing(db, 'achievement_experiment_scores', 'obj5_achievement', 'REAL DEFAULT 0');
+    await _addRealColumnIfMissing(db, 'achievement_exam_scores', 'obj5_achievement', 'REAL DEFAULT 0');
+  }
+
+  Future<void> _migrateToV38(Database db) async {
+    // grading_results 表加唯一索引防重复
+    try {
+      // 先清除已有重复（保留每组最新的那条）
+      await db.execute('''
+        DELETE FROM grading_results WHERE id NOT IN (
+          SELECT MIN(id) FROM grading_results
+          GROUP BY domain, target_id, status
+        )
+      ''');
+      await db.execute(
+          'CREATE UNIQUE INDEX IF NOT EXISTS idx_grading_results_unique '
+          'ON grading_results(domain, target_id, status)');
+    } catch (e) {
+      swallow(e, tag: 'V38.grading_index');
+    }
+  }
+
+  Future<void> _migrateToV39(Database db) async {
+    // lab_tasks 加唯一索引 + 清理已有重复
+    try {
+      await db.execute('''
+        DELETE FROM lab_tasks WHERE id NOT IN (
+          SELECT MIN(id) FROM lab_tasks
+          GROUP BY course_id, title
+        )
+      ''');
+      await db.execute(
+          'CREATE UNIQUE INDEX IF NOT EXISTS idx_lab_tasks_unique '
+          'ON lab_tasks(course_id, title)');
+    } catch (e) {
+      swallow(e, tag: 'V39.lab_tasks_unique');
+    }
+  }
+
+  Future<void> _addRealColumnIfMissing(Database db, String table, String column, String type) async {
+    try {
+      await db.execute('ALTER TABLE $table ADD COLUMN $column $type');
+    } catch (e) {
+      swallow(e, tag: 'V37.$table.$column');
+    }
   }
 
   Future<void> _addTextColumnIfMissing(

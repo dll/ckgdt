@@ -1,4 +1,4 @@
-﻿part of '../assessment_page.dart';
+part of '../assessment_page.dart';
 
 class _ContributionTab extends StatefulWidget {
   final AuthService authService;
@@ -126,7 +126,7 @@ class _ContributionTabState extends State<_ContributionTab>
             controller: _subTabController,
             isScrollable: true,
             labelColor: green[700],
-            unselectedLabelColor: Colors.grey,
+            unselectedLabelColor: Colors.white70,
             dividerColor: Colors.transparent,
             indicator: BoxDecoration(
               color: Colors.white,
