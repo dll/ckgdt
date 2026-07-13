@@ -205,12 +205,12 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
                   studentNameCtrl.text.trim().isEmpty) {
                 return;
               }
-              final values = List<double>.generate(4, (i) {
+              final values = List<double>.generate(objCount, (i) {
                 if (!activeObjectives.contains(i)) return 0;
                 return double.tryParse(objectiveCtrls[i].text) ?? 0;
               });
               final total = List<double>.generate(
-                4,
+                objCount,
                 (i) =>
                     values[i] *
                     (i < objectiveWeights.length ? objectiveWeights[i] : 0),
@@ -233,7 +233,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
                   batchId: _selectedBatchId!,
                   studentId: studentIdCtrl.text.trim(),
                   studentName: studentNameCtrl.text.trim(),
-                  objectiveScores: [values[0], values[1], values[2], values[3]],
+                  objectiveScores: values,
                   totalScore: total,
                 );
               }

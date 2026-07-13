@@ -878,7 +878,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
               children: [
                 _buildPillar('01', '多课', '课程图谱体系'),
                 const SizedBox(width: 28),
-                _buildPillar('02', '多', '协作智能体'),
+                _buildPillar('02', '多智', '协作智能体'),
                 const SizedBox(width: 28),
                 _buildPillar('03', '∞', '师生数字孪生'),
               ],

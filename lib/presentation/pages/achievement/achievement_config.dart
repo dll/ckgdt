@@ -29,25 +29,25 @@ class AchievementConfig {
     required this.assessmentWeights,
   });
 
-  /// 回落默认（与大纲、Python 参考、DB 默认 objective_weights_json 一致）。
-  /// 满分与权重必须同源，不可分开维护。
+  /// 回落默认（无任何课程上下文时的通用兜底，不绑定《移动应用开发》等具体课程）。
+  /// 满分与权重必须同源，不可分开维护。真实课程应基于大纲（course_objectives）动态生成。
   static const AchievementConfig defaults = AchievementConfig(
     weights: [0.15, 0.25, 0.30, 0.30],
     fullMarks: [15.0, 25.0, 30.0, 30.0],
     objectiveNames: ['课程目标1', '课程目标2', '课程目标3', '课程目标4'],
-    indicators: ['1.4', '3.2', '4.2', '5.1'],
+    indicators: ['', '', '', ''],
     descriptions: [
-      '理解课程知识图谱与数字孪生的核心概念，掌握课程目标、知识点、资源和评价数据之间的建模关系',
-      '能够围绕当前课程组织教学资源、实验任务和学习路径，形成可复用、可迁移的平台化课程建设方案',
-      '能够采集和分析学习过程、实验实践、考核评价与作品成果数据，识别学习问题并提出改进建议',
-      '能够结合 AI 工具和持续改进流程完成课程运行、质量评价和教学反馈闭环，具备规范化课程治理能力',
+      '目标1：掌握本课程核心知识与基本概念，建立课程整体认知框架',
+      '目标2：能够运用课程方法与技术完成典型任务，具备问题分析与实践能力',
+      '目标3：能够采集与分析学习与实践过程数据，识别问题并提出改进方案',
+      '目标4：能够结合工具与持续改进流程完成课程综合实践与质量评价',
     ],
-    chapters: ['第1章 + 第2章', '第3章', '第4章 + 第5章', '第6章'],
+    chapters: ['', '', '', ''],
     assessContents: [
-      '课堂表现、知识图谱建模任务',
-      '实验实践、资源建设与学习路径设计',
-      '过程测验、学习分析报告与作品成果',
-      '课程运行报告、答辩与持续改进方案',
+      '课堂表现与过程参与',
+      '实验/实践任务',
+      '过程测验与作品成果',
+      '综合项目与持续改进',
     ],
     assessmentWeights: {'平时': 0.20, '实验': 0.30, '期末': 0.50},
   );
@@ -60,7 +60,11 @@ class AchievementConfig {
     final chapterCount = course.chapters.isNotEmpty
         ? course.chapters.length
         : course.chapterCount;
-    final objectiveCount = chapterCount <= 3 ? chapterCount : chapterCount.clamp(4, 10);
+    // 无章节信息时给通用兜底目标数，避免达成报告因 0 目标而空白
+    // （仅作平台化兜底，真实目标数始终以大纲 course_objectives 为准）。
+    final objectiveCount = chapterCount <= 0
+        ? 4
+        : (chapterCount <= 3 ? chapterCount : chapterCount.clamp(4, 10));
     final baseWeights = [0.15, 0.25, 0.30, 0.30];
     final baseMarks = [15.0, 25.0, 30.0, 30.0];
     List<double> weights;

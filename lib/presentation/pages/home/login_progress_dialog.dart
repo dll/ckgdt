@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../data/local/active_student_scope.dart';
 import '../../../services/course_context_service.dart';
+import '../../../services/course_terminology_service.dart';
 import '../../../services/twin_service.dart';
 import '../../../data/models/twin_profile_model.dart';
 
@@ -48,6 +49,7 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
   bool _loading = true;
   Map<String, dynamic> _stats = {};
   StudentTwinProfile? _studentProfile;
+  CourseTerms? _terms;
   TeacherTwinProfile? _teacherProfile;
 
   @override
@@ -78,6 +80,7 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
       final ctx = CourseContextService();
       final courseId = await ctx.activeCourseId();
       final twinService = TwinService();
+      _terms = await CourseTerminologyService().activeTerms();
 
       if (widget.role == 'student') {
         // 数字孪生画像
@@ -421,7 +424,7 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
             ),
             const SizedBox(width: 6),
             _buildMetricCard(
-              '实验完成',
+              '${_terms?.practiceLabel ?? '实验'}完成',
               '${profile.labCompletionRate.toStringAsFixed(0)}%',
               Icons.science,
               Colors.green,

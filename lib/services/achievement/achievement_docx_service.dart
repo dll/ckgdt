@@ -23,6 +23,15 @@ class AchievementDocxService {
   static final AchievementDocxService instance = AchievementDocxService._();
   AchievementDocxService._();
 
+  /// 学期统一为「YYYY-YYYY-N」短格式（兼容 2025_2026_2 / 2025-2026学年第二学期 等写法）。
+  static String _dashSemester(String semester) {
+    var s = semester.trim().replaceAll('_', '-');
+    while (s.contains('--')) {
+      s = s.replaceAll('--', '-');
+    }
+    return s;
+  }
+
   /// 生成 DOCX 文件并返回路径。
   ///
   /// [objectives]：4 个课程目标，每项 {objective(1-4), weight, indicator,
@@ -48,6 +57,8 @@ class AchievementDocxService {
     List<Uint8List?> scatterChartPngs = const [],
     String syllabusVersion = '',
   }) async {
+    // 优先使用课程资源包中的模板（data/{courseId}/达成/），
+    // 找不到时回退到程序化生成。
     final template = await _findTemplateForCourse(courseName);
     if (template != null) {
       try {
@@ -108,8 +119,7 @@ class AchievementDocxService {
         : archive;
 
     final dir = await OutputPathService.getOutputDirectory();
-    final v = syllabusVersion.trim();
-    final safeName = '${courseName}_${className}_达成评价报告${v.isNotEmpty ? '_v$v' : ''}'
+    final safeName = '${courseName}_${_dashSemester(semester)}_${className}_$teacherName'
         .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
     final filePath = '${dir.path}/$safeName.docx';
 
@@ -219,10 +229,10 @@ class AchievementDocxService {
     }
 
     final dir = await OutputPathService.getOutputDirectory();
-    final v = syllabusVersion.trim();
-    final safeName = '${courseName}_${className}_达成评价报告${v.isNotEmpty ? '_v$v' : ''}'
+    final safeName = '${courseName}_${_dashSemester(semester)}_${className}_$teacherName'
         .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
     final filePath = '${dir.path}/$safeName.docx';
+
     final zipBytes = ZipEncoder().encode(out) ?? <int>[];
     await File(filePath).writeAsBytes(Uint8List.fromList(zipBytes));
     return filePath;

@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr"><head>
+  <title></title>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta http-equiv="pragma" content="no-cache">
+  <meta http-equiv="cache-control" content="no-cache">
+  <meta http-equiv="expires" content="0">
+  <meta http-equiv="content-style-type" content="text/css">
+  <meta http-equiv="content-script-type" content="text/javascript">
+  <script type="text/javascript">
+	      window.$BG_LANG='zh';
+  </script>
+  <script type="text/javascript" src="/eams/static/scripts/jquery/jquery,jquery.ui.core.js?bg=3.4.3"></script>
+  <script type="text/javascript" src="/eams/static/scripts/plugins/jquery-form,jquery-history,jquery-colorbox,jquery-chosen.js?bg=3.4.3"></script>
+  <script type="text/javascript" src="/eams/static/js/plugins/jquery.subscribe,/js/struts2/jquery.struts2,jquery.ui.struts2.js?bg=3.4.3"></script>
+  <script type="text/javascript" src="/eams/static/scripts/beangle/beangle,beangle-ui.js?bg=3.4.3"></script>
+  <script type="text/javascript">var App = {contextPath:"/eams"};var funcInit = function () {jQuery.struts2_jquery.version="3.6.1";beangle.contextPath=App.contextPath;jQuery.scriptPath = App.contextPath+"/static/";jQuery.struts2_jquerySuffix = "";jQuery.ajaxSettings.traditional = true;jQuery.ajaxSetup ({cache: false});};</script>
+  <script type="text/javascript" src="/eams/static/scripts/my97/WdatePicker-4.72.js?compress=no"></script><link href="/eams/static/themes/default/WdatePicker.css" rel="stylesheet" type="text/css">
+  <link id="jquery_theme_link" rel="stylesheet" href="/eams/static/themes/smoothness/jquery-ui.css?s2j=3.6.1" type="text/css">
+  <link id="beangle_theme_link" href="/eams/static/themes/default/beangle-ui,colorbox,chosen.css" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="/eams/static/css/foundation.css" type="text/css">
+  <script type="text/javascript" src="/eams/static/scripts/highcharts.js"></script>
+
+	<script src="/eams/static/scripts/require.config.js?v=3"></script>
+	<script>
+	require.baseUrl="/eams/static/scripts";
+	</script>
+	<script src="/eams/static/scripts/require.js"></script>
+	<script type="text/javascript" src="/eams/static/scripts/require.js"></script>
+	
+	<!-- backbone & underscore -- fontend MVC framework -->
+	<script type="text/javascript" src="/eams/static/scripts/underscore.min.js"></script>
+	<script type="text/javascript" src="/eams/static/scripts/backbone.min.js"></script>
+	<script type="text/javascript" src="/eams/static/scripts/underscore.string.min.js"></script>
+	<script>
+	require(['underscore.string'], function(_s) {
+	        _.str = _s;
+	        _.mixin(_.str.exports());
+	});
+	funcInit();
+	//beangle.ajaxhistory = false;
+	</script>
+	
+
+<script type="text/javascript" charset="utf-8" async="" data-requirecontext="_" data-requiremodule="underscore.string" src="/eams/static/scripts/underscore.string.js?bust=1782182877670"></script></head>
+<body>
+
+<style>
+.TableStyle {
+    border: 1px solid #000;
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 14px;
+    text-align: center;
+}
+.TableStyle td {
+    border: 1px solid #000;
+    height:20px;
+    font-size:10px;
+}
+ .PageNext
+      {
+          page-break-after: always;
+      }
+</style>
+<div id="toolbar17286581531" class="toolbar notprint"><div class="toolbar-title"><span class="toolbar-icon action-info"></span><strong>教学任务书</strong></div><div class="toolbar-items" id="toolbar17286581531_items"><div class="toolbar-item toolbar-item-ge0" title="打印"><span class="toolbar-icon action-print"></span>打印</div></div><div class="toolbar-msg" id="toolbar17286581531_msg" style="display: none;"></div><div class="toolbar-line"><img height="1" width="100%" align="top" src="/eams/static/themes/default/icons/16x16/actions/keyline.png"></div></div>
+<script type="text/javascript">
+  bar = bg.ui.toolbar("toolbar17286581531",'教学任务书');
+  	bar.addPrint("打印");
+
+  bar.addHr();
+</script>  <div style="height:100%;width:90%;margin:0 auto">
+<table style="width:100%;margin-top:8%">
+	<tbody><tr>
+		<td>
+			<div style="font-weight:bold;font-size:16pt;text-align:center;">
+				教&nbsp;&nbsp;学&nbsp;&nbsp;任&nbsp;&nbsp;务&nbsp;&nbsp;书
+			</div>
+			<br>
+			<div style="font-size:14pt;text-align:center;">
+				（存根）
+			</div>
+			<br>
+			<div style="font-size:12pt;">
+				经学校批准聘请刘东良老师担任2025-2026学年第2学期以下教学任务：
+			</div>
+			<br>
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<table class="TableStyle">
+				<tbody>
+				<tr>
+					<td width="12%">课程名称</td>
+					<td width="8%">课程类别</td>
+					<td width="2%">总学时</td>
+					<td width="2%">讲授</td>
+					<td width="2%">实验</td>
+					<td width="2%">实践</td>
+					<td width="2%">课外自主学时</td>
+					<td width="10%">教学班级</td>
+					<td width="2%">计划人数</td>
+					<td width="7%">备注</td>
+					
+				</tr>
+				<tr>
+					<td>程序设计基础（Python）</td>
+					<td>专业基础课</td>
+					<td>64</td>
+		            <td>
+		             32
+		            </td>
+		            <td>
+		             32
+		            </td>
+		            <td>
+		             0
+		            </td>
+		            <td>
+		             0
+		            </td>
+					<td>班级:高分子25</td>
+					<td>60</td>
+					<td></td>
+					
+				</tr>
+				
+				<tr>
+					<td>移动应用开发</td>
+					<td>专业任选课</td>
+					<td>48</td>
+		            <td>
+		             24
+		            </td>
+		            <td>
+		             24
+		            </td>
+		            <td>
+		             0
+		            </td>
+		            <td>
+		             0
+		            </td>
+					<td>班级:软件231 软件232</td>
+					<td>86</td>
+					<td></td>
+					
+				</tr>
+				
+				<tr>
+					<td>软件工程</td>
+					<td>专业限选课</td>
+					<td>48</td>
+		            <td>
+		             32
+		            </td>
+		            <td>
+		             16
+		            </td>
+		            <td>
+		             0
+		            </td>
+		            <td>
+		             0
+		            </td>
+					<td>班级:空间23</td>
+					<td>40</td>
+					<td></td>
+					
+				</tr>
+				
+				<tr>
+					<td>程序设计基础（Python）</td>
+					<td>专业基础课</td>
+					<td>64</td>
+		            <td>
+		             32
+		            </td>
+		            <td>
+		             32
+		            </td>
+		            <td>
+		             0
+		            </td>
+		            <td>
+		             0
+		            </td>
+					<td>班级:化工25</td>
+					<td>59</td>
+					<td></td>
+					
+				</tr>
+				
+				<tr>
+					<td></td>
+					<td></td>
+					<td></td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+					<td></td>
+					<td></td>
+					<td></td>
+					
+				</tr>
+				<tr>
+					<td></td>
+					<td></td>
+					<td></td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+					<td></td>
+					<td></td>
+					<td></td>
+					
+				</tr>
+				<tr>
+					<td></td>
+					<td></td>
+					<td></td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+					<td></td>
+					<td></td>
+					<td></td>
+					
+				</tr>
+				<tr>
+					<td></td>
+					<td></td>
+					<td></td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+					<td></td>
+					<td></td>
+					<td></td>
+					
+				</tr>
+		
+			</tbody></table>
+		</td>
+	</tr>
+</tbody></table>
+<div style="height:50%;width:100%;margin-top:10px;text-align:center;height:60px">
+  <div style="font-size:12pt;float:left;width:30%;">
+				<div style="font-size:12pt;height:30px;">
+				教学任务书
+			    </div>
+			    <div style="font-size:12pt;height:30px;">
+				领取签名
+			    </div>
+			</div>
+			<div style="font-size:12pt;float:left;width:30%">
+				<div style="font-size:12pt;height:30px;">
+				院长
+			    </div>
+			    <div style="font-size:12pt;height:30px;">
+				签章
+			    </div>
+			</div>
+			<div style="font-size:12pt;float:left;width:30%">
+				<div style="font-size:12pt;height:30px;">
+				
+			    </div>
+			    <div style="font-size:12pt;height:30px;">
+				2026年06月23日
+			    </div>
+			</div>
+</div>
+<br>
+	  <div style="text-align: center;margin-top:7%">-----------------------------------------------------------------------------------------------------------------</div>
+<br>
+<table style="width:100%;margin-top:8%">
+	<tbody><tr>
+		<td>
+			<div style="font-weight:bold;font-size:16pt;text-align:center;">
+				教&nbsp;&nbsp;学&nbsp;&nbsp;任&nbsp;&nbsp;务&nbsp;&nbsp;书
+			</div>
+			<br>
+			<div style="font-size:12pt;">
+				经学校批准聘请刘东良老师担任2025-2026学年第2学期以下教学任务：
+			</div>
+			<br>
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<table class="TableStyle">
+				<tbody>
+				<tr>
+					<td width="12%">课程名称</td>
+					<td width="8%">课程类别</td>
+					<td width="2%">总学时</td>
+					<td width="2%">讲授</td>
+					<td width="2%">实验</td>
+					<td width="2%">实践</td>
+					<td width="2%">课外自主学时</td>
+					<td width="10%">教学班级</td>
+					<td width="2%">计划人数</td>
+					<td width="7%">备注</td>
+					
+				</tr>
+
+				
+				<tr>
+					<td>程序设计基础（Python）</td>
+					<td>专业基础课</td>
+					<td>64</td>
+		            <td>
+		             32
+		            </td>
+		            <td>
+		             32
+		            </td>
+		            <td>
+		             0
+		            </td>
+		            <td>
+		             0
+		            </td>
+					<td>班级:高分子25</td>
+					<td>60</td>
+					<td></td>
+					
+				</tr>
+
+				
+				<tr>
+					<td>移动应用开发</td>
+					<td>专业任选课</td>
+					<td>48</td>
+		            <td>
+		             24
+		            </td>
+		            <td>
+		             24
+		            </td>
+		            <td>
+		             0
+		            </td>
+		            <td>
+		             0
+		            </td>
+					<td>班级:软件231 软件232</td>
+					<td>86</td>
+					<td></td>
+					
+				</tr>
+
+				
+				<tr>
+					<td>软件工程</td>
+					<td>专业限选课</td>
+					<td>48</td>
+		            <td>
+		             32
+		            </td>
+		            <td>
+		             16
+		            </td>
+		            <td>
+		             0
+		            </td>
+		            <td>
+		             0
+		            </td>
+					<td>班级:空间23</td>
+					<td>40</td>
+					<td></td>
+					
+				</tr>
+
+				
+				<tr>
+					<td>程序设计基础（Python）</td>
+					<td>专业基础课</td>
+					<td>64</td>
+		            <td>
+		             32
+		            </td>
+		            <td>
+		             32
+		            </td>
+		            <td>
+		             0
+		            </td>
+		            <td>
+		             0
+		            </td>
+					<td>班级:化工25</td>
+					<td>59</td>
+					<td></td>
+					
+				</tr>
+				<tr>
+					<td></td>
+					<td></td>
+					<td></td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+					<td></td>
+					<td></td>
+					<td></td>
+					
+				</tr>
+				<tr>
+					<td></td>
+					<td></td>
+					<td></td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+					<td></td>
+					<td></td>
+					<td></td>
+					
+				</tr>
+				<tr>
+					<td></td>
+					<td></td>
+					<td></td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+					<td></td>
+					<td></td>
+					<td></td>
+					
+				</tr>
+				<tr>
+					<td></td>
+					<td></td>
+					<td></td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+		            <td>
+		            
+		            </td>
+					<td></td>
+					<td></td>
+					<td></td>
+					
+				</tr>
+			</tbody></table>
+		</td>
+	</tr>
+</tbody></table>
+<div style="height:50%;width:100%;margin-top:10px;text-align:center">
+  <div style="font-size:12pt;float:left;width:30%;height:60px">
+				
+			</div>
+			<div style="font-size:12pt;float:left;width:30%">
+				<div style="font-size:12pt;height:30px;">
+				院长
+			    </div>
+			    <div style="font-size:12pt;height:30px;">
+				签章
+			    </div>
+			</div>
+			<div style="font-size:12pt;float:left;width:30%">
+				<div style="font-size:12pt;height:30px;">
+				
+			    </div>
+			    <div style="font-size:12pt;height:30px;">
+				2026年06月23日
+			    </div>
+			</div>
+</div>
+</div>
+  <div class="PageNext"></div>
+
+<script language="javascript">
+   
+</script>
+
+  <script type="text/javascript">
+  	$(function() {
+  	  if(bg.Go != undefined) {
+  	    var originalGo = bg.Go;
+  	    bg.Go = function (obj, target, historyMode, historyData) {
+  	      if(target == "main") {
+  	        target = "_self";
+  	      }
+  	      
+  	      return originalGo(obj, target, historyMode, historyData);
+  	    }
+  	  }
+  	  
+	  $(".toolbar").each(function() {
+        if($(this).prev().length==0 && $(this).find(".toolbar-item").length==0) {
+          $(this).css("display", "none");
+        }
+	  });
+	  $(".search-widget").css("margin-left", "auto");
+    });
+  </script>
+
+
+<div id="cboxOverlay" style="display: none;"></div><div id="colorbox" class="" role="dialog" tabindex="-1" style="display: none;"><div id="cboxWrapper"><div><div id="cboxTopLeft" style="float: left;"></div><div id="cboxTopCenter" style="float: left;"></div><div id="cboxTopRight" style="float: left;"></div></div><div style="clear: left;"><div id="cboxMiddleLeft" style="float: left;"></div><div id="cboxContent" style="float: left;"><div id="cboxTitle" style="float: left;"></div><div id="cboxCurrent" style="float: left;"></div><button type="button" id="cboxPrevious"></button><button type="button" id="cboxNext"></button><button id="cboxSlideshow"></button><div id="cboxLoadingOverlay" style="float: left;"></div><div id="cboxLoadingGraphic" style="float: left;"></div></div><div id="cboxMiddleRight" style="float: left;"></div></div><div style="clear: left;"><div id="cboxBottomLeft" style="float: left;"></div><div id="cboxBottomCenter" style="float: left;"></div><div id="cboxBottomRight" style="float: left;"></div></div></div><div style="position: absolute; width: 9999px; visibility: hidden; display: none; max-width: none;"></div></div><div id="_my97DP" style="position: absolute; display: none; top: -1970px; left: -1970px;"><iframe style="width:1px;height:1px;min-width:192px;min-height: 240px;" src="/eams/static/scripts/my97/My97DatePicker.htm" frameborder="0" border="0" scrolling="no"></iframe></div></body></html>

@@ -4,6 +4,7 @@ import '../../../data/local/database_helper.dart';
 import '../../../data/local/active_student_scope.dart';
 import '../../../data/local/homework_dao.dart';
 import '../../../services/course_context_service.dart';
+import '../../../services/course_terminology_service.dart';
 import '../../../services/twin_service.dart';
 import '../../../data/models/twin_profile_model.dart';
 
@@ -50,6 +51,7 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
   Map<String, dynamic> _report = {};
   StudentTwinProfile? _studentProfile;
   TeacherTwinProfile? _teacherProfile;
+  CourseTerms? _terms;
 
   @override
   void initState() {
@@ -79,6 +81,7 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
       final ctx = CourseContextService();
       final courseId = await ctx.activeCourseId();
       final twinService = TwinService();
+      _terms = await CourseTerminologyService().activeTerms();
 
       if (widget.role == 'student') {
         // 数字孪生画像
@@ -435,7 +438,7 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
         const SizedBox(height: 10),
         _buildScoreProgressBar('作业平均分', _report['homeworkAvg'] ?? '0', 0.3, Colors.green),
         const SizedBox(height: 10),
-        _buildScoreProgressBar('实验平均分', _report['labAvg'] ?? '0', 0.4, Colors.orange),
+        _buildScoreProgressBar('${_terms?.practiceLabel ?? '实验'}平均分', _report['labAvg'] ?? '0', 0.4, Colors.orange),
         const SizedBox(height: 16),
 
         // 统计数据
@@ -443,7 +446,7 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
           children: [
             _buildMiniStat(Icons.quiz, '测验', '${_report['totalQuizzes'] ?? 0}次'),
             _buildMiniStat(Icons.assignment, '作业', '${_report['totalHomework'] ?? 0}次'),
-            _buildMiniStat(Icons.science, '实验', '${_report['totalLabs'] ?? 0}次'),
+            _buildMiniStat(Icons.science, _terms?.practiceLabel ?? '实验', '${_report['totalLabs'] ?? 0}次'),
           ],
         ),
       ],

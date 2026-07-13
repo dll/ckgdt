@@ -126,6 +126,14 @@ class _CourseObjectivesManagePageState
     _extraColumns = names.toList()..sort();
   }
 
+  /// 占比类列（含权重）统一保留两位小数显示。
+  static const Set<String> _ratioColumns = {
+    'weight',
+    'pingshi_ratio',
+    'experiment_ratio',
+    'exam_ratio',
+  };
+
   void _rebuildCtrls() {
     for (final c in _ctrls) {
       c.dispose();
@@ -133,7 +141,11 @@ class _CourseObjectivesManagePageState
     _ctrls = [];
     for (final o in _objectives) {
       for (final col in _fixedColumns) {
-        _ctrls.add(TextEditingController(text: (o[col] ?? '').toString()));
+        final raw = o[col];
+        final text = _ratioColumns.contains(col)
+            ? _valueAsNumber(raw).toStringAsFixed(2)
+            : (raw ?? '').toString();
+        _ctrls.add(TextEditingController(text: text));
       }
       for (final col in [
         'description',
@@ -143,7 +155,13 @@ class _CourseObjectivesManagePageState
         'pingshi_standard',
         'experiment_standard'
       ]) {
-        _ctrls.add(TextEditingController(text: (o[col] ?? '').toString()));
+        var text = (o[col] ?? '').toString();
+        // 支撑章节 / 支撑实验缺失时显式填写“无”，避免留空。
+        if ((col == 'chapters' || col == 'experiments') &&
+            text.trim().isEmpty) {
+          text = '无';
+        }
+        _ctrls.add(TextEditingController(text: text));
       }
       for (final col in _extraColumns) {
         final json = (o['extra_columns_json'] ?? '{}').toString();
@@ -395,6 +413,31 @@ class _CourseObjectivesManagePageState
       final rows = await _svc.extractSyllabusRowsFromRawText(rawText);
       if (rows.isEmpty) throw StateError('未能从大纲中识别课程目标');
       final version = _svc.syllabusVersionFromText(rawText);
+
+      // 从大纲识别课程名称；若是新课程则创建并切换到该课程，使上方课程下拉框显示它。
+      final detected = _svc.courseNameFromText(rawText);
+      final originalCourse = _courseName;
+      String targetCourse = _courseName;
+      if (detected != null && detected.trim().isNotEmpty) {
+        final name = detected.trim();
+        final matched = _allCourses.where((c) => c.name == name);
+        if (matched.isNotEmpty) {
+          targetCourse = name;
+          await _activateCourse(name);
+        } else {
+          final newCourse = CourseModel(
+            id: 'course_${DateTime.now().microsecondsSinceEpoch}',
+            name: name,
+            isActive: true,
+            createdAt: DateTime.now().toIso8601String(),
+          );
+          await _courseDao.addCourse(newCourse);
+          await _courseDao.setActiveCourse(newCourse.id);
+          targetCourse = name;
+        }
+      }
+      _courseName = targetCourse;
+
       await _dao.saveCourseObjectives(
         _courseName,
         rows,
@@ -403,11 +446,14 @@ class _CourseObjectivesManagePageState
       _ctx.courseName = _courseName;
 
       if (mounted) {
-        await _loadObjectives();
+        await _loadCourses();
         setState(() {});
+        final switched = targetCourse != originalCourse;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('已解析并保存 ${rows.length} 个课程目标（$version）'),
+            content: Text(switched
+                ? '已创建并切换到课程「$targetCourse」，保存 ${rows.length} 个课程目标（$version）'
+                : '已解析并保存 ${rows.length} 个课程目标（$version）'),
             backgroundColor: Colors.green,
           ),
         );

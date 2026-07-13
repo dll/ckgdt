@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "course_name": "",
+  "last_updated": "2026-07-05",
+  "description": "课程资源配置清单（由一键生课自动生成，或由教师手动编辑）",
+  "resources": {
+    "lab_tasks": "lab_tasks.json",
+    "report_templates": "report_templates.json",
+    "chapters": "chapters.json",
+    "assessment": "assessment.json"
+  },
+  "repositories": {
+    "system": {
+      "owner": "",
+      "repo": "",
+      "description": "系统级课程资源仓库（从 CourseResourceService 配置读取）"
+    },
+    "enterprise": {
+      "path": "",
+      "name": "",
+      "description": "学生项目仓库所在企业（从 CourseResourceService 配置读取）"
+    },
+    "student_repo_prefixes": [],
+    "branch_convention": "feat-{学生姓名拼音缩写}"
+  },
+  "_note": "course_name 和 repositories 应从 CourseContextService 和 CourseResourceService 动态读取，此文件仅作为结构模板"
+}

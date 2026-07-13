@@ -39,6 +39,28 @@ class AchievementTemplateAssets {
       if (seen.add(normalized)) roots.add(dir);
     }
 
+    // 优先搜索当前课程资源包目录（如 data/SEB/达成/），课程专属模板置顶。
+    try {
+      final course = await CourseContextService().getActiveCourse();
+      final courseId = course.id.trim();
+      if (courseId.isNotEmpty) {
+        addRoot(Directory(p.join('data', courseId, '达成')));
+        addRoot(Directory(p.join(Directory.current.path, 'data', courseId, '达成')));
+        if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+          var dir = File(Platform.resolvedExecutable).parent;
+          for (var i = 0; i < 6; i++) {
+            addRoot(Directory(p.join(dir.path, 'data', courseId, '达成')));
+            final parent = dir.parent;
+            if (parent.path == dir.path) break;
+            dir = parent;
+          }
+        }
+      }
+    } catch (e) {
+      swallow(e, tag: 'AchievementTemplateAssets.courseRoot');
+    }
+
+    // 全局共享目录（data/达成/）作为回退
     addRoot(Directory('data/达成'));
     addRoot(Directory(p.join(Directory.current.path, 'data', '达成')));
     var current = Directory.current.absolute;
@@ -59,8 +81,7 @@ class AchievementTemplateAssets {
       }
     }
 
-    // 复制内置模板到应用支持目录。path_provider 在纯单测环境不可用，
-    // 失败时退回上面的本地/外部 data/达成 根，不影响模板查找。
+    // 复制内置模板到应用支持目录（仅当课程资源包无模板时兜底）。
     try {
       final supportDir = await getApplicationSupportDirectory();
       final bundledDir = Directory(p.join(supportDir.path, 'data', '达成'));

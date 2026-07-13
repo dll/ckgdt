@@ -848,6 +848,19 @@ class AchievementExcelService {
     return '未标注版本';
   }
 
+  /// 从大纲原始文本提取课程名称（规则与 _extractCourseNameFromDocx 一致）。
+  /// 命中则返回课程名，否则返回 null。
+  String? courseNameFromText(String rawText) {
+    final text = _normalizeSyllabusText(rawText);
+    for (final line in text.split(RegExp(r'[\n\r]+'))) {
+      final title = RegExp(r'《([^》]+)》\s*教学大纲').firstMatch(line);
+      if (title != null) return title.group(1)!.trim();
+      final named = RegExp(r'课程名称[:：]\s*([^,，;；\s]+)').firstMatch(line);
+      if (named != null) return named.group(1)!.trim();
+    }
+    return null;
+  }
+
   /// 从上传大纲原始文本提取课程目标行。
   /// 本地确定性解析优先锁定对照表中的权重/满分/比例，AI 只补充描述、
   /// 支撑章节、实验和评价文字，避免 AI 失败时整个导入流程不可用。

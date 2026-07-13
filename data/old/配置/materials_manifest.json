@@ -1,0 +1,9 @@
+{
+  "_note": "材料清单文件。定义每个分类目录下的文件列表。",
+  "_note2": "一键生课时自动生成此文件，存入 data/{courseId}/配置/materials_manifest.json。",
+  "_note3": "materials_tab.dart 的 _tryLoadKnownAssets() 会读取此文件加载 asset 文件列表。",
+  "data/实验/实验教程/": [],
+  "data/实验/技术资源/": [],
+  "data/实验/实验指导/": [],
+  "data/实验/报告模板/": []
+}

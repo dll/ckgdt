@@ -1,0 +1,52 @@
+[
+  {
+    "_note": "以下是 CKGDT 平台的默认实验任务模板。新课程应通过'一键生课'生成自己的实验定义。",
+    "_note2": "实验任务的通用结构：id/title/chapter/description/requirements/deliverables/difficulty/max_score。",
+    "_note3": "不同课程类型的实验标签不同：软件=实验、文学=研读、体育=训练、艺术=创作、经管法=案例、技能=操作。"
+  },
+  {
+    "id": 1,
+    "title": "实践任务一：基础入门",
+    "chapter": "第1章",
+    "description": "完成课程基础环境搭建和入门实践，理解课程核心概念。\n\n【学时】2学时 | 【类型】验证型 | 【要求】必做 | 【对应课程目标】目标1",
+    "requirements": "① 明确任务目标和要求；\n② 按步骤完成实践操作；\n③ 记录操作过程和结果；\n④ 总结实践收获和问题。",
+    "deliverables": "实践过程记录、运行结果截图、实践报告",
+    "difficulty": "简单",
+    "max_score": 100,
+    "due_days_offset": 14,
+    "hours": 2,
+    "type": "验证型",
+    "group_size": 1,
+    "course_objective": "目标1"
+  },
+  {
+    "id": 2,
+    "title": "实践任务二：核心技能",
+    "chapter": "第2章",
+    "description": "掌握课程核心技能，完成指定的实践任务。\n\n【学时】4学时 | 【类型】验证型 | 【要求】必做 | 【对应课程目标】目标1-2",
+    "requirements": "① 分析任务需求；\n② 设计实施方案；\n③ 按方案执行实践；\n④ 验证实践结果。",
+    "deliverables": "方案设计文档、实践过程记录、结果验证报告、实践报告",
+    "difficulty": "中等",
+    "max_score": 100,
+    "due_days_offset": 21,
+    "hours": 4,
+    "type": "验证型",
+    "group_size": 1,
+    "course_objective": "目标1-2"
+  },
+  {
+    "id": 3,
+    "title": "实践任务三：综合应用",
+    "chapter": "第3章",
+    "description": "综合运用所学知识完成跨章节的实践任务。\n\n【学时】4学时 | 【类型】综合型 | 【要求】必做 | 【对应课程目标】目标2-3",
+    "requirements": "① 综合分析任务需求；\n② 设计综合方案；\n③ 分步实施并记录；\n④ 综合验证和总结。",
+    "deliverables": "综合方案设计、实施过程记录、验证报告、综合实践报告",
+    "difficulty": "中等",
+    "max_score": 100,
+    "due_days_offset": 28,
+    "hours": 4,
+    "type": "综合型",
+    "group_size": 1,
+    "course_objective": "目标2-3"
+  }
+]

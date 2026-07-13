@@ -1,0 +1,15 @@
+{
+  "_comment": "课程资源仓库配置，loadFromConfig() 从本文件加载覆盖全局默认值",
+  "sysOwner": "chzcldl",
+  "sysRepo": "mad-data",
+  "enterprise": "chzuczldl",
+  "cgPrefixes": ["cg1-", "cg2-", "cg3-"],
+  "giteeToken": "8972385e53f6d6357673cb07fb0bf845",
+  "courseRepos": {
+    "课程知识图谱与数字孪生平台": {
+      "codeRepo": "https://gitee.com/chzcldl/cg1-ckgdt.git",
+      "owner": "chzcldl",
+      "repo": "cg1-ckgdt"
+    }
+  }
+}

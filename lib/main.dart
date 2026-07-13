@@ -570,13 +570,13 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
           onTap: _toggleVoice,
         ),
 
-        // 子按钮：多智能体助手
+        // 子按钮：多智（多智能体助手）
         _buildPositionedSubButton(
           offset: 280,
           isOnRight: isOnRight,
           size: size,
           icon: Icons.chat_bubble_outline,
-          label: '助手',
+          label: '多智',
           color: Colors.indigo,
           onTap: _showAgentChat,
         ),

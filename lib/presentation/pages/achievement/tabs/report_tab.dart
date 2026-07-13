@@ -12,7 +12,7 @@ import '../../../../data/local/achievement_dao.dart';
 import '../../../../services/achievement/achievement_audit_context_service.dart';
 import '../../../../services/achievement/achievement_docx_service.dart';
 import '../../../../services/achievement/achievement_template_excel_service.dart';
-import '../../../../services/achievement/excel_chart_injector.dart';
+
 import '../../../../services/achievement_context.dart';
 import '../../../../services/course_context_service.dart';
 import '../../../../services/archive/native_docx_service.dart';
@@ -34,6 +34,15 @@ int _asInt(Object? value, [int fallback = 0]) {
   if (value is num) return value.toInt();
   if (value is String) return int.tryParse(value) ?? fallback;
   return fallback;
+}
+
+/// 学期统一为「YYYY-YYYY-N」短格式（兼容 2025_2026_2 等写法）。
+String _dashSemester(String semester) {
+  var s = semester.trim().replaceAll('_', '-');
+  while (s.contains('--')) {
+    s = s.replaceAll('--', '-');
+  }
+  return s;
 }
 
 String _nonEmpty(Object? value, String fallback) {
@@ -99,10 +108,19 @@ class _ReportTabState extends State<ReportTab> {
     List<double>? weights,
   ]) {
     final resolvedWeights = weights ?? _objectiveWeights;
-    final count = max(
-      resolvedWeights.length,
-      max(config.fullMarks.length, _objectiveAchievements.length),
-    );
+    // 以大纲（course_objectives）目标数为准，不依赖默认 4 目标或批次残留数据，
+    // 避免大纲只有 3 个目标时仍多算/多显示第 4 个目标。
+    // 同时夹取到所有目标列表长度的最小值，防止 config.* / _objectiveWeights /
+    // _objectiveAchievements 长度不一致时越界（RangeError 导致 Markdown/Word/Excel 报告生成失败）。
+    final count = [
+      config.weights.length,
+      config.fullMarks.length,
+      config.descriptions.length,
+      config.indicators.length,
+      _objectiveWeights.length,
+      _objectiveAchievements.length,
+    ].reduce((a, b) => a < b ? a : b);
+    if (count == 0) return const [];
     final indexes = [
       for (var i = 0; i < count; i++)
         if ((i < resolvedWeights.length && resolvedWeights[i] > 0) ||
@@ -588,9 +606,9 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln();
 
       // 从课程配置动态生成分析描述（不再硬编码课程内容）
-      final objAnalysisDesc = List<String>.generate(4, (i) {
-        final desc = cfg.descriptions[i];
-        final assess = cfg.assessContents[i];
+      final objAnalysisDesc = List<String>.generate(cfg.descriptions.length, (i) {
+        final desc = i < cfg.descriptions.length ? cfg.descriptions[i] : '';
+        final assess = i < cfg.assessContents.length ? cfg.assessContents[i] : '';
         final parts = assess.split('、');
         final envList = envDefsFor(i).map((env) {
           final label = env.$1;
@@ -1004,52 +1022,39 @@ class _ReportTabState extends State<ReportTab> {
       final scores = await widget.achievementDao.getScores(_selectedBatchId!);
       final comb = await widget.achievementDao
           .calculateCombinedAchievement(_selectedBatchId!);
-      final pingshi =
-          await widget.achievementDao.getPingshiScores(_selectedBatchId!);
-      final experiment =
-          await widget.achievementDao.getExperimentScores(_selectedBatchId!);
-      final exam = await widget.achievementDao.getExamScores(_selectedBatchId!);
       final cf = _config;
-      final fullMarks = cf.fullMarks;
-      final ps = comb['pingshi'] as Map? ?? {};
-      final es = comb['experiment'] as Map? ?? {};
-      final xs = comb['exam'] as Map? ?? {};
-      final envWeightsByObjective = ((comb['weightsByObjective'] as List?) ??
-              const [])
-          .map((w) =>
-              (w as Map?)?.map(
-                (key, value) =>
-                    MapEntry(key.toString(), (value as num?)?.toDouble() ?? 0),
-              ) ??
-              <String, double>{})
-          .toList();
-      bool defaultLike(Map<String, double> w) =>
-          ((w['pingshi'] ?? 0) - 0.2).abs() < 0.0001 &&
-          ((w['experiment'] ?? 0) - 0.3).abs() < 0.0001 &&
-          ((w['exam'] ?? 0) - 0.5).abs() < 0.0001;
-      final activeObjectives = _activeObjectiveIndexesFor(cf);
-      final standardThreePart = activeObjectives.length == cf.weights.length &&
-          envWeightsByObjective.length >= cf.weights.length &&
-          activeObjectives.every((i) => defaultLike(envWeightsByObjective[i]));
-      final pById = {for (final r in pingshi) '${r['student_id']}': r};
-      final eById = {for (final r in experiment) '${r['student_id']}': r};
-      final xById = {for (final r in exam) '${r['student_id']}': r};
-
-      Map<String, double> avgMap(Map source) => {
-            for (int i = 1; i <= cf.weights.length; i++)
-              'obj$i': (source['obj$i'] as num?)?.toDouble() ?? 0,
-          };
 
       final dir = await OutputPathService.getOutputDirectory();
-      final safeName = '$className《$courseName》课程达成度评价表格.xlsx';
+      final teacherName = widget.authService.currentUser?.realName ?? '教师';
+      final safeName =
+          '${courseName}_${_dashSemester(semester)}_${className}_$teacherName.xlsx';
       final file = File('${dir.path}/$safeName');
-      final templateFile = standardThreePart
-          ? await AchievementTemplateExcelService.instance
-              .findTemplateForCourse(
-              courseName,
-            )
-          : null;
+      // 优先使用课程资源包中的模板（data/{courseId}/达成/），
+      // 找不到时回退到动态导出。
+      final templateFile = await AchievementTemplateExcelService.instance
+          .findTemplateForCourse(courseName);
       if (templateFile != null) {
+        final pingshi =
+            await widget.achievementDao.getPingshiScores(_selectedBatchId!);
+        final experiment =
+            await widget.achievementDao.getExperimentScores(_selectedBatchId!);
+        final exam = await widget.achievementDao.getExamScores(_selectedBatchId!);
+        final ps = comb['pingshi'] as Map? ?? {};
+        final es = comb['experiment'] as Map? ?? {};
+        final xs = comb['exam'] as Map? ?? {};
+        Map<String, double> avgMap(Map source) => {
+              for (int i = 1; i <= cf.weights.length; i++)
+                'obj$i': (source['obj$i'] as num?)?.toDouble() ?? 0,
+            };
+        final envWeightsByObjective = ((comb['weightsByObjective'] as List?) ??
+                const [])
+            .map((w) =>
+                (w as Map?)?.map(
+                  (key, value) =>
+                      MapEntry(key.toString(), (value as num?)?.toDouble() ?? 0),
+                ) ??
+                <String, double>{})
+            .toList();
         final payload = AchievementExcelTemplatePayload(
           courseName: courseName,
           className: className,
@@ -1084,383 +1089,16 @@ class _ReportTabState extends State<ReportTab> {
         }
         return;
       }
-      if (!standardThreePart || templateFile == null) {
-        await _exportDynamicExcelReport(
-          file: file,
-          courseName: courseName,
-          className: className,
-          semester: semester,
-          syllabusVersion: syllabusVersion,
-          scores: scores,
-          combined: comb,
-          config: cf,
-        );
-        return;
-      }
-
-      final excel = xl.Excel.createExcel();
-      for (final n in excel.tables.keys.toList()) {
-        excel.delete(n);
-      }
-
-      xl.TextCellValue t(Object? v) => xl.TextCellValue(v?.toString() ?? '');
-      xl.DoubleCellValue n(num? v, [int digits = 4]) {
-        final d = (v ?? 0).toDouble();
-        return xl.DoubleCellValue(double.parse(d.toStringAsFixed(digits)));
-      }
-
-      double val(Map? r, String key) => (r?[key] as num?)?.toDouble() ?? 0;
-      double mapVal(Map m, int objectiveIndex) =>
-          (m['obj${objectiveIndex + 1}'] as num?)?.toDouble() ?? 0;
-      double experimentTarget4Score(Map? row) {
-        final exp7 = val(row, 'exp7_score');
-        if (exp7 > 0) return exp7;
-        final obj4 = val(row, 'obj4_achievement');
-        return obj4 > 0 ? obj4 * 100 : 0;
-      }
-
-      List<xl.CellValue?> rowOf(int len) =>
-          List<xl.CellValue?>.filled(len, null);
-
-      final s1 = excel['平时成绩'];
-      s1.appendRow([t('$semester$className《$courseName》课程目标达成度计算表（平时）')]);
-      var r = rowOf(39);
-      r[0] = t('班级：$className');
-      r[2] = t('评价方式:平时');
-      r[38] = t('满分值：100分');
-      s1.appendRow(r);
-      r = rowOf(39);
-      r[0] = t('课程目标');
-      r[2] = t('1');
-      r[15] = t('2');
-      r[27] = t('4');
-      r[38] = t('总评');
-      s1.appendRow(r);
-      r = rowOf(39);
-      r[0] = t('学号');
-      r[1] = t('姓名');
-      r[2] = t('课堂表现 满分20');
-      r[15] = t('期间测验 满分30');
-      r[27] = t('课外学习 满分50');
-      s1.appendRow(r);
-      r = rowOf(39);
-      r[13] = t('最后得分');
-      r[14] = t('指标点达成度');
-      r[25] = t('平均分');
-      r[26] = t('指标点达成度');
-      r[36] = t('平均分');
-      r[37] = t('指标点达成度');
-      r[38] = t('得分');
-      s1.appendRow(r);
-      for (final row in pingshi) {
-        r = rowOf(39);
-        final classActivity = val(row, 'class_activity_score');
-        final quizHomework = val(row, 'quiz_homework_score');
-        final extraLearning = val(row, 'extra_learning_score');
-        r[0] = t(row['student_id']);
-        r[1] = t(row['student_name']);
-        r[2] = n(classActivity, 0);
-        r[13] = n(classActivity, 0);
-        r[14] = n(val(row, 'class_activity_achievement'), 4);
-        r[15] = n(quizHomework, 0);
-        r[25] = n(quizHomework, 0);
-        r[26] = n(val(row, 'quiz_homework_achievement'), 4);
-        r[27] = n(extraLearning, 0);
-        r[36] = n(extraLearning, 0);
-        r[37] = n(val(row, 'extra_learning_achievement'), 4);
-        r[38] = n(val(row, 'total_score'), 0);
-        s1.appendRow(r);
-      }
-
-      final s2 = excel['实验成绩'];
-      s2.appendRow([t('$semester$className《$courseName》课程目标达成度计算表（实验）')]);
-      r = rowOf(14);
-      r[0] = t('班级：$className');
-      r[2] = t('评价方式:实验');
-      r[13] = t('满分值：100分');
-      s2.appendRow(r);
-      r = rowOf(14);
-      r[0] = t('课程目标');
-      r[2] = t('1');
-      r[5] = t('2');
-      r[8] = t('3');
-      r[11] = t('4');
-      r[13] = t('总评');
-      s2.appendRow(r);
-      r = rowOf(14);
-      r[0] = t('学号');
-      r[1] = t('姓名');
-      r[2] = t('满分${fullMarks[0].toInt()}');
-      r[5] = t('满分${fullMarks[1].toInt()}');
-      r[8] = t('满分${fullMarks[2].toInt()}');
-      r[11] = t('满分${fullMarks[3].toInt()}');
-      s2.appendRow(r);
-      r = rowOf(14);
-      r[2] = t('实验1得分（满分5分）');
-      r[3] = t('实验2得分（满分5分）');
-      r[4] = t('指标点达成度');
-      r[5] = t('实验3得分（满分10分）');
-      r[6] = t('实验4得分（满分10分）');
-      r[7] = t('指标点达成度');
-      r[8] = t('实验5得分（满分15分）');
-      r[9] = t('实验6得分（满分15分）');
-      r[10] = t('指标点达成度');
-      r[11] = t('实验7得分（满分40分）');
-      r[12] = t('指标点达成度');
-      r[13] = t('得分');
-      s2.appendRow(r);
-      for (final row in experiment) {
-        r = rowOf(14);
-        r[0] = t(row['student_id']);
-        r[1] = t(row['student_name']);
-        r[2] = n(val(row, 'exp1_score'), 0);
-        r[3] = n(val(row, 'exp2_score'), 0);
-        r[4] = n(val(row, 'obj1_achievement'), 4);
-        r[5] = n(val(row, 'exp3_score'), 0);
-        r[6] = n(val(row, 'exp4_score'), 0);
-        r[7] = n(val(row, 'obj2_achievement'), 4);
-        r[8] = n(val(row, 'exp5_score'), 0);
-        r[9] = n(val(row, 'exp6_score'), 0);
-        r[10] = n(val(row, 'obj3_achievement'), 4);
-        r[11] = n(experimentTarget4Score(row), 0);
-        r[12] = n(val(row, 'obj4_achievement'), 4);
-        r[13] = n(val(row, 'total_score'), 0);
-        s2.appendRow(r);
-      }
-
-      final s3 = excel['期末成绩'];
-      s3.appendRow([t('$semester$className《$courseName》课程目标达成度计算表（期末考核）')]);
-      r = rowOf(11);
-      r[0] = t('班级：$className');
-      r[2] = t('评价方式:期末考核（大作业）');
-      r[10] = t('满分值：100分');
-      s3.appendRow(r);
-      r = rowOf(11);
-      r[0] = t('课程目标');
-      r[2] = t('1');
-      r[4] = t('2');
-      r[6] = t('3');
-      r[8] = t('4');
-      r[10] = t('总评');
-      s3.appendRow(r);
-      r = rowOf(11);
-      r[0] = t('学号');
-      r[1] = t('姓名');
-      r[2] = t('满分${fullMarks[0].toInt()}');
-      r[4] = t('满分${fullMarks[1].toInt()}');
-      r[6] = t('满分${fullMarks[2].toInt()}');
-      r[8] = t('满分${fullMarks[3].toInt()}');
-      s3.appendRow(r);
-      r = rowOf(11);
-      r[2] = t('项目（30%）');
-      r[3] = t('指标点达成度');
-      r[4] = t('小组（20%）');
-      r[5] = t('指标点达成度');
-      r[6] = t('个人（20%）');
-      r[7] = t('指标点达成度');
-      r[8] = t('答辩（30%）');
-      r[9] = t('指标点达成度');
-      r[10] = t('得分');
-      s3.appendRow(r);
-      for (final row in exam) {
-        r = rowOf(11);
-        r[0] = t(row['student_id']);
-        r[1] = t(row['student_name']);
-        r[2] = n(val(row, 'project_score'), 0);
-        r[3] = n(val(row, 'obj1_achievement'), 4);
-        r[4] = n(val(row, 'group_score'), 0);
-        r[5] = n(val(row, 'obj2_achievement'), 4);
-        r[6] = n(val(row, 'individual_score'), 0);
-        r[7] = n(val(row, 'obj3_achievement'), 4);
-        r[8] = n(val(row, 'defense_score'), 0);
-        r[9] = n(val(row, 'obj4_achievement'), 4);
-        r[10] = n(val(row, 'total_score'), 0);
-        s3.appendRow(r);
-      }
-
-      final s4 = excel['学生个体课程目标达成度'];
-      s4.appendRow([t('$semester$className《$courseName》学生个体课程目标达成度计算表')]);
-      s4.appendRow([t('班级：$className')]);
-      r = rowOf(18);
-      r[0] = t('课程目标');
-      r[2] = t('1');
-      r[6] = t('2');
-      r[10] = t('3');
-      r[14] = t('4');
-      s4.appendRow(r);
-      r = rowOf(18);
-      r[0] = t('支撑的毕业要求指标点');
-      r[2] = t(cf.indicators[0]);
-      r[6] = t(cf.indicators[1]);
-      r[10] = t(cf.indicators[2]);
-      r[14] = t(cf.indicators[3]);
-      s4.appendRow(r);
-      r = rowOf(18);
-      r[0] = t('权重');
-      for (final entry in [2, 6, 10, 14].asMap().entries) {
-        final i = entry.key;
-        final offset = entry.value;
-        final envWeight = i < envWeightsByObjective.length
-            ? envWeightsByObjective[i]
-            : const {};
-        r[offset] = n(envWeight['pingshi'] ?? 0, 1);
-        r[offset + 1] = n(envWeight['experiment'] ?? 0, 1);
-        r[offset + 2] = n(envWeight['exam'] ?? 0, 1);
-        r[offset + 3] = n(1, 0);
-      }
-      s4.appendRow(r);
-      r = rowOf(18);
-      r[0] = t('学号');
-      r[1] = t('姓名');
-      for (final offset in [2, 6, 10, 14]) {
-        r[offset] = t('平时评价达成度');
-        r[offset + 1] = t('实验评价达成度');
-        r[offset + 2] = t('期末考核评价达成度');
-        r[offset + 3] = t('课程目标达成度');
-      }
-      s4.appendRow(r);
-      for (final s in scores) {
-        final sid = '${s['student_id'] ?? ''}';
-        final p = pById[sid], e = eById[sid], x = xById[sid];
-        r = rowOf(18);
-        r[0] = t(sid);
-        r[1] = t(s['student_name']);
-        for (int i = 0; i < _config.objectiveNames.length; i++) {
-          final offset = 2 + i * 4;
-          final pAch = i == 0
-              ? val(p, 'class_activity_achievement')
-              : i == 1
-                  ? val(p, 'quiz_homework_achievement')
-                  : i == 2
-                      ? 0.0
-                      : val(p, 'extra_learning_achievement');
-          final eAch = val(e, 'obj${i + 1}_achievement');
-          final xAch = val(x, 'obj${i + 1}_achievement');
-          final objAch =
-              (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
-          r[offset] = n(pAch, 4);
-          r[offset + 1] = n(eAch, 4);
-          r[offset + 2] = n(xAch, 4);
-          r[offset + 3] = n(objAch, 4);
-        }
-        s4.appendRow(r);
-      }
-
-      final s5 = excel['课程目标点达成度'];
-      s5.appendRow([t('$semester$className《$courseName》课程目标达成度计算表')]);
-      s5.appendRow([
-        t('课程目标及权重'),
-        null,
-        t('评价方式'),
-        null,
-        null,
-        null,
-        null,
-        t('课成目标达成度'),
-        t('毕业要求指标点达成度')
-      ]);
-      s5.appendRow([
-        t('课程目标i'),
-        t('权重'),
-        t('评价环节j'),
-        t('满分'),
-        t('平均分'),
-        t('达成度'),
-        t('权重'),
-        t('课程目标达成度'),
-        t('指标点'),
-        t('达成度')
-      ]);
-      const envNames = ['平时', '实验', '期末考试'];
-      for (int i = 0; i < _config.objectiveNames.length; i++) {
-        final envWeight = i < envWeightsByObjective.length
-            ? envWeightsByObjective[i]
-            : const {};
-        final envWeights = [
-          envWeight['pingshi'] ?? 0,
-          envWeight['experiment'] ?? 0,
-          envWeight['exam'] ?? 0,
-        ];
-        final envFull = [
-          for (final weight in envWeights) weight > 0 ? cf.fullMarks[i] : 0.0
-        ];
-        final envAch = [mapVal(ps, i), mapVal(es, i), mapVal(xs, i)];
-        for (int j = 0; j < 3; j++) {
-          r = rowOf(10);
-          if (j == 0) {
-            r[0] = t('目标${i + 1}');
-            r[1] = n(_objectiveWeights[i], 2);
-            r[7] = n(_objectiveAchievements[i], 4);
-            r[8] = t(cf.indicators[i]);
-            r[9] = n(_objectiveAchievements[i], 4);
-          }
-          r[2] = t(envNames[j]);
-          r[3] = n(envFull[j], 0);
-          r[4] = n(envAch[j] * envFull[j], 2);
-          r[5] = n(envAch[j], 4);
-          r[6] = n(envWeights[j], 1);
-          s5.appendRow(r);
-        }
-      }
-      s5.appendRow([
-        t('课程总体目标期望值'),
-        n(0.6, 1),
-        null,
-        null,
-        null,
-        null,
-        t('课程总体目标达成度(cc)'),
-        n(_weightedAchievement, 4),
-        null,
-        null
-      ]);
-
-      // 条形图 + 4 张散点趋势图数据页（对齐模板的 课程目标条形图 / 目标N散点趋势图）
-      // 数值列用 DoubleCellValue，否则注入的图表无法把文本当数据绘制。
-      final bar = excel['课程目标条形图'];
-      for (int i = 0; i < _config.objectiveNames.length; i++) {
-        bar.appendRow([
-          t(cf.objectiveNames[i]),
-          xl.DoubleCellValue(
-              double.parse(_objectiveAchievements[i].toStringAsFixed(4))),
-        ]);
-      }
-      for (int i = 0; i < _config.objectiveNames.length; i++) {
-        final sh = excel['目标${i + 1}散点趋势图'];
-        for (int k = 0; k < scores.length; k++) {
-          final a =
-              (scores[k]['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
-          sh.appendRow([
-            xl.DoubleCellValue((k + 1).toDouble()),
-            xl.DoubleCellValue(double.parse(a.toStringAsFixed(4))),
-            xl.DoubleCellValue(
-                double.parse(_objectiveAchievements[i].toStringAsFixed(4))),
-            const xl.DoubleCellValue(0.6),
-          ]);
-        }
-      }
-
-      var bytes = excel.save();
-      if (bytes == null) throw StateError('Excel生成失败');
-      // 注入原生 OOXML 图表：条形图(4目标) + 每目标散点参考线
-      final specs = <ChartSpec>[
-        const ChartSpec.bar(
-            sheetName: '课程目标条形图', title: '课程目标达成度', rowCount: 4),
-        for (int i = 0; i < _config.objectiveNames.length; i++)
-          ChartSpec.scatter(
-              sheetName: '目标${i + 1}散点趋势图',
-              title: '学生个体课程目标${i + 1}达成评价结果',
-              rowCount: scores.length),
-      ];
-      bytes = ExcelChartInjector.inject(Uint8List.fromList(bytes), specs);
-      await file.writeAsBytes(bytes);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Excel已导出:${file.path}'),
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-                label: '打开', onPressed: () => OpenFilex.open(file.path))));
-      }
+      await _exportDynamicExcelReport(
+        file: file,
+        courseName: courseName,
+        className: className,
+        semester: semester,
+        syllabusVersion: syllabusVersion,
+        scores: scores,
+        combined: comb,
+        config: cf,
+      );
     } catch (e, st) {
       swallowDebug(e, tag: 'ReportTab.exportExcel', stack: st);
     }
@@ -1661,6 +1299,7 @@ class _ReportTabState extends State<ReportTab> {
       final semester = batch['semester'] ?? '-';
       final syllabusVersion = (batch['syllabus_version'] ?? '未标注版本').toString();
       final teacherId = batch['teacher_id'] ?? '';
+      final teacherName = widget.authService.currentUser?.realName ?? '教师';
       final dateStr = DateTime.now().toString().substring(0, 10);
       final cfg = _config;
       final objIndicators = cfg.indicators;
@@ -2233,7 +1872,7 @@ class _ReportTabState extends State<ReportTab> {
       // 使用 printing 包进行分享/打印/保存
       await Printing.sharePdf(
         bytes: await pdf.save(),
-        filename: '$className《$courseName》课程达成度评价报告.pdf',
+        filename: '${courseName}_${_dashSemester(semester)}_${className}_$teacherName.pdf',
       );
 
       if (mounted) {
