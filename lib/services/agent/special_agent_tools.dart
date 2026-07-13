@@ -691,13 +691,14 @@ ${chapters.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n')}
   }
 
   List<int> _activeObjectiveIndexes(List<double> weights, List<double> marks) {
+    final maxIdx = math.max(weights.length, marks.length);
     final indexes = [
-      for (var i = 0; i < 4; i++)
+      for (var i = 0; i < maxIdx; i++)
         if ((i < weights.length && weights[i] > 0) ||
             (i < marks.length && marks[i] > 0))
           i,
     ];
-    return indexes.isEmpty ? [0, 1, 2, 3] : indexes;
+    return indexes.isEmpty ? [for (var i = 0; i < maxIdx; i++) i] : indexes;
   }
 
   String _objectiveDescription(Map<String, dynamic> row, int index) {

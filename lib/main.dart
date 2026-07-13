@@ -163,12 +163,15 @@ Future<void> _initArchivePaths() async {
     if (dataDir.existsSync()) {
       for (final ent in dataDir.listSync()) {
         if (ent is! Directory) continue;
+        final courseId = p.basename(ent.path);
         final archiveSub = Directory(p.join(ent.path, '归档'));
-        if (!archiveSub.existsSync()) continue;
+        // 平台化：即便课程尚无归档目录也登记为课程级归档根，
+        // registerCourseArchiveRoot 内部会同步创建 data/<课程ID>/归档/<期>/模板
+        // 命名空间，使 SEB / FPP / AAOS 等课程不再回落到其它课程的专属模板。
         // 不在此处设为首选（prefer=false）：当前激活课程由归档页打开时再设为首选，
         // 避免把遍历到的最后一个课程错当成首选归档根。
         ArchiveTemplateSourceService.registerCourseArchiveRoot(
-          courseId: p.basename(ent.path),
+          courseId: courseId,
           archiveRoot: archiveSub.path,
           prefer: false,
         );

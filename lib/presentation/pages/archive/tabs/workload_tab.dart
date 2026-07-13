@@ -604,7 +604,7 @@ class _WorkloadTabState extends State<WorkloadTab> {
 
   Future<void> _onExportTemplate() async {
     try {
-      final bytes = _excel.exportTemplate();
+      final bytes = await _excel.exportTemplate();
       final dir = await getApplicationDocumentsDirectory();
       final path = p.join(dir.path, '工作量申报模板.xlsx');
       await File(path).writeAsBytes(bytes);

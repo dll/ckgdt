@@ -45,7 +45,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
   late TabController _tabCtrl;
   List<Map<String, dynamic>> _ps = [], _es = [], _xs = [], _agg = [];
   List<String> _activeEnvs = ['pingshi', 'experiment', 'exam'];
-  List<int> _activeObjectiveIndexes = [0, 1, 2, 3];
+  List<int> _activeObjectiveIndexes = [];
   final ScoreSort _sort = ScoreSort.idAsc;
 
   @override

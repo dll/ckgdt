@@ -33,15 +33,21 @@ class ResourceGenerationService {
     bool rich = true,
     PlannedChapter? plannedChapter,
   }) async {
-    if (rich && plannedChapter != null) {
-      return _generateRichResourcesForChapter(
-        courseId: courseId,
-        chapter: plannedChapter,
-        sourceType: sourceType,
-      );
-    }
-
     final result = GenerationResult(chapter: chapterTitle);
+
+    if (rich && plannedChapter != null) {
+      try {
+        return await _generateRichResourcesForChapter(
+          courseId: courseId,
+          chapter: plannedChapter,
+          sourceType: sourceType,
+        );
+      } catch (e, st) {
+        swallowDebug(e, tag: 'ResourceGen.richChapter', stack: st);
+        result.errors.add('富资源生成失败: $e');
+        return result;
+      }
+    }
 
     // 1. 读取 MD 内容
     String mdContent = '';

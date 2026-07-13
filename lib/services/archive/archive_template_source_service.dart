@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import '../../core/constants/archive_periods.dart';
+import '../../core/init_logger.dart';
 import 'archive_document_policy.dart';
 import 'base_document_processor.dart';
 import 'importers/archive_importers.dart';
@@ -26,6 +27,40 @@ class ArchiveTemplateSourceService {
     if (courseId.trim().isEmpty || archiveRoot.trim().isEmpty) return;
     _courseArchiveRoots[courseId] = archiveRoot;
     if (prefer) _preferredCourseId = courseId;
+    // 平台化：登记即确保该课程的归档模板命名空间存在，使尚无归档目录的课程
+    // （如 SEB / FPP / AAOS）也能拥有独立的 data/<课程ID>/归档/<期>/模板，
+    // 不再回落到其它课程的专属模板（避免脏数据跨课程泄露）。
+    _ensureCourseArchiveDirsSync(courseId, archiveRoot);
+  }
+
+  /// 同步确保某课程的归档模板目录树存在（data/<课程ID>/归档/<期>/模板）。
+  ///
+  /// 仅创建空模板命名空间并写入说明 README，不复制任何其它课程（如 MAD）的
+  /// 专属模板，避免把软件23 / 移动应用开发等历史数据带入新课程的归档。
+  static void _ensureCourseArchiveDirsSync(String courseId, String archiveRoot) {
+    try {
+      final root = Directory(archiveRoot);
+      final isNew = !root.existsSync();
+      for (final label in archivePeriodLabels) {
+        final tmplDir = Directory(p.join(archiveRoot, label, '模板'));
+        if (!tmplDir.existsSync()) tmplDir.createSync(recursive: true);
+      }
+      if (isNew) {
+        final readme = File(p.join(archiveRoot, 'README.md'));
+        if (!readme.existsSync()) {
+          readme.writeAsStringSync('''
+# $courseId 课程归档模板目录
+
+本目录是「$courseId」课程的归档模板根。每个期（期初 / 期中 / 期末 / 结课 / 工作量）下含 `模板/` 子目录，用于存放该课程对应的学校规范归档模板（Word 等）。
+
+- 系统优先在本课程目录查找模板；若某期 `模板/` 为空，则回落到通用 `data/归档` 模板。
+- 模板文件不入库（属学校资产），请由教师 / 管理员放入本课程对应的学校原版模板。
+''');
+        }
+      }
+    } catch (e, st) {
+      InitLogger.error('archive', '确保课程归档目录失败: $archiveRoot', st);
+    }
   }
 
   static void clearRegisteredCourseArchiveRoots() {

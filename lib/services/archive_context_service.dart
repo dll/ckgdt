@@ -238,7 +238,7 @@ class ArchiveContextService {
       b.writeln('- 班级：${latest['class_name'] ?? '[未填]'}');
       b.writeln('- 学期：${latest['semester'] ?? '[未填]'}');
       final weights = await _achievementDao.resolveObjectiveWeights(batchId);
-      final cfg = weights.length >= 4 ? weights : [0.15, 0.25, 0.30, 0.30];
+      final cfg = weights.isNotEmpty ? weights : [0.15, 0.25, 0.30, 0.30];
       double weighted = 0;
       final count = cfg.length;
       for (int i = 0; i < count; i++) {

@@ -111,13 +111,12 @@ class AchievementConfig {
       for (final row in sorted)
         if (_asInt(row['idx']) > 0) _asInt(row['idx']): row
     };
-    // 动态目标数量：取实际行数与 fallback 中较大者
+    // 动态目标数量：以 course_objectives 表中的实际 idx 为准，
+    // 不为空时不再以 fallback.weights.length 为下限，确保 3 个目标就显示 3 个。
     final objCount = byIdx.isNotEmpty
         ? byIdx.keys.fold<int>(0, (m, k) => k > m ? k : m)
         : fallback.weights.length;
-    final count = objCount > fallback.weights.length
-        ? objCount
-        : fallback.weights.length;
+    final count = byIdx.isNotEmpty ? objCount : objCount > fallback.weights.length ? objCount : fallback.weights.length;
     try {
       List<T> pick<T>(T Function(Map<String, dynamic>?, int) f) =>
           List<T>.generate(count, (i) => f(byIdx[i + 1], i));

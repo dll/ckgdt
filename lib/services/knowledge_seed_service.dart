@@ -23,53 +23,168 @@ class KnowledgeSeedService {
   /// Seeds concepts and relations only when the `knowledge_concepts` table is
   /// empty, making it safe to call on every app launch.
   Future<void> seedIfEmpty() async {
-    // 先清理 homework 类型的概念（不是真正的知识图谱节点）
+    // 先清理 homework 类型的概念（不是真正的知识图谱节点，会干扰判定）。
+    // 注意：清理后会重新评估真实知识概念数量，避免「有作业占位节点就跳过种子」。
     try {
       final db = await DatabaseHelper.instance.database;
       await db.rawDelete("DELETE FROM knowledge_concepts WHERE concept_type = 'homework' OR node_type = 'homework'");
     } catch (_) {}
 
-    final count = await _dao.conceptCount();
-    final relCount = await _dao.relationCount();
-    // 跳过条件：概念和关系都有（说明已完整初始化）
-    // 如果只有概念没有关系，仍然需要种子关系
-    if (count > 0 && relCount > 0) {
-      debugPrint('[KnowledgeSeedService] 已有 $count 个概念 + $relCount 条关系，跳过种子数据');
-      return;
-    }
-    if (count > 0 && relCount == 0) {
-      debugPrint('[KnowledgeSeedService] 已有 $count 个概念但无关系，补充种子关系...');
-    }
+    await ensureRelationsForActiveCourse();
+  }
 
+  /// 确保当前激活课程拥有「真实知识概念 + 关系」。
+  ///
+  /// 平台化关键修复：旧逻辑以 `conceptCount() > 0` 判定是否跳过种子，
+  /// 而一键生课 / 课程包导入会写入 `homework` 类型占位节点，导致真实概念与关系
+  /// 永不生成，知识图谱只剩孤立节点、没有任何边。
+  ///
+  /// 新逻辑：
+  /// 1. 仅以「非 homework 的真实概念」数量决定是否需要种子；
+  /// 2. 真实概念缺失 → 生成通用课程图谱（含丰富关系）；
+  /// 3. 真实概念存在但关系缺失 → 基于概念结构（章节 + 类型）推导关系，
+  ///    兼容 AI / 一键生课生成的任意命名概念，使任意课程都能呈现网状知识图谱。
+  Future<int> ensureRelationsForActiveCourse() async {
     final course = await _courseDao.getActiveCourse();
-    if (_shouldSeedGenericCourse(course)) {
-      // 如果概念已存在，只补充关系
-      if (count > 0) {
-        debugPrint('[KnowledgeSeedService] 概念已存在，只补充关系');
-        await _seedGenericRelations(course!);
+    if (course == null) return 0;
+
+    final allConcepts = await _dao.getAllConcepts();
+    final realConcepts = allConcepts
+        .where((c) => (c['concept_type']?.toString() ?? '') != 'homework')
+        .toList();
+
+    // 没有任何真实知识概念 → 生成通用课程图谱（课程/章节/核心/方法/实践 + 关系）
+    if (realConcepts.isEmpty) {
+      if (_shouldSeedGenericCourse(course)) {
+        await _seedGenericCourse(course);
       } else {
-        await _seedGenericCourse(course!);
+        if ((await _dao.conceptCount()) == 0) await _seedConcepts();
+        await _seedRelations();
       }
-      final conceptCount = await _dao.conceptCount();
-      final relCount2 = await _dao.relationCount();
+      final relCount = await _dao.relationCount();
       debugPrint(
-        '[KnowledgeSeedService] 已为《${course.name}》生成通用课程图谱：'
-        '$conceptCount 个概念，$relCount2 条关系',
+        '[KnowledgeSeedService] 已为《${course.name}》生成图谱：'
+        '${await _dao.conceptCount()} 个概念，$relCount 条关系',
       );
-      return;
+      return relCount;
     }
 
-    if (count == 0) {
-      await _seedConcepts();
-      final conceptCount = await _dao.conceptCount();
-      debugPrint('[KnowledgeSeedService] 概念写入完成，共 $conceptCount 条');
+    // 已有真实概念：关系缺失则基于结构推导（兼容任意来源概念）
+    final relCount = await _dao.relationCount();
+    if (relCount > 0) return relCount;
+
+    if (!_shouldSeedGenericCourse(course)) {
+      // MAD 等专属课程：沿用名称匹配的关系种子
+      await _seedRelations();
+      return await _dao.relationCount();
+    }
+    return await _buildStructuralRelations(allConcepts, course);
+  }
+
+  /// 基于概念自身结构（章节聚类 + 类型语义 + 描述互引）推导关系，
+  /// 使任意课程（含 AI / 一键生课生成的概念）都能呈现有边的知识图谱。
+  ///
+  /// 产生的典型关系类型：包含 / 支撑 / 应用 / 关联 / 前置 / 递进 / 解释。
+  Future<int> _buildStructuralRelations(
+    List<Map<String, dynamic>> concepts,
+    CourseModel course,
+  ) async {
+    final byChapter = <int, List<Map<String, dynamic>>>{};
+    for (final c in concepts) {
+      final ch = (c['chapter'] as int?) ?? 0;
+      byChapter.putIfAbsent(ch, () => []).add(c);
+    }
+    final chapters = byChapter.keys.toList()..sort();
+
+    int added = 0;
+    Future<void> rel(int sid, int tid, String type, String label,
+        [double weight = 1.0]) async {
+      if (sid == tid) return;
+      await _dao.addRelation({
+        'source_concept_id': sid,
+        'target_concept_id': tid,
+        'relation_type': type,
+        'relation_label': label,
+        'description': '$type: $label',
+        'bidirectional': 0,
+        'weight': weight,
+        'ai_generated': 0,
+        'confidence': 0.7,
+      });
+      added++;
     }
 
-    await _seedRelations();
-    final relCount3 = await _dao.relationCount();
-    debugPrint('[KnowledgeSeedService] 关系写入完成，共 $relCount3 条');
+    final courseNode = concepts.firstWhere(
+      (c) =>
+          (c['concept_type']?.toString() ?? '') == 'course' ||
+          (c['concept_name']?.toString() ?? '') == course.name,
+      orElse: () => const <String, dynamic>{},
+    );
 
-    debugPrint('[KnowledgeSeedService] 种子数据初始化完毕 ✓');
+    String relationTypeFor(String a, String b) {
+      final set = {a, b};
+      if (set.contains('course')) return 'contains';
+      if (set.contains('concept') && set.contains('pattern')) return 'supports';
+      if (set.contains('pattern') && set.contains('technology')) {
+        return 'applied_in';
+      }
+      return 'related_to';
+    }
+
+    const labelOf = <String, String>{
+      'contains': '包含',
+      'supports': '支撑',
+      'applied_in': '应用',
+      'related_to': '关联',
+      'prerequisite': '前置',
+      'sequential': '递进',
+      'explains': '解释',
+    };
+
+    for (var i = 0; i < chapters.length; i++) {
+      final group = byChapter[chapters[i]]!;
+      // 课程节点 → 本章首节点（包含）
+      if (courseNode.isNotEmpty) {
+        await rel(courseNode['id'] as int, group.first['id'] as int,
+            'contains', '包含');
+      }
+      // 章内概念互联（按类型语义 / 描述互引）
+      for (var a = 0; a < group.length; a++) {
+        final ca = group[a];
+        final nameA = ca['concept_name']?.toString() ?? '';
+        final descA = (ca['description']?.toString() ?? '').toLowerCase();
+        for (var b = a + 1; b < group.length; b++) {
+          final cb = group[b];
+          final nameB = cb['concept_name']?.toString() ?? '';
+          final descB = (cb['description']?.toString() ?? '').toLowerCase();
+          String type;
+          if (descA.contains(nameB.toLowerCase()) ||
+              descB.contains(nameA.toLowerCase())) {
+            type = 'explains'; // 描述互引 -> 解释关系
+          } else {
+            type = relationTypeFor(
+              ca['concept_type']?.toString() ?? 'concept',
+              cb['concept_type']?.toString() ?? 'concept',
+            );
+          }
+          await rel(ca['id'] as int, cb['id'] as int, type,
+              labelOf[type] ?? '关联', type == 'explains' ? 0.8 : 0.5);
+        }
+      }
+      // 跨章前置 / 递进
+      if (i > 0) {
+        final prev = byChapter[chapters[i - 1]]!;
+        await rel(prev.first['id'] as int, group.first['id'] as int,
+            'prerequisite', '前置', 0.7);
+        await rel(prev.last['id'] as int, group.first['id'] as int,
+            'sequential', '递进', 0.6);
+      }
+    }
+
+    debugPrint(
+      '[KnowledgeSeedService] 已为《${course.name}》结构推导 $added 条关系',
+    );
+    return added;
   }
 
   bool _shouldSeedGenericCourse(CourseModel? course) {
@@ -198,6 +313,13 @@ class KnowledgeSeedService {
       await rel('core_$chapterNo', 'method_$chapterNo', 'supports', '方法支撑');
       await rel(
           'method_$chapterNo', 'practice_$chapterNo', 'applied_in', '实践应用');
+      // 同章节概念间关联，使图谱形成网状结构而非纯树状
+      await rel('core_$chapterNo', 'practice_$chapterNo', 'applied_in',
+          '知识应用', 0.6);
+      await rel('chapter_$chapterNo', 'practice_$chapterNo', 'guides', '实践组织',
+          0.6);
+      await rel('core_$chapterNo', 'method_$chapterNo', 'related_to', '概念关联',
+          0.5);
       if (chapterNo > 1) {
         await rel(
           'chapter_${chapterNo - 1}',
@@ -206,6 +328,11 @@ class KnowledgeSeedService {
           '前置章节',
           0.7,
         );
+        // 跨章节知识递进：前置章节的核心知识 / 实践是本章核心知识的先修与巩固
+        await rel('core_${chapterNo - 1}', 'core_$chapterNo', 'prerequisite',
+            '前置知识', 0.6);
+        await rel('practice_${chapterNo - 1}', 'core_$chapterNo', 'reinforces',
+            '实践巩固', 0.5);
       }
     }
   }

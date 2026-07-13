@@ -15,6 +15,9 @@ class NoirTokens {
   static const Color success = Color(0xFF2E7D32);
   static const Color danger = Color(0xFFB71C1C);
 
+  static const Color inkLight = Color(0xFF8A8F9E);
+  static const Color inkBackground = Color(0xFF141828);
+
   static Color inkAlpha(double a) => ink.withOpacity(a);
   static Color paperAlpha(double a) => paper.withOpacity(a);
 

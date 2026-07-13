@@ -2324,7 +2324,7 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         batch_name TEXT NOT NULL,
         course_name TEXT DEFAULT '',
-        class_name TEXT DEFAULT '软件23',
+        class_name TEXT DEFAULT '',
         semester TEXT,
         teacher_id TEXT,
         objective_weights_json TEXT DEFAULT '{"目标1":0.15,"目标2":0.25,"目标3":0.30,"目标4":0.30}',

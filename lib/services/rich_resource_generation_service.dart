@@ -78,14 +78,18 @@ class RichResourceGenerationService {
     }
     additional.writeln('请生成内容详实、可直接授课的教案，包含完整教学环节、示例、实践任务和评价方式。');
 
-    final lessonPlan = await _courseware.generateLessonPlan(
+    final lessonPlan = await _generateLessonPlanSafely(
       topic: chapterShortTitle,
       chapter: chapterTitle,
-      classHours: 2,
       additionalRequirements: additional.toString(),
       configOverride: effectiveAiConfig,
     );
     onProgress?.call('plan', 1.0);
+    // 教案是 PDF/PPT/视频的共同基础；若生成失败则本章无可用素材，直接返回空结果，
+    // 避免向上抛出导致整个课程的资源生成中断。
+    if (lessonPlan == null) {
+      return result;
+    }
 
     // 3. 生成 UML 图（用于 PDF 增强）
     final List<Uint8List> umlImages = [];
@@ -237,5 +241,26 @@ class RichResourceGenerationService {
     onProgress?.call('video', 1.0);
 
     return result;
+  }
+
+  /// 生成教案，失败时返回 null 而非抛出，保证单个章节失败不影响整课程资源生成。
+  Future<Map<String, dynamic>?> _generateLessonPlanSafely({
+    required String topic,
+    required String chapter,
+    required String additionalRequirements,
+    AiConfigModel? configOverride,
+  }) async {
+    try {
+      return await _courseware.generateLessonPlan(
+        topic: topic,
+        chapter: chapter,
+        classHours: 2,
+        additionalRequirements: additionalRequirements,
+        configOverride: configOverride,
+      );
+    } catch (e, st) {
+      swallowDebug(e, tag: 'RichResourceGen.lessonPlan', stack: st);
+      return null;
+    }
   }
 }

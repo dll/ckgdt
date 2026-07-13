@@ -196,17 +196,14 @@ class _ReportTabState extends State<ReportTab> {
       final fullMarks = await widget.achievementDao
           .resolveObjectiveFullMarks(_selectedBatchId!);
       final objectiveCount = max(
-        4,
+        objWeights.length,
         max(
-          objWeights.length,
-          max(
-            fullMarks.where((m) => m > 0).length,
-            avgAchievements.keys
-                .map((k) => RegExp(r'课程目标(\d+)').firstMatch(k)?.group(1))
-                .whereType<String>()
-                .map((v) => int.tryParse(v) ?? 0)
-                .fold<int>(0, max),
-          ),
+          fullMarks.where((m) => m > 0).length,
+          avgAchievements.keys
+              .map((k) => RegExp(r'课程目标(\d+)').firstMatch(k)?.group(1))
+              .whereType<String>()
+              .map((v) => int.tryParse(v) ?? 0)
+              .fold<int>(0, max),
         ),
       );
       final objAchievements = List<double>.generate(objectiveCount, (i) {
@@ -804,17 +801,14 @@ class _ReportTabState extends State<ReportTab> {
     final fullMarks = await widget.achievementDao
         .resolveObjectiveFullMarks(_selectedBatchId!);
     final objectiveCount = max(
-      4,
+      weights.length,
       max(
-        weights.length,
-        max(
-          fullMarks.where((m) => m > 0).length,
-          recalculated.keys
-              .map((k) => RegExp(r'课程目标(\d+)').firstMatch(k)?.group(1))
-              .whereType<String>()
-              .map((v) => int.tryParse(v) ?? 0)
-              .fold<int>(0, max),
-        ),
+        fullMarks.where((m) => m > 0).length,
+        recalculated.keys
+            .map((k) => RegExp(r'课程目标(\d+)').firstMatch(k)?.group(1))
+            .whereType<String>()
+            .map((v) => int.tryParse(v) ?? 0)
+            .fold<int>(0, max),
       ),
     );
     final achievements = List<double>.generate(
@@ -824,7 +818,7 @@ class _ReportTabState extends State<ReportTab> {
     var weighted = recalculated['weighted'] ?? 0.0;
     if (weighted <= 0) {
       weighted = List<double>.generate(
-        4,
+        objectiveCount,
         (i) => achievements[i] * (i < weights.length ? weights[i] : 0.0),
       ).fold<double>(0, (sum, value) => sum + value);
     }

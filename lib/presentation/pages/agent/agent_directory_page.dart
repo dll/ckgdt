@@ -6,6 +6,33 @@ import '../../../core/design/noir_tokens.dart';
 import '../../../core/design/noir_components.dart';
 import '../../widgets/agent_chat_overlay.dart';
 
+List<Color> _cardColor(String id) {
+  const map = {
+    'voice': [0xFF667eea, 0xFF764ba2],
+    'graph': [0xFF4facfe, 0xFF00f2fe],
+    'quiz': [0xFFf093fb, 0xFFf5576c],
+    'repo': [0xFF43e97b, 0xFF38f9d7],
+    'assessment': [0xFFfa709a, 0xFFfee140],
+    'lab': [0xFFa18cd1, 0xFFfbc2eb],
+    'works': [0xFF84fab0, 0xFF8fd3f4],
+    'achievement': [0xFFf6d365, 0xFFfda085],
+    'courseware': [0xFFa1c4fd, 0xFFc2e9fb],
+    'tutor': [0xFF2d6a4f, 0xFF52b788],
+    'doc_converter': [0xFFe0c3fc, 0xFF8ec5fc],
+    'mobile_expert': [0xFFfccb90, 0xFFd57eeb],
+    'ethics': [0xFF667eea, 0xFF43e97b],
+    'safety': [0xFFf5576c, 0xFFf093fb],
+    'archive': [0xFF8fd3f4, 0xFF84fab0],
+    'grading': [0xFF764ba2, 0xFFa18cd1],
+    'digital_twin': [0xFFc2e9fb, 0xFFa1c4fd],
+    'case_demo': [0xFF2d6a4f, 0xFFf6d365],
+    'courseware_workshop': [0xFF4facfe, 0xFF43e97b],
+    'assistant': [0xFF667eea, 0xFF764ba2],
+  };
+  final c = map[id] ?? [0xFF667eea, 0xFF764ba2];
+  return [Color(c[0]), Color(c[1])];
+}
+
 /// 智能体广场 — 列出所有智能体，显示使用指南，一键发起对话
 class AgentDirectoryPage extends StatefulWidget {
   final String? initialAgentId;
@@ -14,6 +41,33 @@ class AgentDirectoryPage extends StatefulWidget {
 
   @override
   State<AgentDirectoryPage> createState() => _AgentDirectoryPageState();
+
+  static List<Color> _cardColor(String id) {
+    const map = {
+      'voice': [0xFF667eea, 0xFF764ba2],
+      'graph': [0xFF4facfe, 0xFF00f2fe],
+      'quiz': [0xFFf093fb, 0xFFf5576c],
+      'repo': [0xFF43e97b, 0xFF38f9d7],
+      'assessment': [0xFFfa709a, 0xFFfee140],
+      'lab': [0xFFa18cd1, 0xFFfbc2eb],
+      'works': [0xFF84fab0, 0xFF8fd3f4],
+      'achievement': [0xFFf6d365, 0xFFfda085],
+      'courseware': [0xFFa1c4fd, 0xFFc2e9fb],
+      'tutor': [0xFF2d6a4f, 0xFF52b788],
+      'doc_converter': [0xFFe0c3fc, 0xFF8ec5fc],
+      'mobile_expert': [0xFFfccb90, 0xFFd57eeb],
+      'ethics': [0xFF667eea, 0xFF43e97b],
+      'safety': [0xFFf5576c, 0xFFf093fb],
+      'archive': [0xFF8fd3f4, 0xFF84fab0],
+      'grading': [0xFF764ba2, 0xFFa18cd1],
+      'digital_twin': [0xFFc2e9fb, 0xFFa1c4fd],
+      'case_demo': [0xFF2d6a4f, 0xFFf6d365],
+      'courseware_workshop': [0xFF4facfe, 0xFF43e97b],
+      'assistant': [0xFF667eea, 0xFF764ba2],
+    };
+    final c = map[id] ?? [0xFF667eea, 0xFF764ba2];
+    return [Color(c[0]), Color(c[1])];
+  }
 }
 
 class _AgentDirectoryPageState extends State<AgentDirectoryPage> {
@@ -60,9 +114,9 @@ class _AgentDirectoryPageState extends State<AgentDirectoryPage> {
           _buildSearchBar(),
           Expanded(
             child: _filteredConfigs.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text('无匹配智能体',
-                        style: TextStyle(color: NoirTokens.inkLight)),
+                        style: TextStyle(color: NoirTokens.inkAlpha(0.5))),
                   )
                 : LayoutBuilder(builder: (context, constraints) {
                     final cols = constraints.maxWidth > 900
@@ -206,33 +260,6 @@ class _AgentDirectoryPageState extends State<AgentDirectoryPage> {
       }),
     );
   }
-
-  static List<Color> _cardColor(String id) {
-    const map = {
-      'voice': [0xFF667eea, 0xFF764ba2],
-      'graph': [0xFF4facfe, 0xFF00f2fe],
-      'quiz': [0xFFf093fb, 0xFFf5576c],
-      'repo': [0xFF43e97b, 0xFF38f9d7],
-      'assessment': [0xFFfa709a, 0xFFfee140],
-      'lab': [0xFFa18cd1, 0xFFfbc2eb],
-      'works': [0xFF84fab0, 0xFF8fd3f4],
-      'achievement': [0xFFf6d365, 0xFFfda085],
-      'courseware': [0xFFa1c4fd, 0xFFc2e9fb],
-      'tutor': [0xFF2d6a4f, 0xFF52b788],
-      'doc_converter': [0xFFe0c3fc, 0xFF8ec5fc],
-      'mobile_expert': [0xFFfccb90, 0xFFd57eeb],
-      'ethics': [0xFF667eea, 0xFF43e97b],
-      'safety': [0xFFf5576c, 0xFFf093fb],
-      'archive': [0xFF8fd3f4, 0xFF84fab0],
-      'grading': [0xFF764ba2, 0xFFa18cd1],
-      'digital_twin': [0xFFc2e9fb, 0xFFa1c4fd],
-      'case_demo': [0xFF2d6a4f, 0xFFf6d365],
-      'courseware_workshop': [0xFF4facfe, 0xFF43e97b],
-      'assistant': [0xFF667eea, 0xFF764ba2],
-    };
-    final c = map[id] ?? [0xFF667eea, 0xFF764ba2];
-    return [Color(c[0]), Color(c[1])];
-  }
 }
 
 class _AgentDetailSheet extends StatelessWidget {
@@ -243,7 +270,7 @@ class _AgentDetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AgentDirectoryPage._cardColor(config.id);
+    final colors = _cardColor(config.id);
     return DraggableScrollableSheet(
       initialChildSize: 0.65,
       maxChildSize: 0.85,
@@ -387,7 +414,7 @@ class _AgentDetailSheet extends StatelessWidget {
   Widget _sectionHeader(String title) {
     return Row(
       children: [
-        Container(width: 3, height: 16, color: AgentDirectoryPage._cardColor(config.id)[0]),
+        Container(width: 3, height: 16, color: _cardColor(config.id)[0]),
         const SizedBox(width: 8),
         Text(title,
             style: const TextStyle(
@@ -401,7 +428,7 @@ class _AgentDetailSheet extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: NoirTokens.inkBackground,
+        color: NoirTokens.inkAlpha(0.05),
         borderRadius: BorderRadius.circular(NoirTokens.radius),
         border: Border.all(color: NoirTokens.inkAlpha(0.08)),
       ),
@@ -415,7 +442,7 @@ class _AgentDetailSheet extends StatelessWidget {
                 fontSize: 13, fontWeight: FontWeight.w600,
                 color: NoirTokens.ink)),
         subtitle: Text(c.userInput,
-            style: const TextStyle(fontSize: 11, color: NoirTokens.inkLight)),
+            style: TextStyle(fontSize: 11, color: NoirTokens.inkAlpha(0.5))),
         children: [
           Container(
             width: double.infinity,

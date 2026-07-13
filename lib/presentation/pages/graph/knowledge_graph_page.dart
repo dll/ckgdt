@@ -215,12 +215,27 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     setState(() => _isLoading = true);
 
     try {
+      // 平台化修复：确保当前课程存在真实知识概念与关系。
+      // 一键生课 / 课程包导入会写入 homework 等占位节点，旧种子逻辑据此跳过
+      // 真实概念与关系生成，导致知识图谱只剩孤立节点、没有任何边。
+      // 此处先补齐概念与关系，再加载并过滤占位节点。
+      try {
+        await KnowledgeSeedService().ensureRelationsForActiveCourse();
+      } catch (e) {
+        swallowDebug(e, tag: 'KnowledgeGraphPage._ensureRelations');
+      }
+
       List<Map<String, dynamic>> conceptMaps;
       if (_chapterFilter != null) {
         conceptMaps = await _dao.getConceptsByChapter(_chapterFilter!);
       } else {
         conceptMaps = await _dao.getAllConcepts();
       }
+      // homework 等占位节点不是知识图谱节点（仅用于达成度跟踪），过滤掉，
+      // 避免它们以孤立点形式出现在关系图谱中。
+      conceptMaps = conceptMaps
+          .where((m) => (m['concept_type']?.toString() ?? '') != 'homework')
+          .toList();
 
       final allRelationMaps = <Map<String, dynamic>>[];
       final conceptIds = conceptMaps.map((c) => c['id'] as int).toSet();

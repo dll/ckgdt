@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:excel/excel.dart' as xl;
 import '../../core/error_handler.dart';
+import 'course_context_service.dart';
 import '../data/local/workload_dao.dart';
 
 /// 工作量 Excel 导入/导出服务。
@@ -44,7 +45,13 @@ class WorkloadExcelService {
   ];
 
   /// 生成申报模板（含两张表：课程工作量 / 其他工作量）。
-  Uint8List exportTemplate() {
+  ///
+  /// 示例行的课程编号 / 课程名称随当前激活课程动态生成，教学班用占位示例，
+  /// 不再硬编码历史课程班级（如「软件23」），符合平台化要求。
+  Future<Uint8List> exportTemplate() async {
+    final courseName = await CourseContextService().activeCourseName();
+    final courseId = await CourseContextService().activeCourseId();
+    final courseCode = courseId.trim().toUpperCase();
     final excel = xl.Excel.createExcel();
     for (final n in excel.tables.keys.toList()) {
       excel.delete(n);
@@ -52,16 +59,16 @@ class WorkloadExcelService {
 
     final courseSheet = excel['课程工作量'];
     courseSheet.appendRow(courseHeaders.map(xl.TextCellValue.new).toList());
-    // 示例行
+    // 示例行（占位，提示教师按当前课程填写）
     courseSheet.appendRow([
       xl.TextCellValue('419116'),
-      xl.TextCellValue('管理员'),
-      xl.TextCellValue('计算机学院'),
+      xl.TextCellValue('教师姓名'),
+      xl.TextCellValue('教学单位'),
       xl.TextCellValue('1'),
-      xl.TextCellValue('CKGDT'),
-      xl.TextCellValue('课程知识图谱与数字孪生'),
+      xl.TextCellValue(courseCode),
+      xl.TextCellValue(courseName),
       xl.TextCellValue('专业基础课'),
-      xl.TextCellValue('软件23'),
+      xl.TextCellValue('示例教学班'),
       xl.TextCellValue('合班'),
       xl.TextCellValue('理论'),
       const xl.DoubleCellValue(3.0),

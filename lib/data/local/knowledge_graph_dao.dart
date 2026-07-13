@@ -165,6 +165,18 @@ class KnowledgeGraphDao {
     return (r.first['c'] as int?) ?? 0;
   }
 
+  /// 真实知识概念数量（排除 homework 等占位节点）。
+  /// 这些占位节点会干扰「是否需要种子」的判定，必须单独统计。
+  Future<int> realConceptCount() async {
+    final db = await _dbHelper.database;
+    final scope = await _courseWhere("concept_type <> 'homework'");
+    final r = await db.rawQuery(
+      'SELECT COUNT(*) as c FROM knowledge_concepts WHERE ${scope.where}',
+      scope.args,
+    );
+    return (r.first['c'] as int?) ?? 0;
+  }
+
   Future<int> relationCount() async {
     final db = await _dbHelper.database;
     final scope = await _courseWhere();

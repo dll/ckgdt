@@ -379,7 +379,7 @@ class AchievementDao {
     required List<double> fullMarks,
     Iterable<int> dynamicObjectives = const [],
   }) {
-    var count = 4;
+    var count = 0;
     for (var i = 0; i < weights.length; i++) {
       if (weights[i] > 0) count = max(count, i + 1);
     }
@@ -889,7 +889,7 @@ class AchievementDao {
             break;
           }
         }
-        if (w.length >= 4 && w.every((x) => x > 0)) return w;
+        if (w.isNotEmpty && w.every((x) => x > 0)) return w;
       }
     } catch (e, st) {
       swallowDebug(e, tag: 'AchievementDao.resolveObjectiveWeights', stack: st);
@@ -1728,7 +1728,9 @@ class AchievementDao {
   static Future<Map<int, List<String>>> chapterKeywords(
       Database db, String courseId) async {
     final chapters = await _getCourseChapters(db, courseId);
-    if (chapters.isEmpty) return _defaultChapterKeywords;
+    // 平台化：无章节时不套用 MAD 关键词，返回空映射，由调用方提示教师配置章节，
+    // 避免把「移动应用 / 软件 / 技术体系」等 MAD 专属关键词强加给其它课程。
+    if (chapters.isEmpty) return const {};
     if (chapters.length == _defaultChapterKeywords.length) {
       final isMad = chapters.every((c) => _defaultChapterKeywords.values
           .any((kws) => kws.any((kw) => c.contains(kw))));
