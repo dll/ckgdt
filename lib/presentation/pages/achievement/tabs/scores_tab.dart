@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
 import '../../../../data/local/achievement_dao.dart';
+import '../../../../data/local/class_dao.dart';
 import '../../../../data/local/database_helper.dart';
 import '../../../../data/local/score_audit_dao.dart';
 import '../../../../services/auth_service.dart';
@@ -45,7 +47,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
   late TabController _tabCtrl;
   List<Map<String, dynamic>> _ps = [], _es = [], _xs = [], _agg = [];
   List<String> _activeEnvs = ['pingshi', 'experiment', 'exam'];
-  List<int> _activeObjectiveIndexes = [];
+  List<int> _activeObjectiveIndexes = [0, 1, 2, 3];
   final ScoreSort _sort = ScoreSort.idAsc;
 
   @override
@@ -75,8 +77,6 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
 
   Future<void> _loadBatches() async {
     try {
-      // 课程/班级/学期/教师均已确定时，自动生成达成度批次，无需用户点击
-      await widget.achievementDao.ensureBatchForActiveCourse();
       final batches = await widget.achievementDao.getBatches();
       if (mounted) {
         setState(() {
@@ -134,8 +134,9 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
             (i < objectiveWeights.length && objectiveWeights[i] > 0))
           i
     ];
-    if (activeObjectives.isEmpty) activeObjectives.addAll(
-        [for (var i = 0; i < objCount; i++) i]);
+    if (activeObjectives.isEmpty) {
+      activeObjectives.addAll(List<int>.generate(objCount, (i) => i));
+    }
     final studentIdCtrl = TextEditingController(
         text: isEdit ? (existing['student_id'] ?? '').toString() : '');
     final studentNameCtrl = TextEditingController(
@@ -219,7 +220,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
                 await widget.achievementDao.updateScore(existing['id'] as int, {
                   'student_id': studentIdCtrl.text.trim(),
                   'student_name': studentNameCtrl.text.trim(),
-                  for (var i = 0; i < values.length; i++) ...{
+                  for (var i = 0; i < objCount; i++) ...{
                     'obj${i + 1}_score': values[i],
                     'obj${i + 1}_achievement': fullMarks[i] > 0
                         ? (values[i] / fullMarks[i]).clamp(0.0, 1.0)
@@ -232,7 +233,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
                   batchId: _selectedBatchId!,
                   studentId: studentIdCtrl.text.trim(),
                   studentName: studentNameCtrl.text.trim(),
-                  objectiveScores: values,
+                  objectiveScores: [values[0], values[1], values[2], values[3]],
                   totalScore: total,
                 );
               }
@@ -305,13 +306,12 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('模板已生成：${file.path}'),
-            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+                label: '打开', onPressed: () => OpenFilex.open(file.path)),
+            duration: const Duration(seconds: 5),
           ),
         );
       }
-      // 打开所在目录并直接打开文件
-      await OpenFilex.open(dir.path);
-      await OpenFilex.open(file.path);
     } catch (e, st) {
       swallowDebug(e, tag: 'ScoresTab.downloadTemplate', stack: st);
       if (mounted) {
@@ -693,18 +693,19 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
           .resolveObjectiveWeights(_selectedBatchId!);
       final fullMarks = await widget.achievementDao
           .resolveObjectiveFullMarks(_selectedBatchId!);
-      final objCount = math.max(objectiveWeights.length, fullMarks.length);
       final activeObjectives = [
-        for (var i = 0; i < objCount; i++)
+        for (var i = 0; i < math.max(objectiveWeights.length, fullMarks.length); i++)
           if ((i < objectiveWeights.length && objectiveWeights[i] > 0) ||
               (i < fullMarks.length && fullMarks[i] > 0))
             i
       ];
-      if (activeObjectives.isEmpty) activeObjectives.addAll(
-          [for (var i = 0; i < objCount; i++) i]);
+      if (activeObjectives.isEmpty) {
+        activeObjectives.addAll(
+            List<int>.generate(math.max(objectiveWeights.length, fullMarks.length), (i) => i));
+      }
       bool close(double a, double b) => (a - b).abs() < 0.0001;
-      final standardThreePart = activeObjectives.isNotEmpty &&
-          weights.length >= objCount &&
+      final standardThreePart = activeObjectives.length == 4 &&
+          weights.length >= 4 &&
           activeObjectives.every((i) {
             final w = weights[i];
             return close(w['pingshi'] ?? 0, 0.2) &&
@@ -1058,8 +1059,16 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
             Icon(Icons.warning_amber, size: 18, color: Colors.orange.shade700),
             const SizedBox(width: 8),
             const Expanded(
-              child: Text('正在为当前课程自动创建达成度批次…（若长时间未出现，请到「达成概览」确认大纲已导入）',
+              child: Text('暂无达成度批次，请先创建',
                   style: TextStyle(fontSize: 13, color: Colors.black87)),
+            ),
+            FilledButton.tonal(
+              onPressed: _createBatch,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                visualDensity: VisualDensity.compact,
+              ),
+              child: const Text('创建批次', style: TextStyle(fontSize: 12)),
             ),
           ],
         ),
@@ -1089,6 +1098,108 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
         ),
       ),
     );
+  }
+
+  Future<void> _createBatch() async {
+    final activeCourse = await CourseContextService().getActiveCourse();
+    final courseName = activeCourse.name.trim().isNotEmpty
+        ? activeCourse.name.trim()
+        : AchievementContext.instance.courseName;
+    final today = DateTime.now();
+      var classes = await ClassDao().getActiveClasses(courseId: activeCourse.id);
+      var selectedClass = AchievementDao.selectClassForBatch(classes);
+
+      if (selectedClass.isEmpty) {
+      // 没有课程关联班级时，退而求全部活跃班级
+      classes = await ClassDao().getActiveClasses();
+      selectedClass = AchievementDao.selectClassForBatch(classes);
+    }
+
+    final semester = selectedClass.isNotEmpty
+        ? AchievementDao.semesterForClass(classes, selectedClass, today)
+        : AchievementDao.normalizeAcademicSemester(null, now: today);
+     final syllabusVersion =
+         await widget.achievementDao.currentSyllabusVersion(courseName);
+     final rawTeacherName =
+         widget.authService.currentUser?.realName?.trim() ?? '';
+     final teacherName = rawTeacherName.isNotEmpty ? rawTeacherName : '任课教师';
+     final teacherId = widget.authService.getCurrentUserId() ?? '';
+      final batchName = AchievementDao.buildBatchName(
+        courseName: courseName,
+        className: selectedClass,
+        semester: semester,
+        teacherName: teacherName,
+      );
+     try {
+      // 快照当前 course_objectives 到批次，保证达成计算与一键生课一致
+      final objs = await widget.achievementDao.getCourseObjectives(courseName);
+      final weightsJson = <String, double>{};
+      final marksJson = <String, double>{};
+      for (final o in objs) {
+        final idx = (o['idx'] as num?)?.toInt() ?? 0;
+        if (idx >= 1) {
+          weightsJson['目标$idx'] = (o['weight'] as num?)?.toDouble() ?? 0;
+          marksJson['目标$idx'] = (o['full_mark'] as num?)?.toDouble() ?? 0;
+        }
+      }
+      final objectiveWeightsJson =
+          weightsJson.isNotEmpty ? jsonEncode(weightsJson) : null;
+      final assessmentWeightsJson =
+          objs.isNotEmpty ? jsonEncode(_buildAssessmentWeightsFromRows(objs)) : null;
+
+      final id = await widget.achievementDao.addBatch(
+        batchName: batchName,
+        courseName: courseName,
+        className: selectedClass,
+        semester: semester,
+        teacherId: teacherId.isNotEmpty ? teacherId : teacherName,
+        syllabusVersion: syllabusVersion,
+        objectiveWeightsJson: objectiveWeightsJson,
+        assessmentWeightsJson: assessmentWeightsJson,
+      );
+      await _loadBatches();
+      setState(() => _selectedBatchId = id);
+      _loadComponentScores();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已自动创建批次：$batchName'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ScoresTab.createBatch', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('创建失败: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Map<String, double> _buildAssessmentWeightsFromRows(
+      List<Map<String, dynamic>> objs) {
+    double p = 0, e = 0, x = 0;
+    var count = 0;
+    for (final row in objs) {
+      final rp = _ratio(row['pingshi_ratio']);
+      final re = _ratio(row['experiment_ratio']);
+      final rx = _ratio(row['exam_ratio']);
+      final sum = rp + re + rx;
+      if (sum <= 0) continue;
+      p += rp / sum;
+      e += re / sum;
+      x += rx / sum;
+      count++;
+    }
+    if (count == 0) return {'pingshi': 0, 'experiment': 0, 'exam': 1};
+    return {'pingshi': p / count, 'experiment': e / count, 'exam': x / count};
+  }
+
+  double _ratio(Object? value) {
+    final v = (value as num?)?.toDouble() ?? 0;
+    return v > 1 ? v / 100 : v;
   }
 
   Future<int> _dynamicComponentRowCount() async {
@@ -1169,8 +1280,6 @@ class _ComponentAchievementTabState extends State<ComponentAchievementTab> {
 
   Future<void> _loadBatches() async {
     try {
-      // 平台化：当前激活课程自动创建批次，无需手工新建
-      await widget.achievementDao.ensureBatchForActiveCourse();
       final batches = await widget.achievementDao.getBatches();
       if (!mounted) return;
       setState(() {
@@ -1197,15 +1306,16 @@ class _ComponentAchievementTabState extends State<ComponentAchievementTab> {
           .resolveObjectiveFullMarks(_selectedBatchId!);
       final envWeights = await widget.achievementDao
           .resolveObjectiveAssessmentWeights(_selectedBatchId!);
-      final objCount = math.max(weights.length, fullMarks.length);
       final activeObjectives = [
-        for (var i = 0; i < objCount; i++)
+        for (var i = 0; i < math.max(weights.length, fullMarks.length); i++)
           if ((i < weights.length && weights[i] > 0) ||
               (i < fullMarks.length && fullMarks[i] > 0))
             i
       ];
-      if (activeObjectives.isEmpty) activeObjectives.addAll(
-          [for (var i = 0; i < objCount; i++) i]);
+      if (activeObjectives.isEmpty) {
+        activeObjectives.addAll(
+            List<int>.generate(math.max(weights.length, fullMarks.length), (i) => i));
+      }
       final usesEnv = activeObjectives.any(
           (i) => i < envWeights.length && (envWeights[i][widget.env] ?? 0) > 0);
 
@@ -1280,7 +1390,7 @@ class _ComponentAchievementTabState extends State<ComponentAchievementTab> {
 
   bool _isStandardThreePart(
       List<int> activeObjectives, List<Map<String, double>> envWeights) {
-    if (activeObjectives.isEmpty || envWeights.length < activeObjectives.length) return false;
+    if (activeObjectives.length != 4 || envWeights.length < 4) return false;
     bool close(double a, double b) => (a - b).abs() < 0.0001;
     return activeObjectives.every((i) {
       final w = envWeights[i];
@@ -1582,8 +1692,6 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
   }
 
   Future<void> _loadBatches() async {
-    // 平台化：当前激活课程自动创建批次，无需手工新建
-    await widget.achievementDao.ensureBatchForActiveCourse();
     final batches = await widget.achievementDao.getBatches();
     if (mounted) {
       setState(() {

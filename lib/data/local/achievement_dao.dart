@@ -647,6 +647,8 @@ class AchievementDao {
     String semester = '',
     String teacherId = '',
     String? syllabusVersion,
+    String? objectiveWeightsJson,
+    String? assessmentWeightsJson,
   }) async {
     final effectiveCourseName = courseName.isNotEmpty
         ? courseName
@@ -665,6 +667,10 @@ class AchievementDao {
       'teacher_id': teacherId,
       'syllabus_version': effectiveVersion,
       'status': 'draft',
+      if (objectiveWeightsJson != null && objectiveWeightsJson.isNotEmpty)
+        'objective_weights_json': objectiveWeightsJson,
+      if (assessmentWeightsJson != null && assessmentWeightsJson.isNotEmpty)
+        'assessment_weights_json': assessmentWeightsJson,
     });
   }
 
