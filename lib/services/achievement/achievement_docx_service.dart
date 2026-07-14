@@ -6,6 +6,7 @@ import 'package:archive/archive_io.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:xml/xml.dart';
+import 'package:path/path.dart' as p;
 import '../../core/error_handler.dart';
 import '../output_path_service.dart';
 import 'achievement_chart_service.dart';
@@ -221,10 +222,26 @@ class AchievementDocxService {
   }
 
   Future<File?> _findTemplateForCourse(String courseName) async {
-    final roots = await AchievementTemplateAssets.courseOnlyRoots();
+    final roots = await AchievementTemplateAssets.templateRoots();
+
+    // 额外扫描所有 data/*/达成 目录，确保能找到非当前课程的资源包模板
+    try {
+      final dataDir = Directory('data');
+      if (await dataDir.exists()) {
+        await for (final entry in dataDir.list()) {
+          if (entry is Directory) {
+            final dirName = entry.path.split(Platform.pathSeparator).last;
+            if (dirName == 'old' || dirName == '达成') continue;
+            roots.add(Directory(p.join(entry.path, '达成')));
+          }
+        }
+      }
+    } catch (e) {
+      swallow(e, tag: 'AchievementDocxService._findTemplateForCourse');
+    }
+
     final seen = <String>{};
-    final courseFiles = <File>[];
-    final anyFiles = <File>[];
+    final candidates = <File>[];
     for (final root in roots) {
       if (!await root.exists()) continue;
       await for (final entity
@@ -236,44 +253,49 @@ class AchievementDocxService {
         if (name.startsWith('~\$')) continue;
         if (!name.toLowerCase().endsWith('.docx')) continue;
         if (!name.contains('达成') && !name.contains('评价报告')) continue;
-        anyFiles.add(entity);
-        if (courseName.isNotEmpty && name.contains(courseName)) {
-          courseFiles.add(entity);
-        }
+        candidates.add(entity);
       }
     }
-    // 优先级：通用模板 > 课程专属模板 > 生成的输出文件
-    // 先从 anyFiles 中提取含"模板"或"样例"的文件
-    final templateFiles = anyFiles
-        .where((f) => f.path.contains('模板') || f.path.contains('样例'))
-        .toList();
-    // 再从 courseFiles 中排除已生成的输出文件（含版本号/日期的）
-    final courseTemplateFiles = courseFiles
-        .where((f) =>
-            f.path.contains('模板') ||
-            f.path.contains('样例') ||
-            f.path.contains('模板样例'))
-        .toList();
-    final candidates = templateFiles.isNotEmpty
-        ? templateFiles
-        : courseTemplateFiles.isNotEmpty
-            ? courseTemplateFiles
-            : courseFiles.isNotEmpty
-                ? courseFiles
-                : anyFiles;
     if (candidates.isEmpty) return null;
+
     candidates.sort((a, b) {
-      final an = a.path.contains('评价报告') ? 0 : 1;
-      final bn = b.path.contains('评价报告') ? 0 : 1;
-      if (an != bn) return an.compareTo(bn);
-      // 含"模板"的优先于含"样例"的
-      final am = a.path.contains('模板') ? 0 : 1;
-      final bm = b.path.contains('模板') ? 0 : 1;
-      if (am != bm) return am.compareTo(bm);
-      // 排除已生成的输出文件（含日期/版本号模式的）
-      final ad = a.path.contains(RegExp(r'\d{4}-\d{2}-\d{2}|v控制版|v\d+\.\d+'));
-      final bd = b.path.contains(RegExp(r'\d{4}-\d{2}-\d{2}|v控制版|v\d+\.\d+'));
-      if (ad != bd) return ad ? 1 : -1;
+      // 1. 路径包含课程名的优先
+      bool dirMatchesCourse(String path) {
+        if (courseName.isEmpty) return false;
+        return path.split(Platform.pathSeparator).any(
+            (s) => s.contains(courseName));
+      }
+      final ad = dirMatchesCourse(a.path) ? 0 : 1;
+      final bd = dirMatchesCourse(b.path) ? 0 : 1;
+      if (ad != bd) return ad.compareTo(bd);
+
+      final nameA = a.path.split(Platform.pathSeparator).last;
+      final nameB = b.path.split(Platform.pathSeparator).last;
+
+      // 2. 文件名为 XX-课程目标达成评价报告.docx（无 模板/样例 后缀）优先
+      final isSchool = RegExp(r'^\d+-课程目标达成评价报告\.docx$');
+      final aSchool = isSchool.hasMatch(nameA) ? 0 : 1;
+      final bSchool = isSchool.hasMatch(nameB) ? 0 : 1;
+      if (aSchool != bSchool) return aSchool.compareTo(bSchool);
+
+      // 3. 模板 > 样例 > 其他
+      int score(File f) {
+        final n = f.path.split(Platform.pathSeparator).last;
+        final p = f.path;
+        int s = 0;
+        if (n.contains('模板') || p.contains('模板')) s += 2;
+        if (n.contains('样例') || p.contains('样例')) s += 1;
+        return s;
+      }
+      final sa = score(a), sb = score(b);
+      if (sa != sb) return sb.compareTo(sa);
+
+      // 4. 排除已生成的输出文件（含日期/版本号）
+      final generated = RegExp(r'\d{4}-\d{2}-\d{2}|v控制版|v\d+\.\d+');
+      final aGen = generated.hasMatch(a.path) ? 1 : 0;
+      final bGen = generated.hasMatch(b.path) ? 1 : 0;
+      if (aGen != bGen) return aGen.compareTo(bGen);
+
       return a.path.length.compareTo(b.path.length);
     });
     return candidates.first;
@@ -515,10 +537,11 @@ class AchievementDocxService {
       _setCell(table, row, 4, experimentCell == '—' ? '' : experimentCell);
       _setCell(table, row, 5, _envRatioCell(obj, '考核', full.toDouble()));
     }
-    _setCell(table, 6, 0, '合计（占总评成绩比例）');
-    _setCell(table, 6, 1, _hasEnv(objectives, '平时') ? '100' : '');
-    _setCell(table, 6, 2, _hasEnv(objectives, '实验') ? '100' : '');
-    _setCell(table, 6, 3, _hasEnv(objectives, '考核') ? '100' : '');
+    final totalRow = 2 + objectives.length;
+    _setCell(table, totalRow, 0, '合计（占总评成绩比例）');
+    _setCell(table, totalRow, 1, _hasEnv(objectives, '平时') ? '100' : '');
+    _setCell(table, totalRow, 2, _hasEnv(objectives, '实验') ? '100' : '');
+    _setCell(table, totalRow, 3, _hasEnv(objectives, '考核') ? '100' : '');
   }
 
   void _fillDocxStandardTable(
@@ -591,7 +614,7 @@ class AchievementDocxService {
             ((env['weight'] as num?)?.toDouble() ?? 0).toStringAsFixed(1));
       }
     }
-    final totalRow = 5 + objectives.length * 3 + 2;
+    final totalRow = 5 + objectives.length * 3;
     _setCell(table, totalRow, 0, '课程总体目标期望值');
     _setCell(table, totalRow, 1, expectation.toStringAsFixed(1));
     _setCell(table, totalRow, 2, '课程总体目标达成度(cc)');

@@ -799,6 +799,9 @@ class _ReportTabState extends State<ReportTab> {
       builder: (ctx) => ReportPreviewDialog(
         reportText: reportText,
         syllabusVersion: version,
+        templateExportCallback: (_calcResults != null && _selectedBatchId != null)
+            ? () => _generateDocxReport()
+            : null,
       ),
     );
  }
@@ -862,135 +865,135 @@ class _ReportTabState extends State<ReportTab> {
     });
   }
 
+  Future<String> _generateDocxReport() async {
+    await _syncCalculationSnapshot();
+    final batch = _batches.firstWhere((b) => b['id'] == _selectedBatchId,
+        orElse: () => <String, dynamic>{});
+    final teacherName = widget.authService.currentUser?.realName ?? '教师';
+    final scores = await widget.achievementDao.getScores(_selectedBatchId!);
+    final cfg = _config;
+
+    final combined = await widget.achievementDao
+        .calculateCombinedAchievement(_selectedBatchId!);
+    final pingshiAvg = combined['pingshi'] as Map<String, double>? ?? {};
+    final experimentAvg =
+        combined['experiment'] as Map<String, double>? ?? {};
+    final examAvg = combined['exam'] as Map<String, double>? ?? {};
+    final rawEnvWeights =
+        (combined['weightsByObjective'] as List?) ?? const [];
+
+    Map<String, double> envWeightAt(int index) {
+      if (index >= 0 && index < rawEnvWeights.length) {
+        final raw = rawEnvWeights[index] as Map?;
+        return {
+          'pingshi': (raw?['pingshi'] as num?)?.toDouble() ?? 0,
+          'experiment': (raw?['experiment'] as num?)?.toDouble() ?? 0,
+          'exam': (raw?['exam'] as num?)?.toDouble() ?? 0,
+        };
+      }
+      return {'pingshi': 0.20, 'experiment': 0.30, 'exam': 0.50};
+    }
+
+    final activeObjectiveIndexes = _activeObjectiveIndexesFor(cfg);
+    final objectives = <Map<String, dynamic>>[];
+    for (final i in activeObjectiveIndexes) {
+      if (_objectiveWeights[i] <= 0 && cfg.fullMarks[i] <= 0) continue;
+      final objKey = 'obj${i + 1}';
+      final envWeight = envWeightAt(i);
+      final envDefs = [
+        ('平时', 'pingshi', envWeight['pingshi'] ?? 0),
+        ('实验', 'experiment', envWeight['experiment'] ?? 0),
+        ('考核', 'exam', envWeight['exam'] ?? 0),
+      ].where((e) => e.$3 > 0).toList();
+      final envs = <Map<String, dynamic>>[];
+      for (final (label, key, w) in envDefs) {
+        final src = key == 'pingshi'
+            ? pingshiAvg
+            : key == 'experiment'
+                ? experimentAvg
+                : examAvg;
+        final ach = src[objKey] ?? 0;
+        envs.add({
+          'name': label,
+          'full': cfg.fullMarks[i],
+          'avg': ach * cfg.fullMarks[i],
+          'ach': ach,
+          'weight': w,
+        });
+      }
+      objectives.add({
+        'objective': i + 1,
+        'weight': _objectiveWeights[i],
+        'indicator': cfg.indicators[i],
+        'description': cfg.descriptions[i],
+        'assess_content': cfg.assessContents[i],
+        'full_mark': cfg.fullMarks[i],
+        'achievement': _objectiveAchievements[i],
+        'avgScore': _objectiveAchievements[i] * 100,
+        'envs': envs,
+      });
+    }
+
+    final syllabus = <String, dynamic>{
+      'info': <String, String>{
+        '英文名称': (batch['course_name'] ?? _fallbackCourseName).toString(),
+        '考核方式': '考查',
+        '开课学期': (batch['semester'] ?? '').toString(),
+        '大纲版本': (batch['syllabus_version'] ?? '未标注版本').toString(),
+      },
+      'objectives': [
+        for (final i in activeObjectiveIndexes)
+          {
+            'num': i + 1,
+            'objective': cfg.descriptions[i],
+            'requirement': cfg.indicators[i],
+          }
+      ],
+      'weights': [
+        for (final i in activeObjectiveIndexes)
+          {
+            'objective': i + 1,
+            'weight': _objectiveWeights[i],
+            'pingshi_full': cfg.fullMarks[i].toInt(),
+            'experiment_full': (envWeightAt(i)['experiment'] ?? 0) > 0
+                ? cfg.fullMarks[i].toInt()
+                : 0,
+            'exam_full': cfg.fullMarks[i].toInt(),
+            'pingshi_ratio': envWeightAt(i)['pingshi'] ?? 0,
+            'experiment_ratio': envWeightAt(i)['experiment'] ?? 0,
+            'exam_ratio': envWeightAt(i)['exam'] ?? 0,
+          }
+      ],
+    };
+
+    final path = await AchievementDocxService.instance.generateReport(
+      batchName: batch['batch_name'] ?? '达成评价',
+      courseName: batch['course_name'] ?? _fallbackCourseName,
+      className: batch['class_name'] ?? '班级',
+      semester: batch['semester'] ?? DateTime.now().year.toString(),
+      teacherName: teacherName,
+      syllabus: syllabus,
+      syllabusVersion: batch['syllabus_version']?.toString() ?? '',
+      objectives: objectives,
+      qualitativeText: _qualitativeFromSurvey(),
+      classStats: {
+        'studentCount': scores.length,
+        'avgTotal': _weightedAchievement * 100,
+        'maxTotal': _maxOf(scores, (s) => _asDouble(s['total_score'])),
+        'minTotal': _minOf(scores, (s) => _asDouble(s['total_score'])),
+        'stdDev': _stdDevOf(scores, (s) => _asDouble(s['total_score'])),
+      },
+      students: scores,
+      surveySummary: _surveySummary,
+      context: context,
+    );
+    return path;
+  }
+
   Future<void> _exportDocx() async {
     if (_calcResults == null || _selectedBatchId == null) return;
     try {
-      await _syncCalculationSnapshot();
-      final batch = _batches.firstWhere((b) => b['id'] == _selectedBatchId,
-          orElse: () => <String, dynamic>{});
-      final teacherName = widget.authService.currentUser?.realName ?? '教师';
-      final scores = await widget.achievementDao.getScores(_selectedBatchId!);
-      final cfg = _config;
-
-      // 分环节达成度（平时/实验/期末）用于报告表5
-      final combined = await widget.achievementDao
-          .calculateCombinedAchievement(_selectedBatchId!);
-      final pingshiAvg = combined['pingshi'] as Map<String, double>? ?? {};
-      final experimentAvg =
-          combined['experiment'] as Map<String, double>? ?? {};
-      final examAvg = combined['exam'] as Map<String, double>? ?? {};
-      final rawEnvWeights =
-          (combined['weightsByObjective'] as List?) ?? const [];
-
-      Map<String, double> envWeightAt(int index) {
-        if (index >= 0 && index < rawEnvWeights.length) {
-          final raw = rawEnvWeights[index] as Map?;
-          return {
-            'pingshi': (raw?['pingshi'] as num?)?.toDouble() ?? 0,
-            'experiment': (raw?['experiment'] as num?)?.toDouble() ?? 0,
-            'exam': (raw?['exam'] as num?)?.toDouble() ?? 0,
-          };
-        }
-        return {'pingshi': 0.20, 'experiment': 0.30, 'exam': 0.50};
-      }
-
-      final activeObjectiveIndexes = _activeObjectiveIndexesFor(cfg);
-      final objectives = <Map<String, dynamic>>[];
-      for (final i in activeObjectiveIndexes) {
-        if (_objectiveWeights[i] <= 0 && cfg.fullMarks[i] <= 0) continue;
-        final objKey = 'obj${i + 1}';
-        final envWeight = envWeightAt(i);
-        final envDefs = [
-          ('平时', 'pingshi', envWeight['pingshi'] ?? 0),
-          ('实验', 'experiment', envWeight['experiment'] ?? 0),
-          ('考核', 'exam', envWeight['exam'] ?? 0),
-        ].where((e) => e.$3 > 0).toList();
-        final envs = <Map<String, dynamic>>[];
-        for (final (label, key, w) in envDefs) {
-          final src = key == 'pingshi'
-              ? pingshiAvg
-              : key == 'experiment'
-                  ? experimentAvg
-                  : examAvg;
-          final ach = src[objKey] ?? 0;
-          envs.add({
-            'name': label,
-            'full': cfg.fullMarks[i],
-            'avg': ach * cfg.fullMarks[i],
-            'ach': ach,
-            'weight': w,
-          });
-        }
-        objectives.add({
-          'objective': i + 1,
-          'weight': _objectiveWeights[i],
-          'indicator': cfg.indicators[i],
-          'description': cfg.descriptions[i],
-          'assess_content': cfg.assessContents[i],
-          'full_mark': cfg.fullMarks[i],
-          'achievement': _objectiveAchievements[i],
-          'avgScore': _objectiveAchievements[i] * 100,
-          'envs': envs,
-        });
-      }
-
-      // 从 config（含大纲导入的 course_objectives）构建 syllabus，
-      // 修复此前传空 {} 导致 docx 一/二/三表表头空白的 bug。
-      final syllabus = <String, dynamic>{
-        'info': <String, String>{
-          '英文名称': (batch['course_name'] ?? _fallbackCourseName).toString(),
-          '考核方式': '考查',
-          '开课学期': (batch['semester'] ?? '').toString(),
-          '大纲版本': (batch['syllabus_version'] ?? '未标注版本').toString(),
-        },
-        'objectives': [
-          for (final i in activeObjectiveIndexes)
-            {
-              'num': i + 1,
-              'objective': cfg.descriptions[i],
-              'requirement': cfg.indicators[i],
-            }
-        ],
-        'weights': [
-          for (final i in activeObjectiveIndexes)
-            {
-              'objective': i + 1,
-              'weight': _objectiveWeights[i],
-              'pingshi_full': cfg.fullMarks[i].toInt(),
-              'experiment_full': (envWeightAt(i)['experiment'] ?? 0) > 0
-                  ? cfg.fullMarks[i].toInt()
-                  : 0,
-              'exam_full': cfg.fullMarks[i].toInt(),
-              'pingshi_ratio': envWeightAt(i)['pingshi'] ?? 0,
-              'experiment_ratio': envWeightAt(i)['experiment'] ?? 0,
-              'exam_ratio': envWeightAt(i)['exam'] ?? 0,
-            }
-        ],
-      };
-
-      final path = await AchievementDocxService.instance.generateReport(
-        batchName: batch['batch_name'] ?? '达成评价',
-        courseName: batch['course_name'] ?? _fallbackCourseName,
-        className: batch['class_name'] ?? '班级',
-        semester: batch['semester'] ?? DateTime.now().year.toString(),
-       teacherName: teacherName,
-       syllabus: syllabus,
-        syllabusVersion: batch['syllabus_version']?.toString() ?? '',
-       objectives: objectives,
-        qualitativeText: _qualitativeFromSurvey(),
-        classStats: {
-          'studentCount': scores.length,
-          'avgTotal': _weightedAchievement * 100,
-          'maxTotal': _maxOf(scores, (s) => _asDouble(s['total_score'])),
-          'minTotal': _minOf(scores, (s) => _asDouble(s['total_score'])),
-          'stdDev': _stdDevOf(scores, (s) => _asDouble(s['total_score'])),
-        },
-        students: scores,
-        surveySummary: _surveySummary,
-        context: context,
-        // 不传递程序生成的图表 — 使用模板原有图表或待用户插入 Excel 截图
-      );
-
+      final path = await _generateDocxReport();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -2840,10 +2843,12 @@ class _ReportTabState extends State<ReportTab> {
 class ReportPreviewDialog extends StatefulWidget {
   final String reportText;
   final String syllabusVersion;
+  final Future<String> Function()? templateExportCallback;
   const ReportPreviewDialog({
     super.key,
     required this.reportText,
     this.syllabusVersion = '',
+    this.templateExportCallback,
   });
 
   @override
@@ -2865,6 +2870,30 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
   Future<void> _exportEditedDocx() async {
     setState(() => _exporting = true);
     try {
+      // 优先使用模板生成（学校标准格式）
+      if (widget.templateExportCallback != null) {
+        try {
+          final path = await widget.templateExportCallback!();
+          if (path.isNotEmpty) {
+            if (mounted) {
+              setState(() => _exporting = false);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text('Word 已导出：$path'),
+                    duration: const Duration(seconds: 4),
+                    action: SnackBarAction(
+                        label: '打开', onPressed: () => OpenFilex.open(path))),
+              );
+            }
+            return;
+          }
+        } catch (e, st) {
+          swallowDebug(e,
+              tag: 'ReportPreview.templateExport', stack: st);
+          // 模板生成失败则回退到 Markdown 导出
+        }
+      }
+
       final bytes = NativeDocxService.instance.markdownToDocx(_editCtrl.text);
       final dir = await OutputPathService.getOutputDirectory();
       final ts = DateTime.now()
