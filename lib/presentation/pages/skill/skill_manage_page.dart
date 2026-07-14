@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
@@ -372,7 +372,7 @@ class _SkillManageCard extends StatelessWidget {
       width: 36,
       height: 36,
       decoration: BoxDecoration(
-        color: skill.color.withValues(alpha: 0.15),
+        color: skill.color.withOpacity(0.15),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Icon(skill.icon, color: skill.color, size: 20),
@@ -431,7 +431,7 @@ class _SkillDetailPage extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: [
-          skill.color.withValues(alpha: 0.8),
+          skill.color.withOpacity(0.8),
           skill.color,
         ]),
         borderRadius: BorderRadius.circular(16),
@@ -442,7 +442,7 @@ class _SkillDetailPage extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(skill.icon, color: Colors.white, size: 28),
@@ -456,7 +456,7 @@ class _SkillDetailPage extends StatelessWidget {
                     style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 Text(skill.subtitle,
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 14)),
+                    style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 14)),
               ],
             ),
           ),
@@ -574,14 +574,14 @@ class _SkillDetailPage extends StatelessWidget {
               children: [
                 ...skill.keywords.map((k) => Chip(
                       label: Text(k, style: const TextStyle(fontSize: 12)),
-                      backgroundColor: const Color(0xFF667eea).withValues(alpha: 0.1),
+                      backgroundColor: const Color(0xFF667eea).withOpacity(0.1),
                       side: BorderSide.none,
                       padding: EdgeInsets.zero,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     )),
                 ...skill.examples.map((e) => Chip(
                       label: Text(e, style: const TextStyle(fontSize: 12)),
-                      backgroundColor: Colors.deepPurple.withValues(alpha: 0.08),
+                      backgroundColor: Colors.deepPurple.withOpacity(0.08),
                       side: BorderSide.none,
                       padding: EdgeInsets.zero,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,

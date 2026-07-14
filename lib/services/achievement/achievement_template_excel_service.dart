@@ -364,43 +364,28 @@ class AchievementTemplateExcelService {
       ws.text(2, 0, '班级：${p.className}');
       ws.text(2, 1, '评价方式:平时');
       final start = profile.componentDataStartRow;
-      final avgRow = profile.pingshiSummaryRow; // 倒数第二行：班平均值
-      final achRow = avgRow + 1; // 倒数第一行：课程目标达成度
+      final avgRow = profile.pingshiSummaryRow;
+      final achRow = avgRow + 1;
       final rows = _rowsInScoreOrder(p.scores, p.pingshi);
-      _clearRows(ws, start, math.max(start, avgRow - 1), 0, 38);
-      _clearRows(ws, avgRow, achRow, 0, 38);
+      // 只更新学号/姓名 + 指标达成度列(O/AA/AL = 14/26/37) + 总评列(AM=38)
+      // 保留模板原始细分成绩列(C-M, P-Z, AB-AK)不变
       for (int i = 0; i < rows.length; i++) {
         final row = rows[i];
         final r = start + i;
-        final classActivity = _num(row, 'class_activity_score');
-        final quizHomework = _num(row, 'quiz_homework_score');
-        final extraLearning = _num(row, 'extra_learning_score');
         ws.text(r, 0, row['student_id']);
         ws.text(r, 1, row['student_name']);
-        ws.number(r, 2, classActivity, 1);
-        ws.number(r, 13, classActivity, 1);
         ws.number(r, 14, _num(row, 'class_activity_achievement'), 4);
-        ws.number(r, 15, quizHomework, 1);
-        ws.number(r, 25, quizHomework, 1);
         ws.number(r, 26, _num(row, 'quiz_homework_achievement'), 4);
-        ws.number(r, 27, extraLearning, 1);
-        ws.number(r, 36, extraLearning, 1);
         ws.number(r, 37, _num(row, 'extra_learning_achievement'), 4);
         ws.number(r, 38, _num(row, 'total_score'), 1);
       }
-      // 倒数第二行：班平均值（三项原始平均分 + 各达成度均值 + 总评均值）
+      // 班平均值（只更新达成度和总评列，原始分列保留模板值）
       ws.text(avgRow, 0, '班平均值');
-      ws.number(avgRow, 2, _avgF(rows, 'class_activity_score'), 1);
-      ws.number(avgRow, 13, _avgF(rows, 'class_activity_score'), 1);
       ws.number(avgRow, 14, _avgF(rows, 'class_activity_achievement'), 4);
-      ws.number(avgRow, 15, _avgF(rows, 'quiz_homework_score'), 1);
-      ws.number(avgRow, 25, _avgF(rows, 'quiz_homework_score'), 1);
       ws.number(avgRow, 26, _avgF(rows, 'quiz_homework_achievement'), 4);
-      ws.number(avgRow, 27, _avgF(rows, 'extra_learning_score'), 1);
-      ws.number(avgRow, 36, _avgF(rows, 'extra_learning_score'), 1);
       ws.number(avgRow, 37, _avgF(rows, 'extra_learning_achievement'), 4);
       ws.number(avgRow, 38, _avgF(rows, 'total_score'), 1);
-      // 倒数第一行：课程目标达成度（仅达成度列 O/AA/AL/AM = 14/26/37/38）
+      // 课程目标达成度
       ws.text(achRow, 0, '课程目标达成度');
       ws.number(achRow, 14, _avg(p.pingshiAverage, 0), 4);
       ws.number(achRow, 26, _avg(p.pingshiAverage, 1), 4);
