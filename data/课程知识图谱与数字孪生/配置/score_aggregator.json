@@ -1,0 +1,46 @@
+{
+  "version": "1.0.0",
+  "description": "成绩聚合模型 — 定义原始分数如何流入达成度计算",
+  "aggregation_flow": {
+    "step1_collect": {
+      "description": "收集各环节原始分数",
+      "sources": [
+        {"table": "homework_scores", "fields": ["student_id", "chapter", "item_id", "score", "max_score"]},
+        {"table": "quiz_results", "fields": ["user_id", "chapter", "score", "total_questions"]},
+        {"table": "lab_submissions", "fields": ["user_id", "task_id", "score", "max_score"]},
+        {"table": "student_works", "fields": ["user_id", "work_id", "score", "max_score"]},
+        {"table": "achievement_pingshi_scores", "fields": ["user_id", "type", "score"]},
+        {"table": "achievement_experiment_scores", "fields": ["user_id", "task_id", "score"]},
+        {"table": "achievement_exam_scores", "fields": ["user_id", "category", "score"]}
+      ]
+    },
+    "step2_normalize": {
+      "description": "标准化为0-1分值",
+      "formula": "normalized = actual_score / max_score"
+    },
+    "step3_weight": {
+      "description": "按课程目标贡献度加权",
+      "formula": "weighted_score = normalized_score × objective_contribution × component_weight"
+    },
+    "step4_aggregate": {
+      "description": "按目标聚合所有环节的加权分",
+      "formula": "objective_achievement = Σ(weighted_scores_for_objective_i) / Σ(max_weighted_scores_for_objective_i)"
+    },
+    "step5_overall": {
+      "description": "计算总达成度",
+      "formula": "overall = Σ(objective_achievement_i × objective_weight_i)"
+    }
+  },
+  "auto_triggers": [
+    {"event": "student_submits_homework", "action": "recalculate_homework_average"},
+    {"event": "student_completes_quiz", "action": "recalculate_quiz_average"},
+    {"event": "teacher_scores_experiment", "action": "recalculate_experiment_achievement"},
+    {"event": "teacher_scores_final", "action": "recalculate_final_achievement"},
+    {"event": "any_score_change", "action": "recalculate_all_objective_achievements"}
+  ],
+  "output_views": [
+    {"view": "student_radar", "description": "学生个人5维达成度雷达图", "data": "5个目标的达成度值"},
+    {"view": "class_overview", "description": "班级达成度概览", "data": "各目标平均达成度+分布"},
+    {"view": "course_report", "description": "课程达成度报告", "data": "全班汇总+毕业要求支撑矩阵"}
+  ]
+}

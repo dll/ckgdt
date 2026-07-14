@@ -1,0 +1,103 @@
+{
+  "version": "1.0.0",
+  "course_name": "课程知识图谱与数字孪生平台",
+  "roles": [
+    {
+      "id": "student",
+      "name": "学生",
+      "description": "以模拟学生身份体验完整学习流程",
+      "navigation_tabs": ["首页", "图谱", "案例", "学习", "实验", "考核", "作品"],
+      "home_modules": [
+        "知识图谱", "课程目标", "学习路径", "章节测验", "Git仓库",
+        "案例库", "AI技能", "数字孪生", "AI对话", "深度实践",
+        "成长曲线", "Token统计", "数据同步", "跨平台同步", "通知",
+        "学习进度", "错题本", "收藏夹", "问卷调查", "课堂问答"
+      ],
+      "permissions": [
+        "view_graph", "browse_learning", "submit_experiment", "submit_work",
+        "take_quiz", "view_progress", "view_achievement", "use_ai_assistant",
+        "sync_data", "view_notifications", "manage_profile"
+      ],
+      "denied_permissions": [
+        "manage_questions", "manage_students", "manage_teachers",
+        "score_works", "manage_assessment", "import_data", "export_data",
+        "manage_classes", "configure_gitee", "view_all_repos",
+        "manage_courses", "manage_teaching", "manage_surveys",
+        "manage_notifications", "generate_course", "archive_course"
+      ]
+    },
+    {
+      "id": "teacher",
+      "name": "教师",
+      "description": "以教师身份进行教学管理与考核评价",
+      "navigation_tabs": ["首页", "图谱", "案例", "教学", "评价", "达成", "归档"],
+      "home_modules": [
+        "知识图谱", "课程目标", "学习路径", "章节测验", "Git仓库",
+        "案例库", "AI技能", "数字孪生", "AI对话", "深度实践",
+        "成长曲线", "Token统计", "数据同步", "跨平台同步", "通知",
+        "成绩分析", "班级管理", "教学管理", "题库管理",
+        "问卷管理", "反馈管理", "课堂问答", "一键生课", "课程管理"
+      ],
+      "permissions": [
+        "view_graph", "browse_learning", "manage_experiments",
+        "score_experiments", "score_works", "manage_assessment",
+        "view_achievement", "manage_achievement", "use_ai_assistant",
+        "sync_data", "view_notifications", "manage_notifications",
+        "manage_teaching", "manage_surveys", "manage_classes",
+        "manage_questions", "import_data", "export_data",
+        "generate_course", "manage_courses", "archive_course",
+        "configure_gitee", "view_all_repos", "teacher_ai_grading"
+      ],
+      "denied_permissions": [
+        "manage_students", "manage_teachers"
+      ]
+    },
+    {
+      "id": "admin",
+      "name": "管理员",
+      "description": "系统管理员，拥有全部权限",
+      "navigation_tabs": ["首页", "图谱", "案例", "教学", "评价", "达成", "归档", "管理"],
+      "home_modules": [
+        "知识图谱", "课程目标", "学习路径", "章节测验", "Git仓库",
+        "案例库", "AI技能", "数字孪生", "AI对话", "深度实践",
+        "成长曲线", "Token统计", "数据同步", "跨平台同步", "通知",
+        "成绩分析", "班级管理", "教学管理", "题库管理",
+        "问卷管理", "反馈管理", "课堂问答", "一键生课", "课程管理",
+        "学生管理", "教师管理", "数据导入", "数据导出", "仓库分析"
+      ],
+      "permissions": [
+        "view_graph", "browse_learning", "manage_experiments",
+        "score_experiments", "score_works", "manage_assessment",
+        "view_achievement", "manage_achievement", "use_ai_assistant",
+        "sync_data", "view_notifications", "manage_notifications",
+        "manage_teaching", "manage_surveys", "manage_classes",
+        "manage_questions", "import_data", "export_data",
+        "generate_course", "manage_courses", "archive_course",
+        "configure_gitee", "view_all_repos", "teacher_ai_grading",
+        "manage_students", "manage_teachers", "repo_analytics",
+        "release_center"
+      ],
+      "denied_permissions": []
+    }
+  ],
+  "sub_page_access": {
+    "student_only": [],
+    "teacher_only": [
+      "archive", "course_manage", "course_objectives_manage",
+      "data_export", "data_import", "feedback", "question_manage",
+      "survey_manage", "teaching_manage", "lab_manage", "grade_entry",
+      "notification_manage", "teacher_workspace", "class_token", "agent_calls"
+    ],
+    "admin_only": [
+      "teacher_application_manage", "student_manage", "teacher_manage",
+      "class_manage", "repo_analytics", "release_center"
+    ],
+    "all_roles": [
+      "knowledge_graph", "graph_detail", "quiz", "wrong_answers",
+      "video_list", "document_list", "favorites", "learning_plan",
+      "progress", "handbook", "ai_skill", "data_sync", "voice_settings",
+      "student_center", "chat_history", "digital_twin", "deep_practice",
+      "growth_curve", "token_stats", "cases", "skills"
+    ]
+  }
+}

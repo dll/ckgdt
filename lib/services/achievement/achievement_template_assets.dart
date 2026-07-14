@@ -30,6 +30,34 @@ class AchievementTemplateAssets {
     };
   }
 
+  /// 仅返回当前课程资源包目录（如 data/SEB/达成/）。
+  /// 模板查找必须用此方法，避免旧 bundled MAD 模板污染新课程。
+  static Future<List<Directory>> courseOnlyRoots() async {
+    final roots = <Directory>[];
+    try {
+      final course = await CourseContextService().getActiveCourse();
+      final courseId = course.id.trim();
+      if (courseId.isEmpty) return roots;
+      void addRoot(Directory dir) {
+        roots.add(dir);
+      }
+      addRoot(Directory(p.join('data', courseId, '达成')));
+      addRoot(Directory(p.join(Directory.current.path, 'data', courseId, '达成')));
+      if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+        var dir = File(Platform.resolvedExecutable).parent;
+        for (var i = 0; i < 6; i++) {
+          addRoot(Directory(p.join(dir.path, 'data', courseId, '达成')));
+          final parent = dir.parent;
+          if (parent.path == dir.path) break;
+          dir = parent;
+        }
+      }
+    } catch (e) {
+      swallow(e, tag: 'AchievementTemplateAssets.courseOnlyRoots');
+    }
+    return roots;
+  }
+
   static Future<List<Directory>> templateRoots() async {
     final roots = <Directory>[];
     final seen = <String>{};

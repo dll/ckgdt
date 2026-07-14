@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -524,6 +524,9 @@ class _VoiceRecordDialogState extends State<_VoiceRecordDialog>
       _recognizedText = finalText;
       _isListening = false;
     });
+    if (finalText.isNotEmpty) {
+      Navigator.of(context).maybePop(finalText);
+    }
   }
 
   Future<void> _startListening() async {

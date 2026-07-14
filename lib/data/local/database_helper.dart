@@ -1002,7 +1002,7 @@ class DatabaseHelper {
         'ai_chat_history': 'user_id',
         'notification_recipients': 'user_id',
         'twin_snapshots': 'user_id',
-        'survey_responses': 'user_id',
+        // survey_responses 不清理 — 问卷数据由课程资源包导入，不应被启动清理删除
         'agent_call_logs': 'user_id',
         'grading_results': 'user_id',
         'plagiarism_records': 'user_id',
@@ -1044,7 +1044,7 @@ class DatabaseHelper {
         'resource_files': 'course_id',
         'favorites': 'course_id',
         'learning_records': 'course_id',
-        'survey_responses': 'course_id',
+        // survey_responses 不清理 — 问卷数据由课程资源包导入
       };
 
       // 只删除 course_id = 'mad' 或 NULL 的行；保留 ckgdt

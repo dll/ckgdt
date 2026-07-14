@@ -109,7 +109,7 @@ class AchievementChartService {
       ),
     );
 
-    return _renderToPng(context, chart, width: width, height: height);
+    return renderToPng(context, chart, width: width, height: height);
   }
 
   /// 单个目标的散点趋势图。
@@ -209,13 +209,13 @@ class AchievementChartService {
       ),
     );
 
-    return _renderToPng(context, chart, width: width, height: height);
+    return renderToPng(context, chart, width: width, height: height);
   }
 
   /// 将 fl_chart Widget 渲染为 PNG bytes。
   ///
   /// [context] 用于获取 Overlay；调用方应传入已 mount 的BuildContext。
-  Future<Uint8List> _renderToPng(
+  Future<Uint8List> renderToPng(
     BuildContext context,
     Widget chart, {
     required double width,

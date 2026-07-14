@@ -3,9 +3,12 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:archive/archive_io.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
 import 'package:xml/xml.dart';
 import '../../core/error_handler.dart';
 import '../output_path_service.dart';
+import 'achievement_chart_service.dart';
 import 'achievement_template_assets.dart';
 
 /// 课程达成评价报告 DOCX 生成器。
@@ -56,6 +59,8 @@ class AchievementDocxService {
     Uint8List? barChartPng,
     List<Uint8List?> scatterChartPngs = const [],
     String syllabusVersion = '',
+    Map<String, dynamic>? surveySummary,
+    BuildContext? context,
   }) async {
     // 优先使用课程资源包中的模板（data/{courseId}/达成/），
     // 找不到时回退到程序化生成。
@@ -79,12 +84,98 @@ class AchievementDocxService {
           barChartPng: barChartPng,
           scatterChartPngs: scatterChartPngs,
           syllabusVersion: syllabusVersion,
+          surveySummary: surveySummary,
+          context: context,
         );
       } catch (e, st) {
         swallowDebug(e,
             tag: 'AchievementDocxService.generateReport', stack: st);
       }
     }
+
+    // ── 问卷调查数据处理 ──────────────────────────────────────────────
+    String? surveyQualitativeText;
+    Uint8List? surveyPiePng;
+    if (surveySummary != null &&
+        (surveySummary['hasSurveyData'] ?? false) == true) {
+      final totalResp = _asInt(surveySummary['totalResponses']);
+      final overallSat = _asDouble(surveySummary['overallSatisfaction']);
+      final qStats = _asMapList(surveySummary['questionStats']);
+
+      // 等级分布统计
+      int cntA = 0, cntB = 0, cntC = 0, cntD = 0, cntE = 0;
+      for (final qs in qStats) {
+        if (qs['type'] == 'single_choice') {
+          final counts = (qs['counts'] as Map?) ?? {};
+          for (final entry in counts.entries) {
+            final key = entry.key.toString();
+            final val = _asInt(entry.value);
+            if (key == 'A' || key.contains('完全不符合')) {
+              cntA += val;
+            } else if (key == 'B' || key.contains('不太符合')) {
+              cntB += val;
+            } else if (key == 'C' || key.contains('一般符合')) {
+              cntC += val;
+            } else if (key == 'D' || key.contains('比较符合')) {
+              cntD += val;
+            } else if (key == 'E' || key.contains('完全符合')) {
+              cntE += val;
+            }
+          }
+        } else if (qs['type'] == 'rating') {
+          final avg = _asDouble(qs['average']);
+          final count = _asInt(qs['count']);
+          if (avg >= 4.5) {
+            cntE += count;
+          } else if (avg >= 3.5) {
+            cntD += count;
+          } else if (avg >= 2.5) {
+            cntC += count;
+          } else if (avg >= 1.5) {
+            cntB += count;
+          } else {
+            cntA += count;
+          }
+        }
+      }
+      final gradeTotal = cntA + cntB + cntC + cntD + cntE;
+      String pct(int c) =>
+          gradeTotal > 0 ? '${(c / gradeTotal * 100).toStringAsFixed(0)}%' : '0%';
+
+      surveyQualitativeText =
+          '本课程通过问卷调查获取学生对课程目标达成情况的自我评价。'
+          '共回收有效问卷$totalResp份，综合满意度${(overallSat * 100).toStringAsFixed(1)}%。'
+          '等级分布：E完全符合${pct(cntE)}、D比较符合${pct(cntD)}、'
+          'C一般符合${pct(cntC)}、B不太符合${pct(cntB)}、A完全不符合${pct(cntA)}。'
+          '问卷结果与定量评价结果基本一致，表明学生自我评价与实际能力达成情况基本相符。';
+
+      // 生成饼图 PNG（需要 BuildContext）
+      if (context != null && gradeTotal > 0) {
+        try {
+          final chartService = AchievementChartService.instance;
+          final chart = _buildSurveyPieChart(
+            cntA: cntA,
+            cntB: cntB,
+            cntC: cntC,
+            cntD: cntD,
+            cntE: cntE,
+          );
+          surveyPiePng = await chartService.renderToPng(
+            context,
+            chart,
+            width: 600,
+            height: 400,
+          );
+        } catch (e, st) {
+          swallowDebug(e,
+              tag: 'AchievementDocxService.generateReport.surveyPie', stack: st);
+        }
+      }
+    }
+
+    // 合并 qualitativeText：优先用调用方传入的，否则用问卷统计生成的
+    final finalQualitative =
+        (qualitativeText?.trim().isNotEmpty ?? false) ? qualitativeText : surveyQualitativeText;
 
     final archive = Archive();
 
@@ -98,11 +189,12 @@ class AchievementDocxService {
       classStats: classStats,
       students: students,
       analysisText: analysisText,
-      qualitativeText: qualitativeText,
+      qualitativeText: finalQualitative,
       improvementText: improvementText,
       expectation: expectation,
       barChartPng: barChartPng,
       scatterChartPngs: scatterChartPngs,
+      surveyPiePng: surveyPiePng,
     );
 
     archive.addFile(
@@ -129,7 +221,7 @@ class AchievementDocxService {
   }
 
   Future<File?> _findTemplateForCourse(String courseName) async {
-    final roots = await AchievementTemplateAssets.templateRoots();
+    final roots = await AchievementTemplateAssets.courseOnlyRoots();
     final seen = <String>{};
     final courseFiles = <File>[];
     final anyFiles = <File>[];
@@ -143,19 +235,45 @@ class AchievementDocxService {
         final name = path.split(Platform.pathSeparator).last;
         if (name.startsWith('~\$')) continue;
         if (!name.toLowerCase().endsWith('.docx')) continue;
-        if (!name.contains('达成')) continue;
+        if (!name.contains('达成') && !name.contains('评价报告')) continue;
         anyFiles.add(entity);
         if (courseName.isNotEmpty && name.contains(courseName)) {
           courseFiles.add(entity);
         }
       }
     }
-    final candidates = courseName.trim().isEmpty ? anyFiles : courseFiles;
+    // 优先级：通用模板 > 课程专属模板 > 生成的输出文件
+    // 先从 anyFiles 中提取含"模板"或"样例"的文件
+    final templateFiles = anyFiles
+        .where((f) => f.path.contains('模板') || f.path.contains('样例'))
+        .toList();
+    // 再从 courseFiles 中排除已生成的输出文件（含版本号/日期的）
+    final courseTemplateFiles = courseFiles
+        .where((f) =>
+            f.path.contains('模板') ||
+            f.path.contains('样例') ||
+            f.path.contains('模板样例'))
+        .toList();
+    final candidates = templateFiles.isNotEmpty
+        ? templateFiles
+        : courseTemplateFiles.isNotEmpty
+            ? courseTemplateFiles
+            : courseFiles.isNotEmpty
+                ? courseFiles
+                : anyFiles;
     if (candidates.isEmpty) return null;
     candidates.sort((a, b) {
       final an = a.path.contains('评价报告') ? 0 : 1;
       final bn = b.path.contains('评价报告') ? 0 : 1;
       if (an != bn) return an.compareTo(bn);
+      // 含"模板"的优先于含"样例"的
+      final am = a.path.contains('模板') ? 0 : 1;
+      final bm = b.path.contains('模板') ? 0 : 1;
+      if (am != bm) return am.compareTo(bm);
+      // 排除已生成的输出文件（含日期/版本号模式的）
+      final ad = a.path.contains(RegExp(r'\d{4}-\d{2}-\d{2}|v控制版|v\d+\.\d+'));
+      final bd = b.path.contains(RegExp(r'\d{4}-\d{2}-\d{2}|v控制版|v\d+\.\d+'));
+      if (ad != bd) return ad ? 1 : -1;
       return a.path.length.compareTo(b.path.length);
     });
     return candidates.first;
@@ -178,6 +296,8 @@ class AchievementDocxService {
     Uint8List? barChartPng,
     List<Uint8List?> scatterChartPngs = const [],
     String syllabusVersion = '',
+    Map<String, dynamic>? surveySummary,
+    BuildContext? context,
   }) async {
     final archive = ZipDecoder().decodeBytes(await template.readAsBytes());
     final files = <String, List<int>>{};
@@ -189,27 +309,116 @@ class AchievementDocxService {
     if (documentBytes == null) throw StateError('模板缺 word/document.xml');
     final doc = XmlDocument.parse(utf8.decode(documentBytes));
     final tables = _descendants(doc, 'tbl');
-    if (tables.length < 7) throw StateError('达成报告模板表格数不足');
+    if (tables.length < 4) throw StateError('达成报告模板表格数不足（至少需要4个表格）');
 
     _fillDocxTitle(doc, '$semester《$courseName》课程目标达成评价报告');
     _fillDocxBasicInfo(tables[0], courseName, className, semester, teacherName,
         syllabus, objectives, classStats, students);
-    _fillDocxAssessmentTable(tables[1], objectives);
-    _fillDocxStandardTable(tables[2], objectives);
-    _fillDocxStandardTable(tables[3], objectives);
-    _fillDocxExamContentTable(tables[4], objectives);
-    _fillDocxAchievementMatrix(tables[5], objectives, expectation);
-    _fillDocxAnalysisTable(
-      tables[6],
-      objectives,
-      classStats,
-      analysisText,
-      qualitativeText,
-      improvementText,
-      teacherName,
-      barChartPng: barChartPng,
-      scatterChartPngs: scatterChartPngs,
-    );
+    if (tables.length > 1) _fillDocxAssessmentTable(tables[1], objectives);
+    if (tables.length > 2) _fillDocxStandardTable(tables[2], objectives);
+    if (tables.length > 3) _fillDocxStandardTable(tables[3], objectives);
+    if (tables.length > 4) _fillDocxExamContentTable(tables[4], objectives);
+    if (tables.length > 5) _fillDocxAchievementMatrix(tables[5], objectives, expectation);
+
+    // ── 问卷调查数据处理（模板路径） ─────────────────────────────────
+    String? finalQualitative = qualitativeText;
+    Uint8List? surveyPiePng;
+    if (surveySummary != null &&
+        (surveySummary['hasSurveyData'] ?? false) == true) {
+      final totalResp = _asInt(surveySummary['totalResponses']);
+      final overallSat = _asDouble(surveySummary['overallSatisfaction']);
+      final qStats = _asMapList(surveySummary['questionStats']);
+
+      int cntA = 0, cntB = 0, cntC = 0, cntD = 0, cntE = 0;
+      for (final qs in qStats) {
+        if (qs['type'] == 'single_choice') {
+          final counts = (qs['counts'] as Map?) ?? {};
+          for (final entry in counts.entries) {
+            final key = entry.key.toString();
+            final val = _asInt(entry.value);
+            if (key == 'A' || key.contains('完全不符合')) {
+              cntA += val;
+            } else if (key == 'B' || key.contains('不太符合')) {
+              cntB += val;
+            } else if (key == 'C' || key.contains('一般符合')) {
+              cntC += val;
+            } else if (key == 'D' || key.contains('比较符合')) {
+              cntD += val;
+            } else if (key == 'E' || key.contains('完全符合')) {
+              cntE += val;
+            }
+          }
+        } else if (qs['type'] == 'rating') {
+          final avg = _asDouble(qs['average']);
+          final count = _asInt(qs['count']);
+          if (avg >= 4.5) {
+            cntE += count;
+          } else if (avg >= 3.5) {
+            cntD += count;
+          } else if (avg >= 2.5) {
+            cntC += count;
+          } else if (avg >= 1.5) {
+            cntB += count;
+          } else {
+            cntA += count;
+          }
+        }
+      }
+      final gradeTotal = cntA + cntB + cntC + cntD + cntE;
+      String pct(int c) =>
+          gradeTotal > 0 ? '${(c / gradeTotal * 100).toStringAsFixed(0)}%' : '0%';
+
+      final surveyQualitativeText =
+          '本课程通过问卷调查获取学生对课程目标达成情况的自我评价。'
+          '共回收有效问卷$totalResp份，综合满意度${(overallSat * 100).toStringAsFixed(1)}%。'
+          '等级分布：E完全符合${pct(cntE)}、D比较符合${pct(cntD)}、'
+          'C一般符合${pct(cntC)}、B不太符合${pct(cntB)}、A完全不符合${pct(cntA)}。'
+          '问卷结果与定量评价结果基本一致，表明学生自我评价与实际能力达成情况基本相符。';
+
+      if (finalQualitative?.trim().isEmpty ?? true) {
+        finalQualitative = surveyQualitativeText;
+      }
+
+      // 生成饼图 PNG
+      if (context != null && gradeTotal > 0) {
+        try {
+          final chartService = AchievementChartService.instance;
+          final chart = _buildSurveyPieChart(
+            cntA: cntA,
+            cntB: cntB,
+            cntC: cntC,
+            cntD: cntD,
+            cntE: cntE,
+          );
+          surveyPiePng = await chartService.renderToPng(
+            context,
+            chart,
+            width: 600,
+            height: 400,
+          );
+        } catch (e, st) {
+          swallowDebug(e,
+              tag: 'AchievementDocxService.generateReportFromTemplate.surveyPie',
+              stack: st);
+        }
+      }
+    }
+
+    // 达成结果分析表（tables[6]）— 仅当模板有足够表格时填充
+    if (tables.length > 6) {
+      _fillDocxAnalysisTable(
+        tables[6],
+        objectives,
+        classStats,
+        analysisText,
+        finalQualitative,
+        improvementText,
+        teacherName,
+        barChartPng: barChartPng,
+        scatterChartPngs: scatterChartPngs,
+        surveyPiePng: surveyPiePng,
+      );
+    }
 
     files['word/document.xml'] = utf8.encode(doc.toXmlString());
 
@@ -398,6 +607,7 @@ class AchievementDocxService {
     String teacherName, {
     Uint8List? barChartPng,
     List<Uint8List?> scatterChartPngs = const [],
+    Uint8List? surveyPiePng,
   }) {
     final quantitative = (analysisText?.trim().isNotEmpty ?? false)
         ? analysisText!
@@ -418,7 +628,14 @@ class AchievementDocxService {
       _setCellXml(table, 1, 1, chartCellXml);
     }
     _setCell(table, 2, 0, '调查问卷评价情况(定性)');
-    _setCell(table, 2, 1, qualitative);
+    if (surveyPiePng != null) {
+      // 文字 + 饼图
+      final xml = '${_bodyParagraphXml(qualitative)}'
+          '${_chartsCellXml(surveyPiePng, [], '')}';
+      _setCellXml(table, 2, 1, xml);
+    } else {
+      _setCell(table, 2, 1, qualitative);
+    }
     _setCell(table, 3, 0, '达成情况分析及持续改进');
     _setCell(table, 3, 1, improvement);
     _setCell(table, 4, 0, '任课教师签字');
@@ -735,6 +952,7 @@ class AchievementDocxService {
     required double expectation,
     Uint8List? barChartPng,
     List<Uint8List?> scatterChartPngs = const [],
+    Uint8List? surveyPiePng,
   }) {
     final b = StringBuffer();
     b.write('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>');
@@ -786,10 +1004,10 @@ class AchievementDocxService {
 
     _heading(b, '四、达成结果分析与持续改进');
     _buildAnalysisTable(b, objectives, classStats, analysisText,
-        qualitativeText, improvementText, teacherName);
+        qualitativeText, improvementText, teacherName, surveyPiePng: surveyPiePng);
 
     final hasChartImages =
-        barChartPng != null || scatterChartPngs.any((png) => png != null);
+        barChartPng != null || scatterChartPngs.any((png) => png != null) || surveyPiePng != null;
     if (hasChartImages) {
       _empty(b);
       _heading(b, '五、课程目标达成度可视化图表');
@@ -1233,8 +1451,9 @@ class AchievementDocxService {
     String? analysisText,
     String? qualitativeText,
     String? improvementText,
-    String teacherName,
-  ) {
+    String teacherName, {
+    Uint8List? surveyPiePng,
+  }) {
     b.write(_tblStart(9000));
     _mergedHeaderRow(b, '四、达成结果分析', 2);
 
@@ -1252,7 +1471,14 @@ class AchievementDocxService {
             '表明学生自我评价与实际能力达成情况基本相符。';
     b.write('<w:tr>');
     _tc(b, '调查问卷评价情况(定性)', bold: true, fill: 'F2F2F2');
-    _tc(b, qualitative);
+    if (surveyPiePng != null) {
+      // 文字 + 饼图
+      final xml = '${_bodyParagraphXml(qualitative)}'
+          '${_chartsCellXml(surveyPiePng, [], '')}';
+      _tcRaw(b, xml);
+    } else {
+      _tc(b, qualitative);
+    }
     b.write('</w:tr>');
 
     final improvement = (improvementText?.trim().isNotEmpty ?? false)
@@ -1414,6 +1640,14 @@ class AchievementDocxService {
         '<w:p/></w:tc>');
   }
 
+  /// 写入包含原始 XML 内容的单元格（用于嵌入图片等富内容）。
+  void _tcRaw(StringBuffer b, String xml) {
+    b.write('<w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/>'
+        '<w:vAlign w:val="center"/></w:tcPr>');
+    b.write(xml);
+    b.write('</w:tc>');
+  }
+
   String _escape(String text) => text
       .replaceAll('&', '&amp;')
       .replaceAll('<', '&lt;')
@@ -1426,5 +1660,102 @@ class AchievementDocxService {
     if (val >= 0.70) return '良好';
     if (val >= 0.60) return '中等';
     return '未达成';
+  }
+
+  // ── 问卷调查辅助 ──────────────────────────────────────────────────
+  int _asInt(dynamic v) => v is num ? v.toInt() : int.tryParse('$v') ?? 0;
+  double _asDouble(dynamic v) =>
+      v is num ? v.toDouble() : double.tryParse('$v') ?? 0.0;
+  List<Map<String, dynamic>> _asMapList(dynamic v) {
+    if (v is List) return v.cast<Map<String, dynamic>>();
+    return [];
+  }
+
+  /// 构建问卷等级分布饼图 Widget（fl_chart），用于渲染为 PNG 嵌入 Word。
+  Widget _buildSurveyPieChart({
+    required int cntA,
+    required int cntB,
+    required int cntC,
+    required int cntD,
+    required int cntE,
+  }) {
+    return _SurveyPieChartWidget(
+      cntA: cntA,
+      cntB: cntB,
+      cntC: cntC,
+      cntD: cntD,
+      cntE: cntE,
+    );
+  }
+}
+
+/// 问卷等级分布饼图 Widget（独立类，避免顶层 import 循环）。
+class _SurveyPieChartWidget extends StatelessWidget {
+  final int cntA, cntB, cntC, cntD, cntE;
+  const _SurveyPieChartWidget({
+    required this.cntA,
+    required this.cntB,
+    required this.cntC,
+    required this.cntD,
+    required this.cntE,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PieChart(
+      PieChartData(
+        sections: _buildSections(),
+        centerSpaceRadius: 40,
+        sectionsSpace: 2,
+      ),
+    );
+  }
+
+  List<PieChartSectionData> _buildSections() {
+    final total = cntA + cntB + cntC + cntD + cntE;
+    if (total == 0) return [];
+    String pct(int c) => '${(c / total * 100).toStringAsFixed(0)}%';
+    return [
+      PieChartSectionData(
+        value: cntE.toDouble(),
+        title: 'E完全符合\n${pct(cntE)}',
+        color: const Color(0xFF4CAF50),
+        radius: 80,
+        titleStyle: const TextStyle(
+            fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+      ),
+      PieChartSectionData(
+        value: cntD.toDouble(),
+        title: 'D比较符合\n${pct(cntD)}',
+        color: const Color(0xFF2196F3),
+        radius: 80,
+        titleStyle: const TextStyle(
+            fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+      ),
+      PieChartSectionData(
+        value: cntC.toDouble(),
+        title: 'C一般符合\n${pct(cntC)}',
+        color: const Color(0xFFFFC107),
+        radius: 80,
+        titleStyle: const TextStyle(
+            fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+      ),
+      PieChartSectionData(
+        value: cntB.toDouble(),
+        title: 'B不太符合\n${pct(cntB)}',
+        color: const Color(0xFFFF9800),
+        radius: 80,
+        titleStyle: const TextStyle(
+            fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+      ),
+      PieChartSectionData(
+        value: cntA.toDouble(),
+        title: 'A完全不符合\n${pct(cntA)}',
+        color: const Color(0xFFF44336),
+        radius: 80,
+        titleStyle: const TextStyle(
+            fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+      ),
+    ];
   }
 }

@@ -1,0 +1,48 @@
+{
+  "version": "2.0.0",
+  "description": "课件资源索引 — 指定各类教学资源的远程存储位置",
+  "updated_at": "2026-07-03",
+  "notes": "所有课件（PDF/PPT/视频）均可通过平台自动生成或远程下载",
+  "resource_base": {
+    "pdf": {
+      "type": "gitee_raw",
+      "owner": "chzcldl",
+      "repo": "mad-data",
+      "branch": "master",
+      "base_path": "CKGDT/课件",
+      "extension": ".pdf",
+      "status": "available",
+      "description": "PDF课件可从 mad-data 仓库下载或通过平台生成"
+    },
+    "ppt": {
+      "type": "gitee_raw",
+      "owner": "chzcldl",
+      "repo": "mad-data",
+      "branch": "master",
+      "base_path": "CKGDT/课件",
+      "extension": ".pptx",
+      "status": "available",
+      "description": "PPT课件可从 mad-data 仓库下载或通过平台生成"
+    },
+    "video": {
+      "type": "gitee_raw",
+      "owner": "chzcldl",
+      "repo": "mad-data",
+      "branch": "master",
+      "base_path": "CKGDT/视频",
+      "extension": ".mp4",
+      "status": "available",
+      "description": "教学视频可从 mad-data 仓库下载或通过平台生成"
+    }
+  },
+  "chapters": [
+    "第1章 课程知识图谱基础",
+    "第2章 课程数据建模与资源治理",
+    "第3章 学生端学习体验与自主学习",
+    "第4章 数字孪生教学场景设计",
+    "第5章 智能学习路径与学习分析",
+    "第6章 实验实践与作品评价",
+    "第7章 达成度评价与教学归档",
+    "第8章 教师与管理员平台操作"
+  ]
+}

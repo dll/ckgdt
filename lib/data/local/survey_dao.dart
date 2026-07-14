@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:excel/excel.dart' as xl;
+import '../../core/error_handler.dart';
 import 'database_helper.dart';
 import '../../services/course_context_service.dart';
 
@@ -858,6 +860,117 @@ class SurveyDao {
   // ─────────────────────────────────────────────────────────────────────────
   // 示例数据
   // ─────────────────────────────────────────────────────────────────────────
+
+  /// 从课程资源包自动导入问卷数据。
+  ///
+  /// 检查 `data/{courseId}/达成/` 目录下是否有 Fanya 格式的问卷 Excel，
+  /// 如果有且当前没有已发布的问卷数据，则自动创建问卷并导入回答。
+  /// 返回导入的回答数，0 表示无需导入或导入失败。
+  Future<int> autoImportFromCoursePackage(String courseId) async {
+    final db = await _dbHelper.database;
+
+    // 1. 检查当前课程是否已有问卷且有回答（按课程名模糊匹配）
+    final courseName = await CourseContextService().activeCourseName();
+    final existing = await db.rawQuery(
+      "SELECT id FROM surveys WHERE title LIKE ? AND status IN ('published','closed') LIMIT 1",
+      ['%$courseName%'],
+    );
+    if (existing.isNotEmpty) {
+      final surveyId = existing.first['id'];
+      final respCount = await db.rawQuery(
+        'SELECT COUNT(*) AS c FROM survey_responses WHERE survey_id = ?',
+        [surveyId],
+      );
+      if (((respCount.first['c'] as int?) ?? 0) > 0) return 0;
+    }
+
+    // 2. 查找课程资源包中的问卷 Excel（复用 AchievementTemplateAssets 的路径搜索逻辑）
+    final surveyFile = await _findSurveyExcelForCourse(courseId);
+    if (surveyFile == null) return 0;
+
+    // 3. 读取 Excel 文件
+    final bytes = await surveyFile.readAsBytes();
+    final wb = xl.Excel.decodeBytes(bytes);
+    if (wb.tables.isEmpty) return 0;
+
+    // 4. 查找 Fanya 格式的 sheet
+    xl.Sheet? sheet;
+    var headerRow = -1;
+    for (final candidate in wb.tables.values) {
+      for (var i = 0; i < candidate.rows.length && i < 12; i++) {
+        final cells =
+            candidate.rows[i].map((c) => c?.value?.toString() ?? '').toList();
+        if (cells.any((c) => c.contains('学号')) &&
+            cells.any((c) => c.contains('[单选题]'))) {
+          sheet = candidate;
+          headerRow = i;
+          break;
+        }
+      }
+      if (sheet != null) break;
+    }
+    if (sheet == null || sheet.rows.length <= headerRow + 1) return 0;
+
+    // 5. 创建问卷
+    final displayCourseName =
+        courseName.isEmpty ? (courseId.isEmpty ? '当前课程' : courseId) : courseName;
+    final sid = await createSurvey(
+      title: '《$displayCourseName》课程目标支撑毕业要求达成度调查问卷',
+      description: '请根据《$displayCourseName》课程学习中的实际收获，评价课程目标对毕业要求的支撑效果。',
+      creatorId: '419116',
+    );
+
+    // 6. 导入回答（复用 importFanyaResponses 逻辑）
+    final imported = await importFanyaResponses(sid, bytes);
+
+    // 7. 如果导入成功，确保问卷已发布
+    if (imported > 0) {
+      await publishSurvey(sid);
+      debugPrint(
+          'SurveyDao: 从课程资源包自动导入 $imported 条问卷回答 sid=$sid');
+    }
+
+    return imported;
+  }
+
+  /// 查找课程资源包中的问卷 Excel 文件
+  Future<File?> _findSurveyExcelForCourse(String courseId) async {
+    try {
+      // 复用 AchievementTemplateAssets.courseOnlyRoots() 的路径搜索逻辑
+      final roots = <String>[];
+      void addRoot(String path) {
+        if (!roots.contains(path)) roots.add(path);
+      }
+
+      addRoot('data/$courseId/达成');
+      addRoot('${Directory.current.path}/data/$courseId/达成');
+      if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+        var dir = File(Platform.resolvedExecutable).parent;
+        for (var i = 0; i < 6; i++) {
+          addRoot('${dir.path}/data/$courseId/达成');
+          final parent = dir.parent;
+          if (parent.path == dir.path) break;
+          dir = parent;
+        }
+      }
+
+      for (final root in roots) {
+        final dir = Directory(root);
+        if (!await dir.exists()) continue;
+        await for (final entity in dir.list(recursive: true)) {
+          if (entity is! File) continue;
+          final name = entity.path.toLowerCase();
+          if ((name.contains('问卷') || name.contains('survey')) &&
+              (name.endsWith('.xlsx') || name.endsWith('.xls'))) {
+            return entity;
+          }
+        }
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SurveyDao._findSurveyExcelForCourse', stack: st);
+    }
+    return null;
+  }
 
   /// 生成示例问卷数据
   Future<void> generateDemoData() async {

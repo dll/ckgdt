@@ -135,14 +135,11 @@ class AchievementTemplateExcelService {
       AchievementTemplateExcelService._();
   AchievementTemplateExcelService._();
 
-  /// Finds a course-specific template under data/达成.
-  ///
-  /// This keeps the export path template-driven: another course can add its own
-  /// xlsx whose filename contains the course name and "达成", without changing
-  /// the calculation code.
+  /// 仅在课程资源包目录（data/{courseId}/达成/）查找课程专属模板。
+  /// 找不到时返回 null，由调用方走动态导出，绝不套用旧 bundled 模板。
   Future<File?> findTemplateForCourse(String courseName) async {
     final profile = AchievementExcelTemplateProfile.schoolMobile48();
-    final roots = await AchievementTemplateAssets.templateRoots();
+    final roots = await AchievementTemplateAssets.courseOnlyRoots();
     final seen = <String>{};
     final courseFiles = <File>[];
     final anyFiles = <File>[];

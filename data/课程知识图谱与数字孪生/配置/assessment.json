@@ -1,0 +1,255 @@
+{
+  "version": "2.0.0",
+  "course_name": "课程知识图谱与数字孪生平台",
+  "course_id": "ckgdt",
+  "total_score": 100,
+
+  "course_objectives": [
+    {"id": 1, "name": "知识图谱基础与数据建模", "weight": 0.15, "graduation_requirement": "1.4", "description": "理解知识图谱基本概念，掌握课程数据建模方法，能够构建中小型课程知识图谱"},
+    {"id": 2, "name": "数字孪生教学场景设计", "weight": 0.20, "graduation_requirement": "3.2", "description": "掌握数字孪生技术在教学场景中的应用，能够设计学生/教师数字画像方案"},
+    {"id": 3, "name": "智能学习路径与学习分析", "weight": 0.25, "graduation_requirement": "4.2", "description": "运用学习分析工具进行学习行为数据挖掘，能够解读仪表盘并推荐个性化学习路径"},
+    {"id": 4, "name": "多智能体AI辅助教学", "weight": 0.20, "graduation_requirement": "5.1", "description": "了解多智能体AI系统在教育中的应用，能够设计AI辅助教学方案"},
+    {"id": 5, "name": "教师端与管理员端操作", "weight": 0.20, "graduation_requirement": "1.2", "description": "掌握平台教师端与管理员端核心功能，能够独立完成教学管理工作"}
+  ],
+
+  "components": [
+    {
+      "name": "平时成绩",
+      "weight": 20,
+      "sub_items": [
+        {
+          "name": "平时作业",
+          "weight": 10,
+          "max_score": 100,
+          "description": "每章课后作业（基础题+实践题+思考题），共8次，每次100分，取平均",
+          "objective_mapping": [
+            {"objective_id": 1, "contribution": 0.30, "source": "第1-2章作业"},
+            {"objective_id": 2, "contribution": 0.20, "source": "第3-4章作业"},
+            {"objective_id": 3, "contribution": 0.25, "source": "第5章作业"},
+            {"objective_id": 4, "contribution": 0.15, "source": "第6章作业"},
+            {"objective_id": 5, "contribution": 0.10, "source": "第7-8章作业"}
+          ]
+        },
+        {
+          "name": "课堂表现",
+          "weight": 4,
+          "max_score": 100,
+          "description": "课堂讨论、互动、出勤",
+          "objective_mapping": [
+            {"objective_id": 1, "contribution": 0.20},
+            {"objective_id": 2, "contribution": 0.20},
+            {"objective_id": 3, "contribution": 0.20},
+            {"objective_id": 4, "contribution": 0.20},
+            {"objective_id": 5, "contribution": 0.20}
+          ]
+        },
+        {
+          "name": "阶段测验",
+          "weight": 6,
+          "max_score": 100,
+          "description": "每章10道四选一测验题，平台自动评分，共8次，取平均",
+          "objective_mapping": [
+            {"objective_id": 1, "contribution": 0.30, "source": "第1-2章测验"},
+            {"objective_id": 2, "contribution": 0.15, "source": "第3-4章测验"},
+            {"objective_id": 3, "contribution": 0.25, "source": "第5章测验"},
+            {"objective_id": 4, "contribution": 0.15, "source": "第6章测验"},
+            {"objective_id": 5, "contribution": 0.15, "source": "第7-8章测验"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "实验成绩",
+      "weight": 30,
+      "sub_items": [
+        {
+          "id": 1,
+          "name": "实验一 平台基础操作与图谱浏览",
+          "weight": 3,
+          "max_score": 100,
+          "type": "验证型",
+          "chapter": "第1章",
+          "objective_mapping": [
+            {"objective_id": 1, "contribution": 1.0, "description": "图谱浏览与平台操作直接支撑目标1"}
+          ]
+        },
+        {
+          "id": 2,
+          "name": "实验二 课程知识图谱建模实践",
+          "weight": 3,
+          "max_score": 100,
+          "type": "验证型",
+          "chapter": "第2章",
+          "objective_mapping": [
+            {"objective_id": 1, "contribution": 1.0, "description": "图谱建模实践直接支撑目标1"}
+          ]
+        },
+        {
+          "id": 3,
+          "name": "实验三 数字孪生场景设计与仿真",
+          "weight": 4,
+          "max_score": 100,
+          "type": "综合型",
+          "chapter": "第3章",
+          "objective_mapping": [
+            {"objective_id": 2, "contribution": 1.0, "description": "数字孪生场景设计直接支撑目标2"}
+          ]
+        },
+        {
+          "id": 4,
+          "name": "实验四 学习分析仪表盘解读与路径推荐",
+          "weight": 4,
+          "max_score": 100,
+          "type": "综合型",
+          "chapter": "第4章",
+          "objective_mapping": [
+            {"objective_id": 3, "contribution": 1.0, "description": "学习分析与路径推荐直接支撑目标3"}
+          ]
+        },
+        {
+          "id": 5,
+          "name": "实验五 实验管理与AI批阅体验",
+          "weight": 3,
+          "max_score": 100,
+          "type": "验证型",
+          "chapter": "第5章",
+          "objective_mapping": [
+            {"objective_id": 4, "contribution": 1.0, "description": "AI批阅体验直接支撑目标4"}
+          ]
+        },
+        {
+          "id": 6,
+          "name": "实验六 综合项目——课程知识图谱构建与教学设计",
+          "weight": 8,
+          "max_score": 100,
+          "type": "综合型",
+          "chapter": "第6章",
+          "group_size": 4,
+          "objective_mapping": [
+            {"objective_id": 1, "contribution": 0.30, "description": "图谱构建部分"},
+            {"objective_id": 2, "contribution": 0.25, "description": "数字孪生设计部分"},
+            {"objective_id": 3, "contribution": 0.25, "description": "学习路径设计部分"},
+            {"objective_id": 4, "contribution": 0.20, "description": "达成度评价方案部分"}
+          ]
+        },
+        {
+          "id": 7,
+          "name": "实验七 教师端教学管理与考核评价实践",
+          "weight": 3,
+          "max_score": 100,
+          "type": "综合型",
+          "chapter": "第7章",
+          "objective_mapping": [
+            {"objective_id": 5, "contribution": 1.0, "description": "教师端操作直接支撑目标5"}
+          ]
+        },
+        {
+          "id": 8,
+          "name": "实验八 学生端自主学习与平台操作实践",
+          "weight": 2,
+          "max_score": 100,
+          "type": "验证型",
+          "chapter": "第8章",
+          "objective_mapping": [
+            {"objective_id": 1, "contribution": 0.25, "description": "图谱浏览与测验"},
+            {"objective_id": 2, "contribution": 0.15, "description": "数字孪生仪表盘查看"},
+            {"objective_id": 3, "contribution": 0.35, "description": "学习路径与进度查看"},
+            {"objective_id": 4, "contribution": 0.25, "description": "AI助手与作品画廊"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "期末考查",
+      "weight": 50,
+      "sub_items": [
+        {
+          "name": "知识图谱构建",
+          "weight": 15,
+          "max_score": 100,
+          "description": "概念提取准确性、关系定义合理性、图谱可视化效果",
+          "objective_mapping": [
+            {"objective_id": 1, "contribution": 1.0, "description": "图谱构建能力直接支撑目标1"}
+          ]
+        },
+        {
+          "name": "数字孪生设计",
+          "weight": 20,
+          "max_score": 100,
+          "description": "场景方案完整性、画像维度设计合理性、风险预警模型有效性",
+          "objective_mapping": [
+            {"objective_id": 2, "contribution": 1.0, "description": "数字孪生设计能力直接支撑目标2"}
+          ]
+        },
+        {
+          "name": "学习分析应用",
+          "weight": 25,
+          "max_score": 100,
+          "description": "仪表盘数据解读准确性、学习路径推荐可行性、改进方案合理性",
+          "objective_mapping": [
+            {"objective_id": 3, "contribution": 1.0, "description": "学习分析能力直接支撑目标3"}
+          ]
+        },
+        {
+          "name": "AI辅助教学方案",
+          "weight": 20,
+          "max_score": 100,
+          "description": "多智能体系统理解、平台操作熟练度、项目文档规范性、答辩表现",
+          "objective_mapping": [
+            {"objective_id": 4, "contribution": 0.60, "description": "AI辅助教学方案设计"},
+            {"objective_id": 5, "contribution": 0.40, "description": "平台操作与文档规范"}
+          ]
+        },
+        {
+          "name": "教师端操作能力",
+          "weight": 20,
+          "max_score": 100,
+          "description": "课程配置、班级管理、考核评价、达成度分析、归档操作、数据同步",
+          "objective_mapping": [
+            {"objective_id": 5, "contribution": 1.0, "description": "教师端操作能力直接支撑目标5"}
+          ]
+        }
+      ]
+    }
+  ],
+
+  "scoring_dimensions": [
+    {"name": "完成度", "max_score": 25, "description": "任务完成情况、功能实现程度"},
+    {"name": "报告质量", "max_score": 20, "description": "文档规范性、逻辑清晰度"},
+    {"name": "问题分析", "max_score": 25, "description": "问题识别准确性、分析深度"},
+    {"name": "创新能力", "max_score": 15, "description": "方案创新性、改进思路"},
+    {"name": "平台操作", "max_score": 15, "description": "CKGDT平台操作熟练度"}
+  ],
+
+  "grading_scale": [
+    {"grade": "优秀", "min": 90, "max": 100},
+    {"grade": "良好", "min": 70, "max": 89},
+    {"grade": "合格", "min": 60, "max": 69},
+    {"grade": "不合格", "min": 0, "max": 59}
+  ],
+
+  "report_templates": [
+    {"keyword": "项目启动", "file": "第一周报告-项目启动.md", "label": "第1周 项目启动", "objective_ids": [1, 2]},
+    {"keyword": "图谱构建", "file": "第二周报告-图谱构建.md", "label": "第2周 图谱构建", "objective_ids": [1]},
+    {"keyword": "场景设计", "file": "第三周报告-场景设计.md", "label": "第3周 场景设计", "objective_ids": [2]},
+    {"keyword": "学习分析", "file": "第四周报告-学习分析.md", "label": "第4周 学习分析", "objective_ids": [3]},
+    {"keyword": "答辩", "file": "考核报告1-答辩报告.md", "label": "答辩报告", "objective_ids": [1, 2, 3, 4, 5]},
+    {"keyword": "个人", "file": "考核报告2-个人报告.md", "label": "个人报告", "objective_ids": [1, 2, 3, 4, 5]},
+    {"keyword": "小组", "file": "考核报告3-小组报告.md", "label": "小组报告", "objective_ids": [1, 2, 3, 4, 5]},
+    {"keyword": "项目", "file": "考核报告4-项目报告.md", "label": "项目报告", "objective_ids": [1, 2, 3, 4, 5]},
+    {"keyword": "默认", "file": "课程考核大作业.md", "label": "课程考核大作业", "objective_ids": [1, 2, 3, 4, 5]}
+  ],
+
+  "repo_norms": {
+    "repo_prefix": ["cg1-", "cg2-", "cg3-"],
+    "repo_format": "cg{组号}-{项目简称}",
+    "branch_format": "feat-{姓名拼音首字母小写}",
+    "branch_pattern": "^feat-[a-z]{2,5}$",
+    "commit_format": "<类型>: <简短描述>",
+    "commit_types": ["feat", "fix", "docs", "style", "refactor", "test", "chore"],
+    "report_dir": "docs/reports/",
+    "report_naming": "实验X_姓名.md",
+    "defense_dir": "docs/defense/",
+    "works_dir": "works/"
+  }
+}

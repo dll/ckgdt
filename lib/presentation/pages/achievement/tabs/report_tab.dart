@@ -9,9 +9,11 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../../../data/local/achievement_dao.dart';
+import '../../../../data/local/survey_dao.dart';
 import '../../../../services/achievement/achievement_audit_context_service.dart';
 import '../../../../services/achievement/achievement_docx_service.dart';
 import '../../../../services/achievement/achievement_template_excel_service.dart';
+import '../../../../services/achievement/excel_chart_injector.dart';
 
 import '../../../../services/achievement_context.dart';
 import '../../../../services/course_context_service.dart';
@@ -288,6 +290,16 @@ class _ReportTabState extends State<ReportTab> {
       // 同时更新批次状态
       await widget.achievementDao
           .updateBatchStatus(_selectedBatchId!, 'completed');
+
+      // 自动从课程资源包导入问卷数据（如果当前没有问卷数据）
+      try {
+        final courseId = await CourseContextService().activeCourseId();
+        if (courseId.isNotEmpty) {
+          await SurveyDao().autoImportFromCoursePackage(courseId);
+        }
+      } catch (e, st) {
+        swallowDebug(e, tag: 'ReportTab.autoImportSurvey', stack: st);
+      }
 
       // 加载问卷满意度数据
       Map<String, dynamic>? surveyData;
@@ -974,6 +986,8 @@ class _ReportTabState extends State<ReportTab> {
           'stdDev': _stdDevOf(scores, (s) => _asDouble(s['total_score'])),
         },
         students: scores,
+        surveySummary: _surveySummary,
+        context: context,
         // 不传递程序生成的图表 — 使用模板原有图表或待用户插入 Excel 截图
       );
 
@@ -1245,6 +1259,153 @@ class _ReportTabState extends State<ReportTab> {
         for (final env in activeEnvKeys) n(weights[env] ?? 0, 2),
         t(config.assessContents[i]),
       ]);
+    }
+
+    // ── 问卷调查工作表 ──────────────────────────────────────────────
+    if (_surveySummary?['hasSurveyData'] == true) {
+      final surveySheet = excel['问卷调查'];
+      final totalResp = _asInt(_surveySummary!['totalResponses']);
+      final overallSat = _asDouble(_surveySummary!['overallSatisfaction']);
+      final qStats = _asMapList(_surveySummary!['questionStats']);
+
+      surveySheet.appendRow([
+        t('$semester$className《$courseName》问卷调查统计'),
+      ]);
+      surveySheet.appendRow([
+        t('回收问卷数'),
+        n(totalResp, 0),
+        t('综合满意度'),
+        n(overallSat * 100, 1),
+        t('%'),
+      ]);
+      surveySheet.appendRow([]);
+
+      // 等级分布统计（A-E），用于饼图
+      int cntA = 0, cntB = 0, cntC = 0, cntD = 0, cntE = 0;
+      for (final qs in qStats) {
+        if (qs['type'] == 'single_choice') {
+          final counts = (qs['counts'] as Map?) ?? {};
+          for (final entry in counts.entries) {
+            final key = entry.key.toString();
+            final val = _asInt(entry.value);
+            if (key == 'A' || key.contains('完全不符合')) {
+              cntA += val;
+            } else if (key == 'B' || key.contains('不太符合')) {
+              cntB += val;
+            } else if (key == 'C' || key.contains('一般符合')) {
+              cntC += val;
+            } else if (key == 'D' || key.contains('比较符合')) {
+              cntD += val;
+            } else if (key == 'E' || key.contains('完全符合')) {
+              cntE += val;
+            }
+          }
+        } else if (qs['type'] == 'rating') {
+          final avg = _asDouble(qs['average']);
+          final count = _asInt(qs['count']);
+          if (avg >= 4.5) {
+            cntE += count;
+          } else if (avg >= 3.5) {
+            cntD += count;
+          } else if (avg >= 2.5) {
+            cntC += count;
+          } else if (avg >= 1.5) {
+            cntB += count;
+          } else {
+            cntA += count;
+          }
+        }
+      }
+      final gradeTotal = cntA + cntB + cntC + cntD + cntE;
+
+      surveySheet.appendRow([t('全部问卷答题等级分布')]);
+      surveySheet.appendRow([
+        t('等级'),
+        t('选项'),
+        t('分值'),
+        t('人次'),
+        t('占比'),
+      ]);
+      final gradeData = [
+        ('E', '完全符合', 5, cntE),
+        ('D', '比较符合', 4, cntD),
+        ('C', '一般符合', 3, cntC),
+        ('B', '不太符合', 2, cntB),
+        ('A', '完全不符合', 1, cntA),
+      ];
+      for (final g in gradeData) {
+        surveySheet.appendRow([
+          t(g.$1),
+          t(g.$2),
+          n(g.$3, 0),
+          n(g.$4, 0),
+          n(gradeTotal > 0 ? g.$4 / gradeTotal : 0, 4),
+        ]);
+      }
+      surveySheet.appendRow([]);
+
+      // 各题目统计
+      surveySheet.appendRow([t('各题目统计')]);
+      surveySheet.appendRow([
+        t('题目'),
+        t('类型'),
+        t('回答数'),
+        t('平均分/达成率'),
+      ]);
+      for (final qs in qStats) {
+        final question = (qs['question'] ?? '').toString();
+        final type = (qs['type'] ?? '').toString();
+        final typeName = type == 'rating'
+            ? '评分题'
+            : type == 'single_choice'
+                ? '单选题'
+                : '文本题';
+        if (type == 'text') {
+          final answers = (qs['answers'] as List?) ?? [];
+          surveySheet.appendRow([
+            t(question),
+            t(typeName),
+            n(answers.length, 0),
+            t(answers.isNotEmpty ? answers.first.toString().substring(0, answers.first.toString().length.clamp(0, 50)) : '-'),
+          ]);
+        } else {
+          final avgOrRate = _asDouble(qs['average'] ?? qs['achievementRate']);
+          final count = _asInt(qs['count'] ?? qs['total']);
+          surveySheet.appendRow([
+            t(question),
+            t(typeName),
+            n(count, 0),
+            n(type == 'rating' ? avgOrRate : avgOrRate * 100, 1),
+          ]);
+        }
+      }
+
+      // 注入饼图
+      if (gradeTotal > 0) {
+        var bytes = excel.save();
+        if (bytes != null) {
+          bytes = ExcelChartInjector.inject(
+            Uint8List.fromList(bytes),
+            [
+              ChartSpec.pie(
+                sheetName: '问卷调查',
+                title: '全部问卷答题等级分布饼图',
+                rowCount: gradeData.length,
+              ),
+            ],
+          );
+          await file.writeAsBytes(bytes);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Excel已按大纲动态导出:${file.path}'),
+                duration: const Duration(seconds: 4),
+                action: SnackBarAction(
+                    label: '打开',
+                    onPressed: () => OpenFilex.open(file.path))));
+          }
+          return;
+        }
+      }
     }
 
     final bytes = excel.save();

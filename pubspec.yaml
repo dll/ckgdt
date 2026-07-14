@@ -1,7 +1,7 @@
 name: knowledge_graph_app
 description: 课程知识图谱与数字孪生平台（CKGDT）
 publish_to: "none"
-version: 2.5.21+0
+version: 2.5.22+0
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -92,9 +92,9 @@ flutter:
     - assets/archive_templates/beginning/_ref/teaching_schedule/
     - assets/archive_templates/beginning/_ref/student_guide/
     - assets/archive_templates/beginning/_ref/teacher_guide/
-    - data/配置/
+    - data/old/配置/
     - data/MAD/考核/
-    - data/用户/管理员教师名单.xlsx
+    - data/old/用户/管理员教师名单.xlsx
     - data/CKGDT/考核/
     - data/CKGDT/配置/
     - data/CKGDT/配置/mask_shapes.json
@@ -119,3 +119,4 @@ flutter:
     - data/CKGDT/归档/期末/
     - data/CKGDT/归档/结课/
     - assets/syllabus/
+

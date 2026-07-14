@@ -239,6 +239,18 @@ class ChartSpec {
     this.expCol = 'E',
   }) : type = ChartType.scatter;
 
+  const ChartSpec.pie({
+    required this.sheetName,
+    required this.title,
+    required int rowCount,
+  })  : type = ChartType.pie,
+        startRow = 1,
+        endRow = rowCount,
+        catCol = 'A',
+        valCol = 'B',
+        avgCol = 'C',
+        expCol = 'D';
+
   String _ref(String col) {
     final esc = sheetName
         .replaceAll('&', '&amp;')
@@ -247,7 +259,16 @@ class ChartSpec {
     return "'$esc'!\$$col\$$startRow:\$$col\$$endRow";
   }
 
-  String buildChartXml() => type == ChartType.bar ? _barXml() : _scatterXml();
+  String buildChartXml() {
+    switch (type) {
+      case ChartType.bar:
+        return _barXml();
+      case ChartType.scatter:
+        return _scatterXml();
+      case ChartType.pie:
+        return _pieXml();
+    }
+  }
 
   String _head() => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
       '<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" '
@@ -311,9 +332,28 @@ class ChartSpec {
         '<c:max val="1"/><c:min val="0"/></c:scaling>'
         '<c:delete val="0"/><c:axPos val="l"/><c:crossAx val="333333333"/></c:valAx>'
         '</c:plotArea>'
-        '<c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend>'
+        '<c:legend><c:legendPos val="r"/><c:overlay val="0"/></c:legend>'
+        '<c:plotVisOnly val="1"/></c:chart></c:chartSpace>';
+  }
+
+  String _pieXml() {
+    return '${_head()}<c:plotArea><c:layout/>'
+        '<c:pieChart><c:varyColors val="1"/>'
+        '<c:ser><c:idx val="0"/><c:order val="0"/>'
+        '<c:dLbls>'
+        '<c:numFmt formatCode="0%" sourceLinked="0"/>'
+        '<c:dLblPos val="bestFit"/>'
+        '<c:showLegendKey val="0"/><c:showVal val="0"/><c:showCatName val="1"/>'
+        '<c:showSerName val="0"/><c:showPercent val="1"/><c:showBubbleSize val="0"/>'
+        '</c:dLbls>'
+        '<c:cat><c:strRef><c:f>${_ref(catCol)}</c:f></c:strRef></c:cat>'
+        '<c:val><c:numRef><c:f>${_ref(valCol)}</c:f></c:numRef></c:val>'
+        '</c:ser>'
+        '</c:pieChart>'
+        '</c:plotArea>'
+        '<c:legend><c:legendPos val="r"/><c:overlay val="0"/></c:legend>'
         '<c:plotVisOnly val="1"/></c:chart></c:chartSpace>';
   }
 }
 
-enum ChartType { bar, scatter }
+enum ChartType { bar, scatter, pie }
