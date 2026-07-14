@@ -171,9 +171,28 @@ class AchievementTemplateExcelService {
     }
     if (templates.isEmpty) return null;
     templates.sort((a, b) {
-      final an = a.path.contains('表格') ? 0 : 1;
-      final bn = b.path.contains('表格') ? 0 : 1;
-      if (an != bn) return an.compareTo(bn);
+      final nameA = a.path.split(Platform.pathSeparator).last;
+      final nameB = b.path.split(Platform.pathSeparator).last;
+      // 1. 文件名为 XX-课程达成度评价图表.xlsx（无 模板/样例 后缀）优先
+      final isSchool = RegExp(r'^\d+-课程达成度评价图表\.xlsx$');
+      final aSchool = isSchool.hasMatch(nameA) ? 0 : 1;
+      final bSchool = isSchool.hasMatch(nameB) ? 0 : 1;
+      if (aSchool != bSchool) return aSchool.compareTo(bSchool);
+      // 2. 模板 > 样例 > 其他
+      int score(File f) {
+        final n = f.path.split(Platform.pathSeparator).last;
+        int s = 0;
+        if (n.contains('模板') || f.path.contains('模板')) s += 2;
+        if (n.contains('样例') || f.path.contains('样例')) s += 1;
+        return s;
+      }
+      final sa = score(a), sb = score(b);
+      if (sa != sb) return sb.compareTo(sa);
+      // 3. 排除已生成的输出文件（含日期/版本号）
+      final generated = RegExp(r'\d{4}-\d{2}-\d{2}|v控制版|v\d+\.\d+');
+      final aGen = generated.hasMatch(a.path) ? 1 : 0;
+      final bGen = generated.hasMatch(b.path) ? 1 : 0;
+      if (aGen != bGen) return aGen.compareTo(bGen);
       return a.path.length.compareTo(b.path.length);
     });
     return templates.first;
@@ -260,12 +279,28 @@ class AchievementTemplateExcelService {
       barDataStartRow: activeProfile.barDataStartRow,
     );
 
+    // 检测模板实际汇总行位置，避免硬编码 profilesummaryRow（如 54）与模板实际（如 91—92）不匹配
+    // 而导致 resize 产生多余脏行。检测不到时回退到静态 profile 值。
+    final sharedStrings = _parseSharedStrings(files);
+    final actualPingshiSummaryRow =
+        _detectSummaryStartRow(files, sheetPaths, activeProfile.pingshiSheet, sharedStrings)
+            ?? activeProfile.pingshiSummaryRow;
+    final actualExperimentSummaryRow =
+        _detectSummaryStartRow(files, sheetPaths, activeProfile.experimentSheet, sharedStrings)
+            ?? activeProfile.experimentSummaryRow;
+    final actualExamSummaryRow =
+        _detectSummaryStartRow(files, sheetPaths, activeProfile.examSheet, sharedStrings)
+            ?? activeProfile.examSummaryRow;
+    final actualIndividualSummaryRow =
+        _detectSummaryStartRow(files, sheetPaths, activeProfile.individualSheet, sharedStrings)
+            ?? (activeProfile.individualSummaryRow - 1);
+
     _resizeSheetDataRegion(
       files,
       sheetPaths,
       [activeProfile.pingshiSheet],
       dataStartRow: activeProfile.componentDataStartRow,
-      templateSummaryStartRow: activeProfile.pingshiSummaryRow,
+      templateSummaryStartRow: actualPingshiSummaryRow,
       summaryRowCount: 2,
       targetDataRows: count,
       maxCol: 38,
@@ -275,7 +310,7 @@ class AchievementTemplateExcelService {
       sheetPaths,
       [activeProfile.experimentSheet],
       dataStartRow: activeProfile.componentDataStartRow,
-      templateSummaryStartRow: activeProfile.experimentSummaryRow,
+      templateSummaryStartRow: actualExperimentSummaryRow,
       summaryRowCount: 2,
       targetDataRows: count,
       maxCol: 13,
@@ -285,7 +320,7 @@ class AchievementTemplateExcelService {
       sheetPaths,
       [activeProfile.examSheet],
       dataStartRow: activeProfile.componentDataStartRow,
-      templateSummaryStartRow: activeProfile.examSummaryRow,
+      templateSummaryStartRow: actualExamSummaryRow,
       summaryRowCount: 2,
       targetDataRows: count,
       maxCol: 10,
@@ -295,7 +330,7 @@ class AchievementTemplateExcelService {
       sheetPaths,
       [activeProfile.individualSheet],
       dataStartRow: activeProfile.individualDataStartRow,
-      templateSummaryStartRow: activeProfile.individualSummaryRow - 1,
+      templateSummaryStartRow: actualIndividualSummaryRow,
       summaryRowCount: 2,
       targetDataRows: count,
       maxCol: 17,
@@ -615,6 +650,57 @@ class AchievementTemplateExcelService {
         }
       });
     }
+  }
+
+  /// 解析共享字符串表，返回按索引排列的字符串列表。
+  List<String> _parseSharedStrings(Map<String, List<int>> files) {
+    final bytes = files['xl/sharedStrings.xml'];
+    if (bytes == null) return const [];
+    try {
+      final doc = XmlDocument.parse(utf8.decode(bytes));
+      return doc.findAllElements('si').map((si) {
+        final t = si.findElements('t').firstOrNull;
+        return t?.innerText ?? '';
+      }).toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// 在指定工作表中查找列 A 内容为「班平均值」的行号，用于确定汇总起始行。
+  /// 找不到时返回 null，由调用方回退到静态 profile。
+  int? _detectSummaryStartRow(
+    Map<String, List<int>> files,
+    Map<String, String> sheetPaths,
+    String sheetName,
+    List<String> sharedStrings,
+  ) {
+    final path = sheetPaths[sheetName];
+    if (path == null) return null;
+    final bytes = files[path];
+    if (bytes == null) return null;
+    try {
+      final doc = XmlDocument.parse(utf8.decode(bytes));
+      for (final row in doc.findAllElements('row')) {
+        final rAttr = row.getAttribute('r');
+        if (rAttr == null) continue;
+        final rowNum = int.tryParse(rAttr);
+        if (rowNum == null) continue;
+        for (final cell in row.findElements('c')) {
+          final ref = cell.getAttribute('r') ?? '';
+          if (ref != 'A$rowNum') continue;
+          final tAttr = cell.getAttribute('t');
+          final v = cell.findElements('v').firstOrNull;
+          if (tAttr != 's' || v == null) continue;
+          final idx = int.tryParse(v.innerText.trim());
+          if (idx == null || idx < 0 || idx >= sharedStrings.length) continue;
+          if (sharedStrings[idx].contains('班平均值')) return rowNum;
+        }
+      }
+    } catch (_) {
+      return null;
+    }
+    return null;
   }
 
   void _resizeSheetDataRegion(
