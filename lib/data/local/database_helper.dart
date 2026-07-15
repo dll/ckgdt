@@ -83,7 +83,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 36,
+       version: 40,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -142,7 +142,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 36,
+          version: 40,
           singleInstance: true, // 启用单例模式
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
@@ -1575,6 +1575,12 @@ class DatabaseHelper {
     }
     if (oldVersion < 39) {
       await _migrateToV39(db);
+    }
+    if (oldVersion < 40) {
+      await _migrateToV40(db);
+    }
+    if (oldVersion < 41) {
+      await _migrateToV41(db);
     }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
@@ -3606,8 +3612,35 @@ class DatabaseHelper {
     try {
       await db.execute('ALTER TABLE $table ADD COLUMN $column $type');
     } catch (e) {
-      swallow(e, tag: 'V37.$table.$column');
+      swallow(e, tag: 'V39.lab_tasks_unique');
     }
+  }
+
+  /// V40: Add syllabus_info_json to courses table for storing
+  /// extracted syllabus metadata (适用专业, 开课学期, etc.).
+  Future<void> _migrateToV40(Database db) async {
+    await _addTextColumnIfMissing(
+        db, 'courses', 'syllabus_info_json', 'V40.courses');
+  }
+
+  /// V41: 泛化达成度子表 — 加 sub_score_json / achievements_json
+  /// 支持任意课程形态（文学/体育/艺术/经管法）：
+  /// - sub_score_json 存非标准考核项分数（如"读书笔记：85, 论文：78"）
+  /// - achievements_json 存任意数量目标的达成度（突破 obj1-5 列上限）
+  Future<void> _migrateToV41(Database db) async {
+    for (final table in [
+      'achievement_pingshi_scores',
+      'achievement_experiment_scores',
+      'achievement_exam_scores',
+    ]) {
+      await _addTextColumnIfMissing(
+          db, table, 'sub_score_json', 'V41.$table.sub_score');
+      await _addTextColumnIfMissing(
+          db, table, 'achievements_json', 'V41.$table.achievements');
+    }
+    // 总表也加 achievements_json
+    await _addTextColumnIfMissing(
+        db, 'achievement_scores', 'achievements_json', 'V41.scores');
   }
 
   Future<void> _addTextColumnIfMissing(

@@ -438,10 +438,12 @@ class _CourseObjectivesManagePageState
       }
       _courseName = targetCourse;
 
+      final syllabusInfo = _svc.extractSyllabusInfo(rawText);
       await _dao.saveCourseObjectives(
         _courseName,
         rows,
         syllabusVersion: version,
+        syllabusInfo: syllabusInfo.isNotEmpty ? syllabusInfo : null,
       );
       _ctx.courseName = _courseName;
 
@@ -491,10 +493,12 @@ class _CourseObjectivesManagePageState
       _readCtrls();
       final merged = _mergeObjectiveRows(_objectives, rows);
       final version = _svc.syllabusVersionFromText(rawText);
+      final syllabusInfo = _svc.extractSyllabusInfo(rawText);
       await _dao.saveCourseObjectives(
         _courseName,
         merged,
         syllabusVersion: version,
+        syllabusInfo: syllabusInfo.isNotEmpty ? syllabusInfo : null,
       );
       _ctx.courseName = _courseName;
 

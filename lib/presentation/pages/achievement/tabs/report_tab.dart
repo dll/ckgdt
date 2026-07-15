@@ -1511,27 +1511,43 @@ class _ReportTabState extends State<ReportTab> {
         return;
       }
 
-      // 加载中文字体：优先 Google Fonts（可靠），回退本地 TTC
+      // 加载中文字体：优先 SimSun（系统宋体），回退 Noto Serif SC（Google Fonts），
+      // 再回退 Noto Sans SC，最后回退本地 msyh.ttc。
       pw.Font? chineseFont;
       pw.Font? chineseBoldFont;
       try {
-        chineseFont = await PdfGoogleFonts.notoSansSCRegular();
-        chineseBoldFont = await PdfGoogleFonts.notoSansSCBold();
-      } catch (e, st) {
-        // 离线回退到本地字体
-        swallowDebug(e, tag: 'ReportTab.googleFonts', stack: st);
+        chineseFont = _loadSystemFont('simsun.ttc');
+        chineseBoldFont = chineseFont;
+      } catch (e) {
+        swallow(e, tag: 'ReportTab.systemFont');
+      }
+      if (chineseFont == null) {
         try {
-          final fontData = await rootBundle.load('assets/fonts/msyh.ttc');
-          chineseFont = pw.Font.ttf(fontData);
-        } catch (e2) {
-          swallow(e2, tag: 'ReportTab.localFontRegular');
+          chineseFont = await PdfGoogleFonts.notoSerifSCRegular();
+          chineseBoldFont = await PdfGoogleFonts.notoSerifSCBold();
+        } catch (e, st) {
+          swallowDebug(e, tag: 'ReportTab.googleSerifFonts', stack: st);
         }
+      }
+      if (chineseFont == null) {
         try {
-          final boldData = await rootBundle.load('assets/fonts/msyhbd.ttc');
-          chineseBoldFont = pw.Font.ttf(boldData);
-        } catch (e2) {
-          swallow(e2, tag: 'ReportTab.localFontBold');
-          chineseBoldFont = chineseFont;
+          chineseFont = await PdfGoogleFonts.notoSansSCRegular();
+          chineseBoldFont = await PdfGoogleFonts.notoSansSCBold();
+        } catch (e, st) {
+          swallowDebug(e, tag: 'ReportTab.googleSansFonts', stack: st);
+          try {
+            final fontData = await rootBundle.load('assets/fonts/msyh.ttc');
+            chineseFont = pw.Font.ttf(fontData);
+          } catch (e2) {
+            swallow(e2, tag: 'ReportTab.localFontRegular');
+          }
+          try {
+            final boldData = await rootBundle.load('assets/fonts/msyhbd.ttc');
+            chineseBoldFont = pw.Font.ttf(boldData);
+          } catch (e2) {
+            swallow(e2, tag: 'ReportTab.localFontBold');
+            chineseBoldFont = chineseFont;
+          }
         }
       }
 
@@ -2066,16 +2082,32 @@ class _ReportTabState extends State<ReportTab> {
     pw.Font? chineseFont;
     pw.Font? chineseBoldFont;
     try {
-      chineseFont = await PdfGoogleFonts.notoSansSCRegular();
-      chineseBoldFont = await PdfGoogleFonts.notoSansSCBold();
-    } catch (e, st) {
-      swallowDebug(e, tag: 'ReportTab.dynamicPdfFonts', stack: st);
+      chineseFont = _loadSystemFont('simsun.ttc');
+      chineseBoldFont = chineseFont;
+    } catch (e) {
+      swallow(e, tag: 'ReportTab.dynamicPdfSystemFont');
+    }
+    if (chineseFont == null) {
       try {
-        final fontData = await rootBundle.load('assets/fonts/msyh.ttc');
-        chineseFont = pw.Font.ttf(fontData);
-        chineseBoldFont = chineseFont;
-      } catch (e) {
-        swallowDebug(e, tag: 'report_tab');
+        chineseFont = await PdfGoogleFonts.notoSerifSCRegular();
+        chineseBoldFont = await PdfGoogleFonts.notoSerifSCBold();
+      } catch (e, st) {
+        swallowDebug(e, tag: 'ReportTab.dynamicPdfSerifFonts', stack: st);
+      }
+    }
+    if (chineseFont == null) {
+      try {
+        chineseFont = await PdfGoogleFonts.notoSansSCRegular();
+        chineseBoldFont = await PdfGoogleFonts.notoSansSCBold();
+      } catch (e, st) {
+        swallowDebug(e, tag: 'ReportTab.dynamicPdfSansFonts', stack: st);
+        try {
+          final fontData = await rootBundle.load('assets/fonts/msyh.ttc');
+          chineseFont = pw.Font.ttf(fontData);
+          chineseBoldFont = chineseFont;
+        } catch (e) {
+          swallowDebug(e, tag: 'report_tab');
+        }
       }
     }
     final theme = chineseFont != null
@@ -2836,6 +2868,48 @@ class _ReportTabState extends State<ReportTab> {
   }
 }
 
+pw.Font? _loadSystemFont(String fontName) {
+  final bytes = _readSystemFontBytes(fontName);
+  if (bytes == null) return null;
+  try {
+    return pw.Font.ttf(bytes.buffer.asByteData());
+  } catch (e) {
+    swallow(e, tag: 'ReportTab.loadSystemFont');
+    return null;
+  }
+}
+
+Uint8List? _readSystemFontBytes(String fontName) {
+  final candidates = [
+    if (Platform.isWindows) ...[
+      'C:\\Windows\\Fonts\\$fontName',
+      'C:\\WinNT\\Fonts\\$fontName',
+    ],
+    if (Platform.isLinux) ...[
+      '/usr/share/fonts/truetype/$fontName',
+      '/usr/local/share/fonts/$fontName',
+      '${Platform.environment['HOME'] ?? ''}/.fonts/$fontName',
+    ],
+    if (Platform.isMacOS) ...[
+      '/System/Library/Fonts/$fontName',
+      '/Library/Fonts/$fontName',
+      '${Platform.environment['HOME'] ?? ''}/Library/Fonts/$fontName',
+    ],
+    if (Platform.isAndroid) ...[
+      '/system/fonts/$fontName',
+    ],
+  ];
+  for (final path in candidates) {
+    try {
+      final file = File(path);
+      if (file.existsSync()) return file.readAsBytesSync();
+    } catch (e) {
+      swallow(e, tag: 'ReportTab.readSystemFont');
+      continue;
+    }
+  }
+  return null;
+}
 // ══════════════════════════════════════════════════════════════════════════════
 // 报告预览对话框
 // ══════════════════════════════════════════════════════════════════════════════

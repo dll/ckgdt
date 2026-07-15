@@ -27,9 +27,13 @@ class AchievementDocxService {
   static final AchievementDocxService instance = AchievementDocxService._();
   AchievementDocxService._();
 
-  /// 学期统一为「YYYY-YYYY-N」短格式（兼容 2025_2026_2 / 2025-2026学年第二学期 等写法）。
+  /// 学期统一为「YYYY-YYYY-N」短格式（兼容 2025_2026_2 / 2025-2026年第2学期 等写法）。
   static String _dashSemester(String semester) {
     var s = semester.trim().replaceAll('_', '-');
+    s = s.replaceAllMapped(
+      RegExp(r'(\d{4}-\d{4})年?第?(\d+)学期?'),
+      (m) => '${m[1]}-${m[2]}',
+    );
     while (s.contains('--')) {
       s = s.replaceAll('--', '-');
     }
@@ -212,7 +216,7 @@ class AchievementDocxService {
         : archive;
 
     final dir = await OutputPathService.getOutputDirectory();
-    final safeName = '${courseName}_${_dashSemester(semester)}_${className}_$teacherName'
+    final safeName = '$courseName--${_dashSemester(semester)}--$className--$teacherName'
         .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
     final filePath = '${dir.path}/$safeName.docx';
 
@@ -460,7 +464,7 @@ class AchievementDocxService {
     }
 
     final dir = await OutputPathService.getOutputDirectory();
-    final safeName = '${courseName}_${_dashSemester(semester)}_${className}_$teacherName'
+    final safeName = '$courseName--${_dashSemester(semester)}--$className--$teacherName'
         .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
     final filePath = '${dir.path}/$safeName.docx';
 

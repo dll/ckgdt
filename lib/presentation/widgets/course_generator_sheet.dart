@@ -491,10 +491,13 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
     final version =
         AchievementExcelService.instance.syllabusVersionFromText(outline);
     final dao = AchievementDao();
+    final svc = AchievementExcelService.instance;
+    final syllabusInfo = svc.extractSyllabusInfo(outline);
     await dao.saveCourseObjectives(
       result.courseName,
       rows,
       syllabusVersion: version,
+      syllabusInfo: syllabusInfo.isNotEmpty ? syllabusInfo : null,
     );
     _log('已保存 ${rows.length} 个课程目标到课程目标管理（$version）');
 

@@ -6,6 +6,7 @@ import '../../data/local/achievement_dao.dart';
 import '../../data/local/knowledge_graph_dao.dart';
 import '../../data/local/lab_task_dao.dart';
 import '../../data/local/quiz_dao.dart';
+import '../../data/local/database_helper.dart';
 import '../../data/models/question_model.dart';
 import '../achievement/achievement_docx_service.dart';
 import '../achievement/achievement_audit_context_service.dart';
@@ -585,6 +586,114 @@ ${chapters.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n')}
 - 任务 ID：$id
 
 请到“${terms.taskPluralLabel}管理”页面刷新查看，并根据班级进度调整截止时间。''';
+  }
+
+  /// 利用已存大纲元信息（适用专业、开课学期）智能推断学期和班级。
+  /// 返回 { semester, className }；缺失字段留空，由 UI 兜底。
+  Future<Map<String, String>> inferCourseContext(String courseName) async {
+    final result = <String, String>{'semester': '', 'className': ''};
+
+    // 1. 读取已存 syllabus_info_json
+    Map<String, String> syllabusInfo = const {};
+    try {
+      final db = await DatabaseHelper.instance.database;
+      final rows = await db.query('courses',
+          columns: ['syllabus_info_json'],
+          where: 'name = ?',
+          whereArgs: [courseName]);
+      if (rows.isNotEmpty) {
+        final raw = rows.first['syllabus_info_json']?.toString() ?? '';
+        if (raw.isNotEmpty) {
+          final decoded = jsonDecode(raw);
+          if (decoded is Map) {
+            syllabusInfo =
+                decoded.map((k, v) => MapEntry(k.toString(), v.toString()));
+          }
+        }
+      }
+    } catch (_) {}
+
+    final major = syllabusInfo['适用专业'] ?? '';
+    final semesterRaw = syllabusInfo['开课学期'] ?? '';
+
+    // 2. 获取班级列表供 AI 推理用
+    String classListStr = '';
+    try {
+      final db = await DatabaseHelper.instance.database;
+      final classes = await db.query('classes',
+          columns: ['name'],
+          where: 'COALESCE(is_archived, 0) = 0');
+      if (classes.isNotEmpty) {
+        classListStr = classes.map((c) => c['name'].toString()).join('、');
+      }
+    } catch (_) {}
+
+    // 3. 用 AI 统一推断学期和班级
+    try {
+      final now = DateTime.now();
+      final ai = AiService();
+      final prompt = '''
+你是一个课程上下文推断助手。根据以下信息，推断学期和班级。
+
+课程名：$courseName
+适用专业：$major
+开课学期（原始描述）：$semesterRaw
+当前日期：${now.toString()}
+已有班级列表：$classListStr
+
+输出 JSON（只输出 JSON，不要其他文字）：
+{
+  "semester": "YYYY-YYYY-N 格式的标准化学期（如 2025-2026-2），从"开课学期"和当前日期推断",
+  "className": "匹配的班级名（从已有班级列表中选出与"适用专业"匹配的班级，多个用+连接；无法匹配则空字符串）"
+}
+
+规则：
+- 第六学期 = 第3学年第2学期
+- 年份根据当前日期确定：7月前 → 上一学年第二学期，9月后 → 本学年第一学期
+- 班级名从"已有班级列表"中选取与"适用专业"匹配的，如"软件工程"对应"软件231""软件232"
+''';
+      final aiResult = await ai.chat([
+        {'role': 'user', 'content': prompt},
+      ]);
+      final start = aiResult.indexOf('{');
+      final end = aiResult.lastIndexOf('}');
+      if (start >= 0 && end > start) {
+        final parsed = jsonDecode(aiResult.substring(start, end + 1));
+        if (parsed is Map) {
+          final sem = (parsed['semester'] ?? '').toString().trim();
+          if (RegExp(r'^\d{4}-\d{4}-\d$').hasMatch(sem)) result['semester'] = sem;
+          final cls = (parsed['className'] ?? '').toString().trim();
+          if (cls.isNotEmpty) result['className'] = cls;
+        }
+      }
+    } catch (_) {}
+
+    // 4. AI 推断失败时的兜底
+    if (result['semester']!.isEmpty) {
+      result['semester'] = AchievementDao.normalizeAcademicSemester(semesterRaw);
+    }
+    if (result['className']!.isEmpty && major.isNotEmpty) {
+      final matchKeywords = <String>[];
+      if (major.contains('软件')) matchKeywords.add('软件');
+      if (major.contains('计算机') || major.contains('计科')) matchKeywords.addAll(['计算机', '计科']);
+      if (major.contains('数据')) matchKeywords.add('数据');
+      if (major.contains('网络')) matchKeywords.add('网络');
+      if (major.contains('通信')) matchKeywords.add('通信');
+      if (major.contains('电子')) matchKeywords.add('电子');
+      if (major.contains('文学')) matchKeywords.add('文学');
+      if (major.contains('体育')) matchKeywords.add('体育');
+      if (major.contains('艺术')) matchKeywords.add('艺术');
+      if (matchKeywords.isEmpty && major.isNotEmpty) {
+        matchKeywords.add(major.substring(0, 2));
+      }
+      if (matchKeywords.isNotEmpty && classListStr.isNotEmpty) {
+        final names = classListStr.split('、');
+        final matched = names.where((n) => matchKeywords.any((kw) => n.contains(kw))).toList();
+        if (matched.isNotEmpty) result['className'] = matched.join('+');
+      }
+    }
+
+    return result;
   }
 
   bool isGraphGenerationIntent(String text) =>

@@ -81,7 +81,7 @@ class AchievementChartService {
           drawVerticalLine: false,
           horizontalInterval: 0.2,
           getDrawingHorizontalLine: (value) => FlLine(
-            color: Colors.grey.withOpacity(0.3),
+            color: Colors.grey.withValues(alpha: 0.3),
             strokeWidth: 1,
           ),
         ),
@@ -93,14 +93,14 @@ class AchievementChartService {
             if (expectationLine.isNotEmpty)
               HorizontalLine(
                 y: expectationLine.first,
-                color: Colors.red.withOpacity(0.6),
+                color: Colors.red.withValues(alpha: 0.6),
                 strokeWidth: 1.5,
                 dashArray: [6, 4],
                 label: HorizontalLineLabel(
                   show: true,
                   alignment: Alignment.topRight,
                   style: TextStyle(
-                      fontSize: 10, color: Colors.red.withOpacity(0.8)),
+                      fontSize: 10, color: Colors.red.withValues(alpha: 0.8)),
                   labelResolver: (_) => '期望值',
                 ),
               ),
@@ -152,7 +152,7 @@ class AchievementChartService {
           drawVerticalLine: false,
           horizontalInterval: 0.2,
           getDrawingHorizontalLine: (value) => FlLine(
-            color: Colors.grey.withOpacity(0.3),
+            color: Colors.grey.withValues(alpha: 0.3),
             strokeWidth: 1,
           ),
         ),
@@ -178,7 +178,7 @@ class AchievementChartService {
           horizontalLines: [
             HorizontalLine(
               y: classAverage,
-              color: Colors.blue.withOpacity(0.6),
+              color: Colors.blue.withValues(alpha: 0.6),
               strokeWidth: 1.5,
               dashArray: [6, 4],
               label: HorizontalLineLabel(
@@ -186,13 +186,13 @@ class AchievementChartService {
                 alignment: Alignment.topLeft,
                 style: TextStyle(
                     fontSize: 10,
-                    color: Colors.blue.withOpacity(0.8)),
+                    color: Colors.blue.withValues(alpha: 0.8)),
                 labelResolver: (_) => '班级平均',
               ),
             ),
             HorizontalLine(
               y: expectation,
-              color: Colors.red.withOpacity(0.5),
+              color: Colors.red.withValues(alpha: 0.5),
               strokeWidth: 1,
               dashArray: [4, 4],
               label: HorizontalLineLabel(
@@ -200,7 +200,7 @@ class AchievementChartService {
                 alignment: Alignment.topRight,
                 style: TextStyle(
                     fontSize: 10,
-                    color: Colors.red.withOpacity(0.7)),
+                    color: Colors.red.withValues(alpha: 0.7)),
                 labelResolver: (_) => '期望值',
               ),
             ),

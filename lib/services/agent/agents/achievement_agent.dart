@@ -16,6 +16,7 @@ class AchievementAgent extends BaseAgent {
   /// 大纲分析会话状态（analyze → clarify → submit）
   List<Map<String, dynamic>> _pendingObjectives = [];
   String _currentAnalysisCourse = '';
+  Map<String, String> _currentSyllabusInfo = const {};
 
   @override
   AgentConfig get config => AgentConfig(
@@ -275,6 +276,7 @@ class AchievementAgent extends BaseAgent {
         RegExp(r'(取消|重置|放弃|重来|不要了)').hasMatch(userMessage)) {
       _pendingObjectives = [];
       _currentAnalysisCourse = '';
+      _currentSyllabusInfo = const {};
       return buildReply('已取消当前大纲分析。请重新导入大纲或提出其他问题。');
     }
 
@@ -463,6 +465,7 @@ class AchievementAgent extends BaseAgent {
       }
       _pendingObjectives = rows;
       _currentAnalysisCourse = courseName;
+      _currentSyllabusInfo = svc.extractSyllabusInfo(raw);
       return buf.toString();
     } catch (e, st) {
       swallowDebug(e, tag: 'AchievementAgent.analyze', stack: st);
@@ -527,7 +530,11 @@ class AchievementAgent extends BaseAgent {
     try {
       final dao = AchievementDao();
       final count = _pendingObjectives.length;
-      await dao.saveCourseObjectives(courseName, _pendingObjectives);
+      await dao.saveCourseObjectives(
+        courseName,
+        _pendingObjectives,
+        syllabusInfo: _currentSyllabusInfo.isNotEmpty ? _currentSyllabusInfo : null,
+      );
       await _activateCourse(courseName);
       // 自动创建默认达成度批次
       try {
@@ -542,6 +549,7 @@ class AchievementAgent extends BaseAgent {
       AchievementContext.instance.courseName = courseName;
       _pendingObjectives = [];
       _currentAnalysisCourse = '';
+      _currentSyllabusInfo = const {};
       return _SubmitResult(
         true,
         courseName,

@@ -847,7 +847,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                           barRods: [
                             BarChartRodData(
                               toY: _classAvgAchievements[entry.value],
-                              color: kObjectiveColors[entry.value],
+                              color: objectiveColor(entry.value),
                               width: 32,
                               borderRadius: const BorderRadius.vertical(
                                   top: Radius.circular(4)),
@@ -956,7 +956,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                       style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: kObjectiveColors[obj])),
+                          color: objectiveColor(obj))),
               ]),
             ]),
           ),
@@ -1017,7 +1017,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   /// 单个课程目标的学生个体散点图：x=学生序号，y=该生该目标达成度，
   /// 红线=期望 0.60，彩色线=该目标班级平均。对齐参考报告"学生个体课程目标N达成评价结果"。
   ScatterChartData _buildObjScatterData(int obj) {
-    final color = kObjectiveColors[obj];
+    final color = objectiveColor(obj);
     final key = 'obj${obj + 1}_achievement';
     final spots = <ScatterSpot>[];
     for (int i = 0; i < _scores.length; i++) {
@@ -1068,7 +1068,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
 
   /// 单目标散点图图例（个体/平均/期望）。
   Widget _objScatterLegend(int obj) {
-    final color = kObjectiveColors[obj];
+    final color = objectiveColor(obj);
     final mean = _objMean(obj);
     Widget item(Color c, String label, {bool line = false}) => Row(
           mainAxisSize: MainAxisSize.min,
@@ -1092,7 +1092,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   }
 
   Widget _buildSingleObjChart(int objIdx) {
-    final color = kObjectiveColors[objIdx];
+    final color = objectiveColor(objIdx);
     final key = 'obj${objIdx + 1}_achievement';
     final fullMark = _config.fullMarks[objIdx];
     int cLow = 0, cMid = 0, cGood = 0, cExcel = 0;
@@ -1533,10 +1533,10 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
             const Divider(height: 20),
             _previousItem('1', '加大与课程目标相关的分析应用问题的题目训练',
                 '已执行。平时作业中增设了技术选型分析题，学生对技术体系理解有明显提升。', Colors.green),
-            _previousItem('2', '增加章节结束后知识图谱创建训练',
-                '已执行。在每章布置知识图谱绘制作业，帮助学生梳理知识结构。', Colors.green),
-            _previousItem('3', '优化期末项目考核的场景设计',
-                '已执行。降低跨设备适配模块分值占比，增加AI工具辅助开发评分维度。', Colors.green),
+            _previousItem('2', '增加章节结束后知识点梳理与综合训练',
+                '已执行。在每章布置知识梳理作业，帮助学生巩固知识结构。', Colors.green),
+            _previousItem('3', '优化期末项目考核的题目设计',
+                '已执行。优化考核内容分布，增加综合分析类题目比重。', Colors.green),
             _previousItem('4', '对过程性考核中达标偏低的同学制定帮扶计划',
                 '部分执行。已组织3次技术专题工作坊，但个别化辅导仍需加强。', Colors.orange),
           ],
@@ -1597,7 +1597,7 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
     final chapters = suggestion['chapters'] as String? ?? '';
     final topics = _stringList(suggestion['topics']);
     final actions = _stringList(suggestion['actions']);
-    final color = kObjectiveColors[objIdx.clamp(0, 3)];
+    final color = objectiveColor(objIdx);
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

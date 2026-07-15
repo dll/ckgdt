@@ -1916,6 +1916,7 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
   Map<String, double> _classAvg = {};
   ScoreSort _sort = ScoreSort.idAsc;
   bool _loading = true;
+  int _objectiveCount = 4;
 
   @override
   void initState() {
@@ -1954,11 +1955,21 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
         await widget.achievementDao.getExperimentScores(_selectedBatchId!);
     final avg = await widget.achievementDao
         .calculateExperimentClassAverage(_selectedBatchId!);
+    final fullMarks =
+        await widget.achievementDao.resolveObjectiveFullMarks(_selectedBatchId!);
+    final objCount = fullMarks.length;
     if (mounted) {
       setState(() {
         sortScoresInPlace(scores, _sort);
         _scores = scores;
-        _classAvg = avg;
+        _objectiveCount = objCount;
+        _classAvg = {};
+        for (final e in avg.entries) {
+          final m = RegExp(r'^obj(\d+)$').firstMatch(e.key);
+          if (m == null || int.parse(m.group(1)!) <= objCount) {
+            _classAvg[e.key] = e.value;
+          }
+        }
       });
     }
   }
@@ -2089,36 +2100,40 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
                         (s) => (s['exp1_score'] as num?)?.toDouble() ?? 0),
                     ScoreColumn('实验2',
                         (s) => (s['exp2_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标1',
-                        (s) => (s['obj1_achievement'] as num?)?.toDouble() ?? 0,
-                        isAchievement: true,
-                        digits: 2,
-                        headerColor: kObjectiveColors[0]),
+                    if (_objectiveCount >= 1)
+                      ScoreColumn('目标1',
+                          (s) => (s['obj1_achievement'] as num?)?.toDouble() ?? 0,
+                          isAchievement: true,
+                          digits: 2,
+                          headerColor: kObjectiveColors[0]),
                     ScoreColumn('实验3',
                         (s) => (s['exp3_score'] as num?)?.toDouble() ?? 0),
                     ScoreColumn('实验4',
                         (s) => (s['exp4_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标2',
-                        (s) => (s['obj2_achievement'] as num?)?.toDouble() ?? 0,
-                        isAchievement: true,
-                        digits: 2,
-                        headerColor: kObjectiveColors[1]),
+                    if (_objectiveCount >= 2)
+                      ScoreColumn('目标2',
+                          (s) => (s['obj2_achievement'] as num?)?.toDouble() ?? 0,
+                          isAchievement: true,
+                          digits: 2,
+                          headerColor: kObjectiveColors[1]),
                     ScoreColumn('实验5',
                         (s) => (s['exp5_score'] as num?)?.toDouble() ?? 0),
                     ScoreColumn('实验6',
                         (s) => (s['exp6_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标3',
-                        (s) => (s['obj3_achievement'] as num?)?.toDouble() ?? 0,
-                        isAchievement: true,
-                        digits: 2,
-                        headerColor: kObjectiveColors[2]),
+                    if (_objectiveCount >= 3)
+                      ScoreColumn('目标3',
+                          (s) => (s['obj3_achievement'] as num?)?.toDouble() ?? 0,
+                          isAchievement: true,
+                          digits: 2,
+                          headerColor: kObjectiveColors[2]),
                     ScoreColumn('实验7',
                         (s) => (s['exp7_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标4',
-                        (s) => (s['obj4_achievement'] as num?)?.toDouble() ?? 0,
-                        isAchievement: true,
-                        digits: 2,
-                        headerColor: kObjectiveColors[3]),
+                    if (_objectiveCount >= 4)
+                      ScoreColumn('目标4',
+                          (s) => (s['obj4_achievement'] as num?)?.toDouble() ?? 0,
+                          isAchievement: true,
+                          digits: 2,
+                          headerColor: kObjectiveColors[3]),
                     ScoreColumn('总评',
                         (s) => (s['total_score'] as num?)?.toDouble() ?? 0,
                         bold: true),
@@ -2151,6 +2166,7 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
   Map<String, double> _classAvg = {};
   ScoreSort _sort = ScoreSort.idAsc;
   bool _loading = true;
+  int _objectiveCount = 4;
 
   @override
   void initState() {
@@ -2188,11 +2204,21 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
     final scores = await widget.achievementDao.getExamScores(_selectedBatchId!);
     final avg = await widget.achievementDao
         .calculateExamClassAverage(_selectedBatchId!);
+    final fullMarks =
+        await widget.achievementDao.resolveObjectiveFullMarks(_selectedBatchId!);
+    final objCount = fullMarks.length;
     if (mounted) {
       setState(() {
         sortScoresInPlace(scores, _sort);
         _scores = scores;
-        _classAvg = avg;
+        _objectiveCount = objCount;
+        _classAvg = {};
+        for (final e in avg.entries) {
+          final m = RegExp(r'^obj(\d+)$').firstMatch(e.key);
+          if (m == null || int.parse(m.group(1)!) <= objCount) {
+            _classAvg[e.key] = e.value;
+          }
+        }
       });
     }
   }
@@ -2321,34 +2347,38 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
                   columns: [
                     ScoreColumn('项目',
                         (s) => (s['project_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标1',
-                        (s) => (s['obj1_achievement'] as num?)?.toDouble() ?? 0,
-                        isAchievement: true,
-                        digits: 2,
-                        headerColor: kObjectiveColors[0]),
+                    if (_objectiveCount >= 1)
+                      ScoreColumn('目标1',
+                          (s) => (s['obj1_achievement'] as num?)?.toDouble() ?? 0,
+                          isAchievement: true,
+                          digits: 2,
+                          headerColor: kObjectiveColors[0]),
                     ScoreColumn('小组',
                         (s) => (s['group_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标2',
-                        (s) => (s['obj2_achievement'] as num?)?.toDouble() ?? 0,
-                        isAchievement: true,
-                        digits: 2,
-                        headerColor: kObjectiveColors[1]),
+                    if (_objectiveCount >= 2)
+                      ScoreColumn('目标2',
+                          (s) => (s['obj2_achievement'] as num?)?.toDouble() ?? 0,
+                          isAchievement: true,
+                          digits: 2,
+                          headerColor: kObjectiveColors[1]),
                     ScoreColumn(
                         '个人',
                         (s) =>
                             (s['individual_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标3',
-                        (s) => (s['obj3_achievement'] as num?)?.toDouble() ?? 0,
-                        isAchievement: true,
-                        digits: 2,
-                        headerColor: kObjectiveColors[2]),
+                    if (_objectiveCount >= 3)
+                      ScoreColumn('目标3',
+                          (s) => (s['obj3_achievement'] as num?)?.toDouble() ?? 0,
+                          isAchievement: true,
+                          digits: 2,
+                          headerColor: kObjectiveColors[2]),
                     ScoreColumn('答辩',
                         (s) => (s['defense_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标4',
-                        (s) => (s['obj4_achievement'] as num?)?.toDouble() ?? 0,
-                        isAchievement: true,
-                        digits: 2,
-                        headerColor: kObjectiveColors[3]),
+                    if (_objectiveCount >= 4)
+                      ScoreColumn('目标4',
+                          (s) => (s['obj4_achievement'] as num?)?.toDouble() ?? 0,
+                          isAchievement: true,
+                          digits: 2,
+                          headerColor: kObjectiveColors[3]),
                     ScoreColumn('总评',
                         (s) => (s['total_score'] as num?)?.toDouble() ?? 0,
                         bold: true),

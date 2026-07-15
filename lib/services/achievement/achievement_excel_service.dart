@@ -75,8 +75,8 @@ class AchievementExcelService {
   }
 
   /// 解析「学生个体课程目标达成度」聚合表。
-  /// 列布局：0=学号 1=姓名，之后每目标 4 列：平时|实验|期末|课程目标达成度。
-  /// 取每目标第 4 列（已按 0.2/0.3/0.5 加权），共 4 目标 = 列 5,9,13,17。
+  /// 列布局：0=学号 1=姓名，之后每目标 4 列：平时|实验|期末|课程目标达成度（第4列）。
+  /// 动态扫描表头识别目标数量，不再硬编码 4 目标。
   List<Map<String, dynamic>> _parseAchievementSheet(xl.Sheet table) {
     final results = <Map<String, dynamic>>[];
     int headerRow = -1;
@@ -90,12 +90,30 @@ class AchievementExcelService {
     }
     if (headerRow < 0) return results;
 
+    final headerCells =
+        table.rows[headerRow].map((c) => c?.value?.toString() ?? '').toList();
+    // 扫描表头中「课程目标N」或「目标N」模式计算目标数量
+    final objPattern = RegExp(r'(?:课程)?目标(\d+)');
+    int maxObj = 0;
+    for (final cell in headerCells) {
+      final match = objPattern.firstMatch(cell.trim());
+      if (match != null) {
+        final n = int.tryParse(match.group(1) ?? '') ?? 0;
+        if (n > maxObj) maxObj = n;
+      }
+    }
+    if (maxObj < 1) maxObj = 4; // 无法识别时兜底
+    final objCount = maxObj;
+    // 每目标占 4 列：平时|实验|期末|达成度，目标N达成度在列 (1 + 4*N)
+    final achCols = List.generate(objCount, (i) => 1 + 4 * (i + 1));
+    // 起码要能容纳最后一列
+    final minCols = achCols.isNotEmpty ? achCols.last + 1 : 3;
+
     final fm = AchievementConfig.defaults.fullMarks;
-    const achCols = [5, 9, 13, 17];
     for (int i = headerRow + 1; i < table.rows.length; i++) {
       final cells =
           table.rows[i].map((c) => c?.value?.toString() ?? '').toList();
-      if (cells.length < 18) continue;
+      if (cells.length < minCols) continue;
       final sid = cells[0].trim();
       if (sid.isEmpty ||
           sid.contains('合计') ||
@@ -859,6 +877,29 @@ class AchievementExcelService {
       if (named != null) return named.group(1)!.trim();
     }
     return null;
+  }
+
+  /// 从大纲原始文本提取元信息（适用专业、开课学期等）。
+  Map<String, String> extractSyllabusInfo(String rawText) {
+    final info = <String, String>{};
+    final text = _normalizeSyllabusText(rawText);
+    for (final line in text.split(RegExp(r'[\n\r]+'))) {
+      final trimmed = line.trim();
+      // Match "**适用专业**：软件工程" or "适用专业：软件工程"
+      if (trimmed.contains('适用专业') || trimmed.contains('适用对象')) {
+        final m = RegExp(r'适用[^：:]*[：:]\s*(.+)').firstMatch(trimmed);
+        if (m != null) info['适用专业'] = m.group(1)!.trim();
+      }
+      if (trimmed.contains('开课学期')) {
+        final m = RegExp(r'开课学期[：:]\s*(.+)').firstMatch(trimmed);
+        if (m != null) info['开课学期'] = m.group(1)!.trim();
+      }
+      if (trimmed.contains('课程名称')) {
+        final m = RegExp(r'课程名称[：:]\s*(.+)').firstMatch(trimmed);
+        if (m != null) info['课程名称'] = m.group(1)!.trim();
+      }
+    }
+    return info;
   }
 
   /// 从上传大纲原始文本提取课程目标行。
