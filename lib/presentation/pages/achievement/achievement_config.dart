@@ -9,8 +9,8 @@ import '../../../data/models/course_model.dart';
 ///
 /// 取值优先级：course_objectives 表（大纲导入）> 批次 objective_weights_json > 此处默认。
 class AchievementConfig {
-  final List<double> weights; // 4 个课程目标权重，和为 1
-  final List<double> fullMarks; // 4 个课程目标满分
+  final List<double> weights; // 课程目标权重（数量动态，和为 1）
+  final List<double> fullMarks; // 课程目标满分（数量动态）
   final List<String> objectiveNames;
   final List<String> indicators; // 毕业要求指标点，如 '1.4'
   final List<String> descriptions; // 课程目标完整描述
@@ -31,6 +31,7 @@ class AchievementConfig {
 
   /// 回落默认（无任何课程上下文时的通用兜底，不绑定《移动应用开发》等具体课程）。
   /// 满分与权重必须同源，不可分开维护。真实课程应基于大纲（course_objectives）动态生成。
+  /// 注意：此为最小回落（4 个课程目标），实际目标数由 defaultsForCourse 动态计算。
   static const AchievementConfig defaults = AchievementConfig(
     weights: [0.15, 0.25, 0.30, 0.30],
     fullMarks: [15.0, 25.0, 30.0, 30.0],

@@ -13,6 +13,7 @@ import '../../../../services/achievement/achievement_excel_service.dart';
 import '../../../../services/output_path_service.dart';
 import '../../../../services/achievement_context.dart';
 import '../../../../services/course_context_service.dart';
+import '../../../../services/course_terminology_service.dart';
 import '../../../../core/error_handler.dart';
 import '../achievement_shared.dart';
 import '../achievement_config.dart';
@@ -39,6 +40,7 @@ class ScoreManagementTab extends StatefulWidget {
 
 class _ScoreManagementTabState extends State<ScoreManagementTab>
     with SingleTickerProviderStateMixin {
+  CourseTerms? _courseTerms;
   List<Map<String, dynamic>> _batches = [];
   int? _selectedBatchId;
   bool _loadingBatches = true;
@@ -77,9 +79,15 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
 
   Future<void> _loadBatches() async {
     try {
-      final batches = await widget.achievementDao.getBatches();
+      final results = await Future.wait([
+        widget.achievementDao.getBatches(),
+        CourseTerminologyService().activeTerms(),
+      ]);
+      final batches = results[0] as List<Map<String, dynamic>>;
+      final terms = results[1] as CourseTerms;
       if (mounted) {
         setState(() {
+          _courseTerms = terms;
           _batches = batches;
           _loadingBatches = false;
           if (_batches.isNotEmpty && _selectedBatchId == null) {
@@ -658,11 +666,12 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
   }
 
   String _envTitle(String env) {
+    final terms = _courseTerms;
     switch (env) {
       case 'pingshi':
         return '平时成绩';
       case 'experiment':
-        return '实验成绩';
+        return '${terms?.navLabel ?? '实验'}成绩';
       case 'aggregate':
         return '达成成绩';
       default:
@@ -685,6 +694,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
 
   void _loadComponentScores() async {
     if (_selectedBatchId == null) return;
+    if (!mounted) return;
     setState(() => _loadingComponents = true);
     try {
       final weights = await widget.achievementDao
@@ -1210,7 +1220,8 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
         [_selectedBatchId],
       );
       return (result.first['c'] as int?) ?? 0;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ScoresTab.getComponentCount', stack: st);
       return 0;
     }
   }

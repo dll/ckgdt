@@ -1,0 +1,4 @@
+  File "<string>", line 6
+    tabs=[r[0] for r in cur.execute(\
+                                   ^
+SyntaxError: '(' was never closed

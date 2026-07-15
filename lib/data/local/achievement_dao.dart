@@ -17,7 +17,7 @@ class AchievementDao {
   /// 默认课程目标满分数值（与大纲第六节、AchievementConfig.defaults 一致）。
   /// DAO 属数据层，不能依赖 presentation 层的 AchievementConfig，故在此独立维护。
   /// 优先使用 course_objectives 表中的满分值，此处仅作兜底。
-  static const List<double> _kFullMarks = [15.0, 20.0, 25.0, 20.0, 20.0];
+  static const List<double> _kFullMarks = [15.0, 25.0, 30.0, 30.0, 0.0];
 
   static int _asInt(Object? value, [int fallback = 0]) {
     if (value is int) return value;
@@ -857,29 +857,11 @@ class AchievementDao {
   Future<void> saveCalculationResults({
     required int batchId,
     required double weightedAchievement,
-    double? objective1Achievement,
-    double? objective2Achievement,
-    double? objective3Achievement,
-    double? objective4Achievement,
     Map<int, double>? objectiveAchievements,
   }) async {
     final results = <String, dynamic>{
       'weighted_achievement': weightedAchievement,
     };
-    // 兼容旧的4参数调用
-    if (objective1Achievement != null) {
-      results['objective1_achievement'] = objective1Achievement;
-    }
-    if (objective2Achievement != null) {
-      results['objective2_achievement'] = objective2Achievement;
-    }
-    if (objective3Achievement != null) {
-      results['objective3_achievement'] = objective3Achievement;
-    }
-    if (objective4Achievement != null) {
-      results['objective4_achievement'] = objective4Achievement;
-    }
-    // 新的动态数量支持
     if (objectiveAchievements != null) {
       for (final entry in objectiveAchievements.entries) {
         results['objective${entry.key}_achievement'] = entry.value;
@@ -2398,70 +2380,71 @@ class AchievementDao {
         final a2 = (s['obj2_achievement'] as num?)?.toDouble() ?? 0;
         final a3 = (s['obj3_achievement'] as num?)?.toDouble() ?? 0;
         final a4 = (s['obj4_achievement'] as num?)?.toDouble() ?? 0;
+        final aggJson = s['achievements_json'] as String?;
 
         if (!pHas && usesPingshi) {
           // 平时：课堂→目标1, 测验→目标2, 课外→目标4（目标3无平时项）
-          await txn.insert(
-              'achievement_pingshi_scores',
-              {
-                'batch_id': batchId,
-                'student_id': sid,
-                'student_name': name,
-                'class_activity_score': a1 * 100,
-                'class_activity_achievement': a1,
-                'quiz_homework_score': a2 * 100,
-                'quiz_homework_achievement': a2,
-                'extra_learning_score': a4 * 100,
-                'extra_learning_achievement': a4,
-                'total_score': (a1 + a2 + a4) / 3 * 100,
-                'created_at': now,
-                'updated_at': now,
-              },
+          final pRow = <String, dynamic>{
+            'batch_id': batchId,
+            'student_id': sid,
+            'student_name': name,
+            'class_activity_score': a1 * 100,
+            'class_activity_achievement': a1,
+            'quiz_homework_score': a2 * 100,
+            'quiz_homework_achievement': a2,
+            'extra_learning_score': a4 * 100,
+            'extra_learning_achievement': a4,
+            'total_score': (a1 + a2 + a4) / 3 * 100,
+            'created_at': now,
+            'updated_at': now,
+          };
+          if (aggJson != null) pRow['achievements_json'] = aggJson;
+          await txn.insert('achievement_pingshi_scores', pRow,
               conflictAlgorithm: ConflictAlgorithm.replace);
         }
         if (!eHas && usesExperiment) {
-          await txn.insert(
-              'achievement_experiment_scores',
-              {
-                'batch_id': batchId,
-                'student_id': sid,
-                'student_name': name,
-                'exp1_score': a1 * 100,
-                'exp2_score': a1 * 100,
-                'exp3_score': a2 * 100,
-                'exp4_score': a2 * 100,
-                'exp5_score': a3 * 100,
-                'exp6_score': a4 * 100,
-                'exp7_score': 0,
-                'obj1_achievement': a1,
-                'obj2_achievement': a2,
-                'obj3_achievement': a3,
-                'obj4_achievement': a4,
-                'total_score': (a1 + a2 + a3 + a4) / 4 * 100,
-                'created_at': now,
-                'updated_at': now,
-              },
+          final eRow = <String, dynamic>{
+            'batch_id': batchId,
+            'student_id': sid,
+            'student_name': name,
+            'exp1_score': a1 * 100,
+            'exp2_score': a1 * 100,
+            'exp3_score': a2 * 100,
+            'exp4_score': a2 * 100,
+            'exp5_score': a3 * 100,
+            'exp6_score': a4 * 100,
+            'exp7_score': 0,
+            'obj1_achievement': a1,
+            'obj2_achievement': a2,
+            'obj3_achievement': a3,
+            'obj4_achievement': a4,
+            'total_score': (a1 + a2 + a3 + a4) / 4 * 100,
+            'created_at': now,
+            'updated_at': now,
+          };
+          if (aggJson != null) eRow['achievements_json'] = aggJson;
+          await txn.insert('achievement_experiment_scores', eRow,
               conflictAlgorithm: ConflictAlgorithm.replace);
         }
         if (!xHas && usesExam) {
-          await txn.insert(
-              'achievement_exam_scores',
-              {
-                'batch_id': batchId,
-                'student_id': sid,
-                'student_name': name,
-                'project_score': a1 * 100,
-                'group_score': a2 * 100,
-                'individual_score': a3 * 100,
-                'defense_score': a4 * 100,
-                'obj1_achievement': a1,
-                'obj2_achievement': a2,
-                'obj3_achievement': a3,
-                'obj4_achievement': a4,
-                'total_score': a1 * 30 + a2 * 20 + a3 * 20 + a4 * 30,
-                'created_at': now,
-                'updated_at': now,
-              },
+          final xRow = <String, dynamic>{
+            'batch_id': batchId,
+            'student_id': sid,
+            'student_name': name,
+            'project_score': a1 * 100,
+            'group_score': a2 * 100,
+            'individual_score': a3 * 100,
+            'defense_score': a4 * 100,
+            'obj1_achievement': a1,
+            'obj2_achievement': a2,
+            'obj3_achievement': a3,
+            'obj4_achievement': a4,
+            'total_score': a1 * 30 + a2 * 20 + a3 * 20 + a4 * 30,
+            'created_at': now,
+            'updated_at': now,
+          };
+          if (aggJson != null) xRow['achievements_json'] = aggJson;
+          await txn.insert('achievement_exam_scores', xRow,
               conflictAlgorithm: ConflictAlgorithm.replace);
         }
       }
@@ -2469,7 +2452,7 @@ class AchievementDao {
   }
 
   // ── 平时成绩 ─────────────────────────────────────────────────────────
-  /// 课堂表现→目标1, 期间测验→目标2, 课外学习→目标4; 目标3无平时成绩
+  /// 前 3 个子分项（class_activity/quiz_homework/extra_learning）依次映射到 obj1-obj3，剩余目标达成度为 0。
 
   Future<List<Map<String, dynamic>>> getPingshiScores(int batchId) async {
     final db = await DatabaseHelper.instance.database;
@@ -2514,7 +2497,7 @@ class AchievementDao {
   /// 前 3 个子分项依次映射到 obj1-obj3，剩余目标达成度为 0。
   Map<String, double> calculatePingshiAchievement(
     Map<String, dynamic> score, {
-    int objectiveCount = 4,
+    int objectiveCount = 10,
   }) {
     final classScore = (score['class_activity_score'] as num?)?.toDouble() ?? 0;
     final quizScore = (score['quiz_homework_score'] as num?)?.toDouble() ?? 0;
@@ -2534,7 +2517,7 @@ class AchievementDao {
   /// 计算平时成绩的班级平均达成度（任意目标数）。
   Future<Map<String, double>> calculatePingshiClassAverage(
     int batchId, {
-    int objectiveCount = 4,
+    int objectiveCount = 10,
   }) async {
     final scores = await getPingshiScores(batchId);
     if (scores.isEmpty) {
@@ -2631,7 +2614,7 @@ class AchievementDao {
   /// 前 N 个实验按 2 个一组依次映射到目标（exp1+exp2→obj1 等）。
   Map<String, double> calculateExperimentAchievement(
     Map<String, dynamic> score, {
-    int objectiveCount = 4,
+    int objectiveCount = 10,
   }) {
     final exps = <double>[];
     for (int i = 1; i <= 7; i++) {
@@ -2660,7 +2643,7 @@ class AchievementDao {
   /// 计算实验成绩的班级平均达成度（任意目标数）。
   Future<Map<String, double>> calculateExperimentClassAverage(
     int batchId, {
-    int objectiveCount = 4,
+    int objectiveCount = 10,
   }) async {
     final scores = await getExperimentScores(batchId);
     if (scores.isEmpty) {
@@ -2725,7 +2708,7 @@ class AchievementDao {
   /// 前 4 个子分项依次映射到 obj1-obj4，其余目标的达成度为 0。
   Map<String, double> calculateExamAchievement(
     Map<String, dynamic> score, {
-    int objectiveCount = 4,
+    int objectiveCount = 10,
   }) {
     final subScores = <double>[
       (score['project_score'] as num?)?.toDouble() ?? 0,
@@ -2751,7 +2734,7 @@ class AchievementDao {
   /// 计算期末考核的班级平均达成度（任意目标数）。
   Future<Map<String, double>> calculateExamClassAverage(
     int batchId, {
-    int objectiveCount = 4,
+    int objectiveCount = 10,
   }) async {
     final scores = await getExamScores(batchId);
     if (scores.isEmpty) {

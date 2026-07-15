@@ -5,6 +5,7 @@ import '../../../../data/local/achievement_dao.dart';
 import '../../../../data/local/course_dao.dart';
 import '../../../../services/achievement_context.dart';
 import '../../../../services/auth_service.dart';
+import '../../../../services/course_terminology_service.dart';
 import '../../admin/course_objectives_manage_page.dart';
 import '../../../widgets/agent_chat_overlay.dart';
 import '../achievement_shared.dart';
@@ -55,6 +56,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
   List<Map<String, dynamic>> _objectives = [];
   bool _loading = true;
   String _currentCourseName = '当前课程';
+  CourseTerms? _courseTerms;
 
   @override
   void initState() {
@@ -80,6 +82,9 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
       // 课程大纲(课程目标)是课程级数据，已导入则常驻显示
       final objectives =
           await widget.achievementDao.getCourseObjectives(_currentCourseName);
+      try {
+        _courseTerms = await CourseTerminologyService().activeTerms();
+      } catch (_) {}
       if (mounted) {
         setState(() {
           _batches = batches;
@@ -287,7 +292,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
       if (_objectives.any((r) => _objectiveRatio(r['pingshi_ratio']) > 0))
         ('平时', 'pingshi_ratio'),
       if (_objectives.any((r) => _objectiveRatio(r['experiment_ratio']) > 0))
-        ('实验', 'experiment_ratio'),
+        (_courseTerms?.navLabel ?? '实验', 'experiment_ratio'),
       if (_objectives.any((r) => _objectiveRatio(r['exam_ratio']) > 0))
         ('考核', 'exam_ratio'),
     ];
@@ -525,7 +530,7 @@ class BatchDetailSheet extends StatefulWidget {
     required this.batch,
     required this.achievementDao,
     required this.scrollController,
-    this.objectiveCount = 4,
+    this.objectiveCount = 1,
     this.objectiveNames = const [],
   });
 
@@ -1006,10 +1011,12 @@ class _SyllabusAssessmentMatrixDialogState
     extends State<SyllabusAssessmentMatrixDialog> {
   late final TextEditingController _courseCtrl;
   late final List<_ObjectiveEditRow> _rows;
+  CourseTerms? _matrixCourseTerms;
 
   @override
   void initState() {
     super.initState();
+    _loadMatrixCourseTerms();
     _courseCtrl = TextEditingController(text: widget.courseName);
     final source = widget.rows.isEmpty
         ? List.generate(4, (i) => {'idx': i + 1})
@@ -1056,6 +1063,13 @@ class _SyllabusAssessmentMatrixDialogState
       row.dispose();
       _reindex();
     });
+  }
+
+  Future<void> _loadMatrixCourseTerms() async {
+    try {
+      final terms = await CourseTerminologyService().activeTerms();
+      if (mounted) setState(() => _matrixCourseTerms = terms);
+    } catch (_) {}
   }
 
   void _markNoExperimentCourse() {
@@ -1150,7 +1164,7 @@ class _SyllabusAssessmentMatrixDialogState
                   const DataColumn(label: Text('考核%')),
                   const DataColumn(label: Text('章节')),
                   if (showExperimentColumns)
-                    const DataColumn(label: Text('实验')),
+                    DataColumn(label: Text(_matrixCourseTerms?.navLabel ?? '实验')),
                   const DataColumn(label: Text('考核内容')),
                   const DataColumn(label: Text('')),
                 ],
@@ -1255,6 +1269,7 @@ class SyllabusPreviewDialog extends StatefulWidget {
 }
 
 class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
+  CourseTerms? _courseTerms;
   late final List<Map<String, dynamic>> _rows = widget.rows
       .map((e) => Map<String, dynamic>.from(e))
       .where(
@@ -1269,6 +1284,7 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
   @override
   void initState() {
     super.initState();
+    _loadCourseTerms();
     _weightCtrls = _rows
         .map((r) => TextEditingController(text: (r['weight'] ?? 0).toString()))
         .toList();
@@ -1342,12 +1358,19 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
     return value > 1 ? value / 100 : value;
   }
 
+  Future<void> _loadCourseTerms() async {
+    try {
+      final terms = await CourseTerminologyService().activeTerms();
+      if (mounted) setState(() => _courseTerms = terms);
+    } catch (_) {}
+  }
+
   String _envLabel(String key) {
     switch (key) {
       case 'pingshi':
         return '平时';
       case 'experiment':
-        return '实验';
+        return _courseTerms?.navLabel ?? '实验';
       default:
         return '考核';
     }
@@ -1446,7 +1469,7 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('实验项目与目标对应表',
+                        Text('${_courseTerms?.practiceLabel ?? '实验项目'}与目标对应表',
                             style: TextStyle(
                                 fontWeight: FontWeight.bold, fontSize: 12)),
                         const SizedBox(height: 6),
@@ -1556,10 +1579,10 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                 const SizedBox(height: 4),
                 TextField(
                   controller: _experimentsCtrls[i],
-                  decoration: const InputDecoration(
-                      labelText: '支撑实验',
+                  decoration: InputDecoration(
+                      labelText: '支撑${_courseTerms?.navLabel ?? '实验'}',
                       isDense: true,
-                      border: OutlineInputBorder()),
+                      border: const OutlineInputBorder()),
                 ),
                 if ((_rows[i]['pingshi_standard'] as String?)?.isNotEmpty ??
                     false) ...[
@@ -1570,7 +1593,7 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                 if ((_rows[i]['experiment_standard'] as String?)?.isNotEmpty ??
                     false) ...[
                   const SizedBox(height: 2),
-                  Text('实验标准：${_rows[i]['experiment_standard']}',
+                  Text('${_courseTerms?.navLabel ?? '实验'}标准：${_rows[i]['experiment_standard']}',
                       style: const TextStyle(fontSize: 10, color: Colors.grey)),
                 ],
                 const SizedBox(height: 4),

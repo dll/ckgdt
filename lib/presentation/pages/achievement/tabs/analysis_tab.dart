@@ -6,6 +6,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import '../../../../data/local/achievement_dao.dart';
+import '../../../../services/ai_service.dart';
 import '../../../../services/course_context_service.dart';
 import '../../../../services/output_path_service.dart';
 import '../../../../core/error_handler.dart';
@@ -706,8 +707,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                             style: TextStyle(
                                 fontSize: 11, fontWeight: FontWeight.bold))),
                   ])),
-              ...(_scores.length > 30 ? _scores.sublist(0, 30) : _scores)
-                  .asMap()
+              ..._scores.asMap()
                   .entries
                   .map((entry) {
                 final i = entry.key;
@@ -755,12 +755,6 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                                   fontSize: 10, fontWeight: FontWeight.w500))),
                     ]));
               }),
-              if (_scores.length > 30)
-                Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text('... 仅显示前30条，共${_scores.length}条',
-                        style:
-                            const TextStyle(fontSize: 11, color: Colors.grey))),
             ])));
   }
 
@@ -1232,6 +1226,8 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
   Map<String, dynamic>? _surveySummary;
   // 各批次加权达成度对比 [{name, semester, weighted}]
   List<Map<String, dynamic>> _comparison = [];
+  bool _aiAnalysisLoading = false;
+  String? _aiAnalysisResult;
 
   @override
   void initState() {
@@ -1312,6 +1308,55 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('分析失败：$e'), backgroundColor: Colors.red),
         );
+      }
+    }
+  }
+
+  Future<void> _generateAiAnalysis() async {
+    if (_selectedBatchId == null) return;
+    setState(() {
+      _aiAnalysisLoading = true;
+      _aiAnalysisResult = null;
+    });
+    try {
+      final scores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
+      final objectives = await widget.achievementDao
+          .getCourseObjectives(await CourseContextService().activeCourseName());
+      final sb = StringBuffer();
+      sb.writeln('请根据以下课程目标达成度数据，提供教学改进建议：');
+      sb.writeln('学生人数：${scores.length}');
+      for (final o in objectives) {
+        final idx = o['idx'] ?? 0;
+        final desc = o['description'] ?? '';
+        sb.writeln('- 目标$idx：$desc');
+      }
+      if (scores.isNotEmpty) {
+        for (int i = 1; i <= objectives.length; i++) {
+          double sum = 0;
+          for (final s in scores) {
+            sum += (s['obj${i}_achievement'] as num?)?.toDouble() ?? 0;
+          }
+          final avg = sum / scores.length;
+          sb.writeln('  达成度：${(avg * 100).toStringAsFixed(1)}%');
+        }
+      }
+      final result = await AiService().chatWithMeta(
+        [{'role': 'user', 'content': sb.toString()}],
+        systemPrompt: '你是一名教学分析专家，请根据课程目标达成度数据给出简洁的改进建议，使用中文。',
+        temperature: 0.7,
+      );
+      if (mounted) {
+        setState(() {
+          _aiAnalysisResult = result.content;
+          _aiAnalysisLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _aiAnalysisResult = 'AI分析失败：$e';
+          _aiAnalysisLoading = false;
+        });
       }
     }
   }
@@ -1446,20 +1491,59 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
           const SizedBox(height: 16),
 
           // 分析按钮
-          Center(
-            child: FilledButton.icon(
-              onPressed: _analyzing ? null : _analyzeAndSuggest,
-              icon: _analyzing
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.auto_fix_high, size: 18),
-              label: Text(_analyzing ? '分析中...' : '分析达成度 & 生成改进建议'),
-            ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              FilledButton.icon(
+                onPressed: _analyzing ? null : _analyzeAndSuggest,
+                icon: _analyzing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.auto_fix_high, size: 18),
+                label: Text(_analyzing ? '分析中...' : '分析达成度 & 生成改进建议'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _aiAnalysisLoading ? null : _generateAiAnalysis,
+                icon: _aiAnalysisLoading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.auto_awesome, size: 18),
+                label: Text(_aiAnalysisLoading ? 'AI生成中...' : 'AI 分析建议'),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
+
+          if (_aiAnalysisResult != null)
+            Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Icon(Icons.auto_awesome, color: primary, size: 20),
+                      const SizedBox(width: 8),
+                      const Text('AI 分析建议',
+                          style: TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.bold)),
+                    ]),
+                    const SizedBox(height: 8),
+                    Text(_aiAnalysisResult!,
+                        style: const TextStyle(fontSize: 12, height: 1.5)),
+                  ],
+                ),
+              ),
+            ),
+          if (_aiAnalysisResult != null) const SizedBox(height: 16),
 
           if (_analyzing)
             const Padding(

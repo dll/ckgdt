@@ -6,6 +6,7 @@ import '../../data/local/archive_dao.dart';
 import '../../data/local/course_dao.dart';
 import '../../data/models/archive_document_model.dart';
 import '../achievement_context.dart';
+import '../course_terminology_service.dart';
 
 class AchievementAuditSnapshot {
   final String courseName;
@@ -97,12 +98,18 @@ class AchievementAuditContextService {
   Future<String> buildAuditMarkdown(
       {int? batchId, bool compact = false}) async {
     final snapshot = await loadSnapshot(batchId: batchId);
-    return buildAuditMarkdownFromSnapshot(snapshot, compact: compact);
+    final terms = await CourseTerminologyService().activeTerms();
+    return buildAuditMarkdownFromSnapshot(
+      snapshot,
+      compact: compact,
+      practicalTerm: terms.navLabel,
+    );
   }
 
   String buildAuditMarkdownFromSnapshot(
     AchievementAuditSnapshot snapshot, {
     bool compact = false,
+    String? practicalTerm,
   }) {
     final docs = snapshot.archiveDocuments;
     final objectives = snapshot.objectives;
@@ -212,7 +219,7 @@ class AchievementAuditContextService {
       buf.writeln('|------|------|------|--------|----------|');
       for (final row in objectives) {
         final idx = _asInt(row['idx']);
-        final envs = _assessmentParts(row);
+        final envs = _assessmentParts(row, practicalTerm: practicalTerm);
         buf.writeln(
             '| 目标$idx | ${_asRatio(row['weight']).toStringAsFixed(2)} | '
             '${_asDouble(row['full_mark']).toStringAsFixed(0)} | '
@@ -298,14 +305,14 @@ class AchievementAuditContextService {
     } catch (e, st) { swallowDebug(e, tag: 'AchievementAudit', stack: st); return false; }
   }
 
-  static List<String> _assessmentParts(Map<String, dynamic> row) {
+  static List<String> _assessmentParts(Map<String, dynamic> row, {String? practicalTerm}) {
     final parts = <String>[];
     final pingshi = _asRatio(row['pingshi_ratio']);
     final experiment = _asRatio(row['experiment_ratio']);
     final exam = _asRatio(row['exam_ratio']);
     if (pingshi > 0) parts.add('平时${(pingshi * 100).toStringAsFixed(0)}%');
     if (experiment > 0) {
-      parts.add('实验${(experiment * 100).toStringAsFixed(0)}%');
+      parts.add('${practicalTerm ?? '实验'}${(experiment * 100).toStringAsFixed(0)}%');
     }
     if (exam > 0) parts.add('考核${(exam * 100).toStringAsFixed(0)}%');
     return parts.isEmpty ? ['未设置'] : parts;

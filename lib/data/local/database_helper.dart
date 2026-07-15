@@ -142,7 +142,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 40,
+          version: 41,
           singleInstance: true, // 启用单例模式
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
@@ -229,7 +229,7 @@ class DatabaseHelper {
     Database db;
     db = await openDatabase(
       dbPath,
-      version: 36,
+      version: 41,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -1663,6 +1663,7 @@ class DatabaseHelper {
     await _ensureCoursePackageVersionTable(db);
     await _ensureAchievementColumns(db);
     await _ensureCourseObjectivesColumns(db);
+    await _ensureAchievementGenericColumns(db);
     await _ensureTeachingWorkloadTable(db);
   }
 
@@ -1820,6 +1821,22 @@ class DatabaseHelper {
         db, 'achievement_batches', 'calc_results_json', 'achievement_batches');
     await _addTextColumnIfMissing(
         db, 'achievement_batches', 'syllabus_version', 'achievement_batches');
+  }
+
+  /// 补齐达成度子表的 achievements_json 泛化列（防御 _onUpgrade 未触发的场景）
+  Future<void> _ensureAchievementGenericColumns(Database db) async {
+    for (final table in [
+      'achievement_pingshi_scores',
+      'achievement_experiment_scores',
+      'achievement_exam_scores',
+    ]) {
+      await _addTextColumnIfMissing(
+          db, table, 'sub_score_json', '_ensure.$table');
+      await _addTextColumnIfMissing(
+          db, table, 'achievements_json', '_ensure.$table');
+    }
+    await _addTextColumnIfMissing(
+        db, 'achievement_scores', 'achievements_json', '_ensure.scores');
   }
 
   /// 补齐 course_objectives 表可能缺少的 AI 解析列

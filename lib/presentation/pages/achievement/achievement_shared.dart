@@ -105,7 +105,7 @@ void sortScoresInPlace(List<Map<String, dynamic>> scores, ScoreSort sort,
   }
 }
 
-/// 4 个课程目标达成度雷达图。[values] 为 obj1..4 达成度（0..1）。
+/// 课程目标达成度雷达图。[values] 为各目标达成度（0..1），长度不限。
 /// 三个达成 tab（平时/实验/考核）共用，避免重复构建。
 Widget objectiveRadarChart(List<double> values, Color color,
     {double size = 180}) {

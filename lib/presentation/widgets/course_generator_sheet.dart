@@ -14,6 +14,7 @@ import '../../data/models/edge_model.dart';
 import '../../data/models/graph_model.dart';
 import '../../data/models/node_model.dart';
 import '../../services/achievement/achievement_excel_service.dart';
+import '../../services/auth_service.dart';
 import '../../services/course_generation_service.dart';
 import '../../services/resource_persistence_service.dart';
 import 'package:knowledge_graph_app/core/error_handler.dart';
@@ -505,18 +506,23 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
     final now = DateTime.now();
     final semester =
         '${now.year}-${now.year + 1}-${now.month >= 2 && now.month <= 7 ? 2 : 1}';
+    final currentUser = AuthService().currentUser;
+    final teacherName = currentUser?.realName ?? '';
+    final teacherId = currentUser?.userId ?? '';
+    final className = result.config['class_name']?.toString() ?? '';
     final batchName = AchievementDao.buildBatchName(
       courseName: result.courseName,
-      className: '',
+      className: className,
       semester: semester,
-      teacherName: '',
+      teacherName: teacherName,
     );
     try {
       await dao.addBatch(
         batchName: batchName,
         courseName: result.courseName,
-        className: '',
+        className: className,
         semester: semester,
+        teacherId: teacherId,
         syllabusVersion: version,
       );
       _log('已自动创建达成度批次：$batchName');

@@ -439,7 +439,7 @@ class _ReportTabState extends State<ReportTab> {
       } else {
         buffer.writeln('| 学生人数 | $studentCount | 评价日期 | $dateStr |');
       }
-      buffer.writeln('| 课程性质 | 考查（大作业） | 评价方式 | 定量+定性 |');
+      buffer.writeln('| 课程性质 | 考查 | 评价方式 | 定量+定性 |');
       buffer.writeln('| 开课学期 | $semester | 大纲版本 | $syllabusVersion |');
       buffer.writeln('| 达成度预期阈值 | 0.60 | 计算依据 | 课程目标管理 |');
       buffer.writeln();
@@ -717,12 +717,18 @@ class _ReportTabState extends State<ReportTab> {
         buffer.writeln(
             '- ${kObjectiveNames[weakest]}方面相对较弱（${_objectiveAchievements[weakest].toStringAsFixed(4)}）');
         buffer.writeln();
-        buffer.writeln('主要原因可能是：');
+        buffer.writeln('（无问卷调查数据，请补充调查后重新生成）');
         buffer.writeln();
-        buffer.writeln('1. 部分课程目标对应的考核内容综合性较强，学生对关键知识点迁移应用不足');
-        buffer.writeln('2. 过程性评价中暴露出学生阶段性复盘和问题整理不充分');
-        buffer.writeln('3. 终结性考核任务对分析、设计和表达能力要求较高，低分学生需要专项训练');
-        buffer.writeln('4. 后续应结合大纲对照表，针对达成度偏低的目标补充训练与反馈');
+        for (final i in activeObjectiveIndexes) {
+          final a = _objectiveAchievements[i];
+          if (a < 0.70) {
+            final desc = cfg.descriptions[i].length > 20
+                ? cfg.descriptions[i].substring(0, 20)
+                : cfg.descriptions[i];
+            buffer.writeln(
+                '- ${kObjectiveNames[i]}（达成度${a.toStringAsFixed(4)}）相关「$desc」内容需加强教学与练习');
+          }
+        }
         buffer.writeln();
       }
 
@@ -1486,6 +1492,13 @@ class _ReportTabState extends State<ReportTab> {
                   ) ??
                   <String, double>{})
               .toList();
+      Map<String, double> envWeightAt(int index) {
+        if (index >= 0 && index < envWeightsByObjective.length) {
+          return envWeightsByObjective[index];
+        }
+        return {'pingshi': 0.20, 'experiment': 0.30, 'exam': 0.50};
+      }
+
       bool defaultLike(Map<String, double> w) =>
           ((w['pingshi'] ?? 0) - 0.2).abs() < 0.0001 &&
           ((w['experiment'] ?? 0) - 0.3).abs() < 0.0001 &&
@@ -1604,7 +1617,7 @@ class _ReportTabState extends State<ReportTab> {
                   ['授课教师', teacherId, '学生人数', '${scores.length}']
                 else
                   ['学生人数', '${scores.length}', '评价日期', dateStr],
-                ['课程性质', '考查（大作业）', '评价方式', '定量+定性'],
+                ['课程性质', '考查', '评价方式', '定量+定性'],
                 ['开课学期', semester, '大纲版本', syllabusVersion],
                 ['达成度预期阈值', '0.60', '计算依据', '课程目标管理'],
               ],
@@ -1633,150 +1646,14 @@ class _ReportTabState extends State<ReportTab> {
 
             pw.Text('3. 评价方式及成绩评定对照表', style: subHeaderStyle),
             pw.SizedBox(height: 6),
-            pw.TableHelper.fromTextArray(
-              headerStyle: boldStyle,
-              cellStyle: baseStyle,
-              headerDecoration:
-                  const pw.BoxDecoration(color: PdfColors.grey300),
-              headers: [
-                '课程目标',
-                '权重',
-                '支撑指标点',
-                '平时成绩(20分)',
-                '实验成绩(30分)',
-                '期末成绩(50分)'
-              ],
-              data: [
-                for (int i = 0; i < _config.objectiveNames.length; i++)
-                  [
-                    kObjectiveNames[i],
-                    _objectiveWeights[i].toStringAsFixed(2),
-                    '指标点${objIndicators[i]}',
-                    '${objMarks[i]}',
-                    '${objMarks[i]}',
-                    '${objMarks[i]}',
-                  ],
-                ['合计', '1.00', '—', '20', '30', '50'],
-              ],
-            ),
+            _buildPdfAssessmentTable(baseStyle, boldStyle, cfg, objIndicators, objMarks, envWeightAt),
             pw.SizedBox(height: 16),
 
             // ═══ 二、课程考核标准（对齐 DOCX 表2 + 表3 + 表4）═══
             pw.Text('二、课程考核标准', style: headerStyle),
             pw.SizedBox(height: 8),
 
-            pw.Text('1. 平时成绩评价标准（满分20分）', style: subHeaderStyle),
-            pw.SizedBox(height: 6),
-            pw.TableHelper.fromTextArray(
-              headerStyle: boldStyle,
-              cellStyle: baseStyle.copyWith(fontSize: 8),
-              headerDecoration:
-                  const pw.BoxDecoration(color: PdfColors.grey300),
-              headers: [
-                '课程目标',
-                '考核内容',
-                '优秀(90-100%)',
-                '良好(70-89%)',
-                '合格(60-69%)',
-                '不合格(0-59%)'
-              ],
-              data: [
-                [
-                  '课程目标1',
-                  '课堂表现',
-                  '全面掌握，表现突出',
-                  '较好掌握，表现良好',
-                  '基本掌握，表现一般',
-                  '未能掌握，需要改进'
-                ],
-                [
-                  '课程目标2',
-                  '期间测验',
-                  '全面掌握，表现突出',
-                  '较好掌握，表现良好',
-                  '基本掌握，表现一般',
-                  '未能掌握，需要改进'
-                ],
-                [
-                  '课程目标4',
-                  '课外学习',
-                  '全面掌握，表现突出',
-                  '较好掌握，表现良好',
-                  '基本掌握，表现一般',
-                  '未能掌握，需要改进'
-                ],
-              ],
-            ),
-            pw.SizedBox(height: 10),
-
-            pw.Text('2. 实验成绩评价标准（满分30分）', style: subHeaderStyle),
-            pw.SizedBox(height: 6),
-            pw.TableHelper.fromTextArray(
-              headerStyle: boldStyle,
-              cellStyle: baseStyle.copyWith(fontSize: 8),
-              headerDecoration:
-                  const pw.BoxDecoration(color: PdfColors.grey300),
-              headers: [
-                '课程目标',
-                '考核内容',
-                '优秀(90-100%)',
-                '良好(70-89%)',
-                '合格(60-69%)',
-                '不合格(0-59%)'
-              ],
-              data: [
-                [
-                  '课程目标1',
-                  '实验1-2',
-                  '独立完成，结果正确',
-                  '基本完成，结果较好',
-                  '能够完成，有少量错误',
-                  '无法完成或错误较多'
-                ],
-                [
-                  '课程目标2',
-                  '实验3-4',
-                  '独立完成，结果正确',
-                  '基本完成，结果较好',
-                  '能够完成，有少量错误',
-                  '无法完成或错误较多'
-                ],
-                [
-                  '课程目标3',
-                  '实验5-6',
-                  '独立完成，结果正确',
-                  '基本完成，结果较好',
-                  '能够完成，有少量错误',
-                  '无法完成或错误较多'
-                ],
-                [
-                  '课程目标4',
-                  '实验7',
-                  '独立完成，结果正确',
-                  '基本完成，结果较好',
-                  '能够完成，有少量错误',
-                  '无法完成或错误较多'
-                ],
-              ],
-            ),
-            pw.SizedBox(height: 10),
-
-            pw.Text('3. 期末考核评价内容（满分50分）', style: subHeaderStyle),
-            pw.SizedBox(height: 6),
-            pw.TableHelper.fromTextArray(
-              headerStyle: boldStyle,
-              cellStyle: baseStyle,
-              headerDecoration:
-                  const pw.BoxDecoration(color: PdfColors.grey300),
-              headers: ['课程目标', '考核内容', '分值'],
-              data: [
-                ['课程目标1', '期末项目', '10'],
-                ['课程目标2', '小组评价', '20'],
-                ['课程目标3', '个人考核', '30'],
-                ['课程目标4', '答辩', '40'],
-                ['合计', '—', '50'],
-              ],
-            ),
+            _buildPdfEvaluationTables(baseStyle, boldStyle, subHeaderStyle, cfg, objMarks, envWeightAt),
             pw.SizedBox(height: 16),
 
             // ═══ 三、达成度计算（对齐 DOCX 表5）═══
@@ -1789,58 +1666,7 @@ class _ReportTabState extends State<ReportTab> {
 
             pw.Text('1. 课程目标达成度计算', style: subHeaderStyle),
             pw.SizedBox(height: 6),
-            // 达成度计算表（4目标 × 3环节 = 12行）
-            pw.TableHelper.fromTextArray(
-              headerStyle: boldStyle.copyWith(fontSize: 7),
-              cellStyle: baseStyle.copyWith(fontSize: 7),
-              headerDecoration:
-                  const pw.BoxDecoration(color: PdfColors.grey300),
-              headers: [
-                '课程目标',
-                '权重',
-                '评价环节',
-                '满分',
-                '平均分',
-                '达成度',
-                '环节权重',
-                '目标达成度',
-                '指标点',
-                '指标点达成度'
-              ],
-              data: [
-                for (int i = 0; i < _config.objectiveNames.length; i++)
-                  for (int j = 0; j < 3; j++) ...[
-                    [
-                      j == 0 ? '课程目标${i + 1}' : '',
-                      j == 0 ? _objectiveWeights[i].toStringAsFixed(2) : '',
-                      ['平时成绩', '实验成绩', '期末成绩'][j],
-                      ['20', '30', '50'][j],
-                      (i == 2 && j == 0)
-                          ? '—'
-                          : (([pingshiAvg, experimentAvg, examAvg][j]
-                                          ['obj${i + 1}'] ??
-                                      0.0) *
-                                  [20, 30, 50][j])
-                              .toDouble()
-                              .toStringAsFixed(2),
-                      (i == 2 && j == 0)
-                          ? '—'
-                          : ([pingshiAvg, experimentAvg, examAvg][j]
-                                      ['obj${i + 1}'] ??
-                                  0.0)
-                              .toStringAsFixed(4),
-                      ['0.2', '0.3', '0.5'][j],
-                      j == 0
-                          ? (combinedAvg['obj${i + 1}'] ?? 0).toStringAsFixed(4)
-                          : '',
-                      j == 0 ? '指标点${['1.4', '3.2', '4.2', '5.1'][i]}' : '',
-                      j == 0
-                          ? (combinedAvg['obj${i + 1}'] ?? 0).toStringAsFixed(4)
-                          : '',
-                    ],
-                  ],
-              ],
-            ),
+            _buildPdfAchievementCalcTable(baseStyle, boldStyle, cfg, envWeightAt, pingshiAvg, experimentAvg, examAvg, combinedAvg),
             pw.SizedBox(height: 10),
 
             // 达成度汇总
@@ -1982,14 +1808,21 @@ class _ReportTabState extends State<ReportTab> {
                 style: baseStyle,
               )
             else ...[
-              pw.Text('从评价结果可以看出：', style: baseStyle),
-              pw.SizedBox(height: 2),
-              pw.Text('1. 混合开发框架版本更新较快，学生对新特性掌握不及时', style: baseStyle),
-              pw.Text('2. 华为多端开发工具操作复杂度较高，实验课时不足导致实操能力薄弱', style: baseStyle),
-              pw.Text('3. 期末项目考核中跨设备适配场景设计占比过高，学生在多终端兼容性调试方面失分较多',
-                  style: baseStyle),
-              pw.Text('4. 本课程在过程性考核中增加了AI工具应用能力的评分项，标准较上届更为严格',
-                  style: baseStyle),
+              pw.Text('（无问卷调查数据，请补充调查后重新生成）',
+                  style: baseStyle.copyWith(color: PdfColors.grey600)),
+              pw.SizedBox(height: 4),
+              ...List.generate(_config.objectiveNames.length, (i) {
+                final a = _objectiveAchievements[i];
+                if (a < 0.70) {
+                  return pw.Padding(
+                    padding: const pw.EdgeInsets.only(bottom: 2),
+                    child: pw.Text(
+                      '- ${kObjectiveNames[i]}（达成度${a.toStringAsFixed(4)}）需加强教学',
+                      style: baseStyle),
+                  );
+                }
+                return pw.SizedBox.shrink();
+              }),
             ],
             pw.SizedBox(height: 12),
 
@@ -2005,18 +1838,21 @@ class _ReportTabState extends State<ReportTab> {
             pw.SizedBox(height: 2),
             ...List.generate(_config.objectiveNames.length, (i) {
               final a = _objectiveAchievements[i];
+              final desc = cfg.descriptions[i].length > 20
+                  ? cfg.descriptions[i].substring(0, 20)
+                  : cfg.descriptions[i];
               String suggestion;
               if (a < 0.60) {
-                suggestion = '大幅增加相关课时和实践环节，增设单元测验，对低分学生进行一对一辅导。';
+                suggestion = '大幅增加与「$desc」相关的课时和实践环节，增设单元测验，对低分学生进行一对一辅导';
               } else if (a < 0.70) {
-                suggestion = '加大跨平台开发方案的对比分析训练，增加知识图谱创建，补充测验题目。';
+                suggestion = '加大与「$desc」相关的对比分析训练，补充测验题目';
               } else {
-                suggestion = '保持现有教学节奏，适当提高考核难度，培养学生创新能力。';
+                suggestion = '保持现有教学节奏，适当提高考核难度，培养学生创新能力';
               }
               return pw.Padding(
                 padding: const pw.EdgeInsets.only(bottom: 3),
                 child: pw.Text(
-                  '${i + 1}. 课程目标${i + 1}（${a.toStringAsFixed(4)}）：$suggestion',
+                  '${i + 1}. ${kObjectiveNames[i]}（${a.toStringAsFixed(4)}）：$suggestion',
                   style: baseStyle,
                 ),
               );
@@ -2242,6 +2078,184 @@ class _ReportTabState extends State<ReportTab> {
     await Printing.sharePdf(
       bytes: await pdf.save(),
       filename: '$className《$courseName》课程达成度评价报告.pdf',
+    );
+  }
+
+  pw.Widget _buildPdfAssessmentTable(
+    pw.TextStyle baseStyle,
+    pw.TextStyle boldStyle,
+    AchievementConfig cfg,
+    List<String> objIndicators,
+    List<int> objMarks,
+    Map<String, double> Function(int) envWeightAtFn,
+  ) {
+    final envKeys = ['pingshi', 'experiment', 'exam'];
+    final envLabels = {'pingshi': '平时成绩', 'experiment': '实验成绩', 'exam': '期末成绩'};
+    final activeEnvKeys = envKeys.where((k) => (envWeightAtFn(0)[k] ?? 0) > 0).toList();
+    final headers = <String>['课程目标', '权重', '支撑指标点'];
+    for (final k in activeEnvKeys) {
+      final totalMark = (objMarks.isNotEmpty ? objMarks[0] : 0).toInt();
+      headers.add('${envLabels[k]!}($totalMark分)');
+    }
+    final data = <List<String>>[];
+    for (int i = 0; i < cfg.objectiveNames.length; i++) {
+      final row = <String>[
+        kObjectiveNames[i],
+        _objectiveWeights[i].toStringAsFixed(2),
+        '指标点${objIndicators[i]}',
+      ];
+      for (final _ in activeEnvKeys) {
+        row.add('${objMarks[i]}');
+      }
+      data.add(row);
+    }
+    final totalRow = <String>['合计', '1.00', '—'];
+    for (final _ in activeEnvKeys) {
+      final totalMark = (objMarks.isNotEmpty ? objMarks[0] : 0).toInt();
+      final colTotal = cfg.objectiveNames.length * totalMark;
+      totalRow.add('$colTotal');
+    }
+    data.add(totalRow);
+    return pw.TableHelper.fromTextArray(
+      headerStyle: boldStyle,
+      cellStyle: baseStyle,
+      headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+      headers: headers,
+      data: data,
+    );
+  }
+
+  pw.Widget _buildPdfEvaluationTables(
+    pw.TextStyle baseStyle,
+    pw.TextStyle boldStyle,
+    pw.TextStyle subHeaderStyle,
+    AchievementConfig cfg,
+    List<int> objMarks,
+    Map<String, double> Function(int) envWeightAtFn,
+  ) {
+    final children = <pw.Widget>[];
+    final activeIdx = _activeObjectiveIndexesFor(cfg);
+    final hasPingshi = activeIdx.any((i) => (envWeightAtFn(i)['pingshi'] ?? 0) > 0);
+    final hasExperiment = activeIdx.any((i) => (envWeightAtFn(i)['experiment'] ?? 0) > 0);
+    final hasExam = activeIdx.any((i) => (envWeightAtFn(i)['exam'] ?? 0) > 0);
+    final pingshiFull = objMarks.isNotEmpty ? objMarks[0] : 20;
+    final expFull = objMarks.isNotEmpty ? objMarks[0] : 30;
+    final examFull = objMarks.isNotEmpty ? objMarks[0] : 50;
+
+    if (hasPingshi) {
+      children.add(pw.Text('1. 平时成绩评价标准（满分$pingshiFull分）', style: subHeaderStyle));
+      children.add(pw.SizedBox(height: 6));
+      children.add(pw.TableHelper.fromTextArray(
+        headerStyle: boldStyle,
+        cellStyle: baseStyle.copyWith(fontSize: 8),
+        headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+        headers: ['课程目标', '考核内容', '优秀(90-100%)', '良好(70-89%)', '合格(60-69%)', '不合格(0-59%)'],
+        data: [
+          for (final i in activeIdx)
+            if ((envWeightAtFn(i)['pingshi'] ?? 0) > 0)
+              [
+                kObjectiveNames[i],
+                cfg.assessContents[i].split('、').first,
+                '全面掌握，表现突出',
+                '较好掌握，表现良好',
+                '基本掌握，表现一般',
+                '未能掌握，需要改进',
+              ],
+        ],
+      ));
+      children.add(pw.SizedBox(height: 10));
+    }
+
+    if (hasExperiment) {
+      children.add(pw.Text('2. 实验成绩评价标准（满分$expFull分）', style: subHeaderStyle));
+      children.add(pw.SizedBox(height: 6));
+      children.add(pw.TableHelper.fromTextArray(
+        headerStyle: boldStyle,
+        cellStyle: baseStyle.copyWith(fontSize: 8),
+        headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+        headers: ['课程目标', '考核内容', '优秀(90-100%)', '良好(70-89%)', '合格(60-69%)', '不合格(0-59%)'],
+        data: [
+          for (final i in activeIdx)
+            if ((envWeightAtFn(i)['experiment'] ?? 0) > 0)
+              [
+                kObjectiveNames[i],
+                cfg.assessContents[i].split('、').length > 1
+                    ? cfg.assessContents[i].split('、')[1]
+                    : cfg.assessContents[i].split('、').first,
+                '独立完成，结果正确',
+                '基本完成，结果较好',
+                '能够完成，有少量错误',
+                '无法完成或错误较多',
+              ],
+        ],
+      ));
+      children.add(pw.SizedBox(height: 10));
+    }
+
+    if (hasExam) {
+      children.add(pw.Text('3. 考核评价内容（满分$examFull分）', style: subHeaderStyle));
+      children.add(pw.SizedBox(height: 6));
+      children.add(pw.TableHelper.fromTextArray(
+        headerStyle: boldStyle,
+        cellStyle: baseStyle,
+        headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+        headers: ['课程目标', '考核内容', '分值'],
+        data: [
+          for (final i in activeIdx)
+            if ((envWeightAtFn(i)['exam'] ?? 0) > 0)
+              [
+                kObjectiveNames[i],
+                cfg.assessContents[i].split('、').last,
+                '${objMarks[i]}',
+              ],
+          ['合计', '—', '$examFull'],
+        ],
+      ));
+      children.add(pw.SizedBox(height: 16));
+    }
+    return pw.Column(children: children);
+  }
+
+  pw.Widget _buildPdfAchievementCalcTable(
+    pw.TextStyle baseStyle,
+    pw.TextStyle boldStyle,
+    AchievementConfig cfg,
+    Map<String, double> Function(int) envWeightAtFn,
+    Map<String, double> pingshiAvg,
+    Map<String, double> experimentAvg,
+    Map<String, double> examAvg,
+    Map<String, double> combinedAvg,
+  ) {
+    final envKeys = ['pingshi', 'experiment', 'exam'];
+    final envLabels = {'pingshi': '平时成绩', 'experiment': '实验成绩', 'exam': '期末成绩'};
+    final envAvgs = [pingshiAvg, experimentAvg, examAvg];
+    final data = <List<String>>[];
+    for (final i in _activeObjectiveIndexesFor(cfg)) {
+      for (int j = 0; j < envKeys.length; j++) {
+        final k = envKeys[j];
+        final w = envWeightAtFn(i)[k] ?? 0;
+        if (w <= 0) continue;
+        final ach = envAvgs[j]['obj${i + 1}'] ?? 0.0;
+        data.add([
+          j == 0 ? kObjectiveNames[i] : '',
+          j == 0 ? _objectiveWeights[i].toStringAsFixed(2) : '',
+          envLabels[k] ?? '',
+          '${cfg.fullMarks[i].toInt()}',
+          (ach * cfg.fullMarks[i]).toStringAsFixed(2),
+          ach.toStringAsFixed(4),
+          w.toStringAsFixed(2),
+          j == 0 ? (combinedAvg['obj${i + 1}'] ?? 0).toStringAsFixed(4) : '',
+          j == 0 ? '指标点${cfg.indicators[i]}' : '',
+          j == 0 ? (combinedAvg['obj${i + 1}'] ?? 0).toStringAsFixed(4) : '',
+        ]);
+      }
+    }
+    return pw.TableHelper.fromTextArray(
+      headerStyle: boldStyle.copyWith(fontSize: 7),
+      cellStyle: baseStyle.copyWith(fontSize: 7),
+      headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+      headers: ['课程目标', '权重', '评价环节', '满分', '平均分', '达成度', '环节权重', '目标达成度', '指标点', '指标点达成度'],
+      data: data,
     );
   }
 

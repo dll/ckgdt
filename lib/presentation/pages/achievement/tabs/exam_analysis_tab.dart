@@ -9,6 +9,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../../../data/local/exam_analysis_dao.dart';
 import '../../../../core/error_handler.dart';
+import '../../../../services/ai_service.dart';
 import '../../../../services/course_context_service.dart';
 
 class ExamAnalysisTab extends StatefulWidget {
@@ -879,6 +880,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
                     _statItem(cs, '难度', '${s['difficulty'] ?? 0}', cellW),
                     _statItem(cs, '区分度', '${s['examValidity'] ?? 0}', cellW),
                     _statItem(cs, '效度', '${s['examValidity'] ?? 0}', cellW),
+                    // TODO: 效度应从 DAO 的 validity 字段读取，当前 DAO 未独立计算
                     _statItem(cs, '信度', '${s['examReliability'] ?? 0}', cellW),
                   ]);
                 }),
@@ -1148,6 +1150,9 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
                           fontWeight: FontWeight.w700,
                           color: cs.onSurface)),
                   const Spacer(),
+                  _btn(Icons.auto_awesome, 'AI 生成分析', _aiGenerateAnalysis,
+                      color: cs.primary),
+                  const SizedBox(width: 8),
                   Text('${_analysisCtrl.text.length}字',
                       style: TextStyle(
                           fontSize: 11,
@@ -1167,6 +1172,51 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
                     style: const TextStyle(fontSize: 12, height: 1.5)),
               ],
             )));
+  }
+
+  Future<void> _aiGenerateAnalysis() async {
+    final s = _stats;
+    if (s.isEmpty) return;
+    try {
+      final prompt = StringBuffer('请根据以下考试统计数据，生成一份试卷分析报告（中文，简洁扼要）：\n\n');
+      prompt.writeln('考试名称：${_nameCtrl.text}');
+      prompt.writeln('班级：${_classCtrl.text}');
+      prompt.writeln('考试人数：${s['studentCount'] ?? 0}');
+      prompt.writeln('最高分：${s['max'] ?? 0}');
+      prompt.writeln('最低分：${s['min'] ?? 0}');
+      prompt.writeln('平均分：${s['avg'] ?? 0}');
+      prompt.writeln('标准差：${s['stdDev'] ?? 0}');
+      prompt.writeln('难度：${s['difficulty'] ?? 0}');
+      prompt.writeln('区分度：${s['examValidity'] ?? 0}');
+      prompt.writeln('信度：${s['examReliability'] ?? 0}');
+      final dist = s['distribution'] as List? ?? [];
+      if (dist.isNotEmpty) {
+        prompt.writeln('分数段分布：');
+        for (var i = 0; i < dist.length; i++) {
+          final labels = ['0-40分', '40-50分', '50-60分', '60-70分', '70-80分', '80-90分', '90-100分'];
+          if (i < labels.length) {
+            prompt.writeln('  ${labels[i]}：${dist[i]}人');
+          }
+        }
+      }
+
+      final result = await AiService().chatWithMeta(
+        [{'role': 'user', 'content': prompt.toString()}],
+        systemPrompt: '你是一名教育考试分析专家，请根据统计数据生成试卷分析报告。',
+        temperature: 0.7,
+      );
+      if (mounted) {
+        _analysisCtrl.text = result.content;
+        setState(() {});
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ExamAnalysisTab.aiGenerate', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('AI生成失败：$e')),
+        );
+      }
+    }
   }
 
   // ══════════════════════════════════════════════════

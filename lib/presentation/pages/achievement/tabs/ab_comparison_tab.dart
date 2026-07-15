@@ -630,9 +630,7 @@ class _AbComparisonTabState extends State<AbComparisonTab> {
                 ScatterChartData(
                   minX: 0,
                   maxX: ((_scoresA.length + _scoresB.length) - 1)
-                          .clamp(1, 1)
-                          .toDouble() +
-                      1,
+                          .toDouble(),
                   minY: 0,
                   maxY: 100,
                   scatterSpots: [
