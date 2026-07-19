@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_theme.dart';
 import '../../../core/constants/chapter_helper.dart';
 import '../../../core/constants/mask_shapes.dart';
 import '../../../core/constants/tech_logo_painter.dart';
@@ -96,6 +97,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   late final TabController _topTabController;
 
   Color primary = const Color(0xFF1677FF);
+  bool _isPrint = false;
 
   // ── 数据 ────────────────────────────────────────────────────────────────
   List<_ConceptNode> _nodes = [];
@@ -2114,8 +2116,9 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   @override
   Widget build(BuildContext context) {
     primary = Theme.of(context).colorScheme.primary;
+    _isPrint = AppGradientTheme.isPrint(context);
     return Scaffold(
-      backgroundColor: NoirTokens.ink,
+      backgroundColor: _isPrint ? Colors.white : NoirTokens.ink,
       appBar: _buildAppBar(),
       body: TabBarView(
         controller: _topTabController,
@@ -2142,11 +2145,13 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   PreferredSizeWidget _buildAppBar() {
     final onGraphTab = _topTabController.index == 0;
     return AppBar(
-      backgroundColor: NoirTokens.ink,
+      backgroundColor: _isPrint ? Colors.white : NoirTokens.ink,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
-      iconTheme: const IconThemeData(color: NoirTokens.paper),
+      iconTheme: _isPrint
+          ? const IconThemeData(color: Colors.black87)
+          : const IconThemeData(color: NoirTokens.paper),
       title: _showSearch
           ? TextField(
               controller: _searchController,

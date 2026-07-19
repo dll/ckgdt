@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import '../constants/app_theme.dart';
 import 'noir_tokens.dart';
 
 /// Noir 设计系统 — 公共 Widget 组件
@@ -395,6 +396,47 @@ class NoirAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPrint = AppGradientTheme.isPrint(context);
+    if (isPrint) {
+      return AppBar(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: implyLeading,
+        iconTheme: const IconThemeData(color: Colors.black87),
+        leading: leading,
+        titleSpacing: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (eyebrow != null)
+              Text(eyebrow!,
+                  style: const TextStyle(
+                      color: Colors.black54, fontSize: 9,
+                      fontWeight: FontWeight.w700, letterSpacing: 4)),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ],
+        ),
+        actions: actions,
+        bottom: bottom ??
+            PreferredSize(
+              preferredSize: const Size.fromHeight(1),
+              child: Container(
+                height: 1,
+                color: Colors.grey.shade300,
+              ),
+            ),
+      );
+    }
     return AppBar(
       backgroundColor: NoirTokens.ink,
       surfaceTintColor: Colors.transparent,

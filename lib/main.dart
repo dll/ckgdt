@@ -203,6 +203,7 @@ class _MyAppState extends State<MyApp> {
   ThemeMode _themeMode = ThemeMode.dark;
   int _colorIndex = 0;
   bool _feedbackEnabled = true;
+  bool _isPrintMode = false;
   Locale? _locale; // null = follow system
 
   // 全局 Navigator Key — 用于悬浮按钮获取正确 context
@@ -229,11 +230,13 @@ class _MyAppState extends State<MyApp> {
     final mode = await SettingsService.getThemeMode();
     final index = await SettingsService.getColorIndex();
     final locale = await SettingsService.getLocale();
+    final printMode = await SettingsService.getPrintMode();
     if (mounted) {
       setState(() {
         _themeMode = mode;
         _colorIndex = index;
         _locale = locale;
+        _isPrintMode = printMode;
       });
     }
   }
@@ -250,9 +253,13 @@ class _MyAppState extends State<MyApp> {
       return MaterialApp(
         title: BuildInfo.appBrandWithVersion,
         debugShowCheckedModeBanner: false,
-        theme: ThemeManager.light(_colorIndex),
-        darkTheme: ThemeManager.dark(_colorIndex),
-        themeMode: _themeMode,
+        theme: _isPrintMode
+            ? ThemeManager.print(_colorIndex)
+            : ThemeManager.light(_colorIndex),
+        darkTheme: _isPrintMode
+            ? ThemeManager.print(_colorIndex)
+            : ThemeManager.dark(_colorIndex),
+        themeMode: _isPrintMode ? ThemeMode.light : _themeMode,
         supportedLocales: AppLocalization.supportedLocales,
         localizationsDelegates: AppLocalization.delegates,
         home: Scaffold(
@@ -322,9 +329,13 @@ class _MyAppState extends State<MyApp> {
       builder: (context, courseName, child) => MaterialApp(
         title: BuildInfo.displayBrandWithVersion(courseName),
         debugShowCheckedModeBanner: false,
-        themeMode: _themeMode,
-        theme: ThemeManager.light(_colorIndex),
-        darkTheme: ThemeManager.dark(_colorIndex),
+        themeMode: _isPrintMode ? ThemeMode.light : _themeMode,
+        theme: _isPrintMode
+            ? ThemeManager.print(_colorIndex)
+            : ThemeManager.light(_colorIndex),
+        darkTheme: _isPrintMode
+            ? ThemeManager.print(_colorIndex)
+            : ThemeManager.dark(_colorIndex),
         navigatorKey: _navigatorKey,
         locale: _locale,
         supportedLocales: AppLocalization.supportedLocales,

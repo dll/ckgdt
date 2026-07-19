@@ -62,10 +62,12 @@ class AppColors {
 class AppGradientTheme extends ThemeExtension<AppGradientTheme> {
   final Color gradientStart;
   final Color gradientEnd;
+  final bool isPrintMode;
 
   const AppGradientTheme({
     required this.gradientStart,
     required this.gradientEnd,
+    this.isPrintMode = false,
   });
 
   // ── 便捷工厂：从预设索引构建 ──────────────────────────────────────────────
@@ -77,10 +79,25 @@ class AppGradientTheme extends ThemeExtension<AppGradientTheme> {
     );
   }
 
+  /// 打印主题工厂
+  factory AppGradientTheme.printMode(int colorIndex) {
+    final p = AppColors.preset(colorIndex);
+    return AppGradientTheme(
+      gradientStart: p.primary,
+      gradientEnd: p.gradientEnd,
+      isPrintMode: true,
+    );
+  }
+
   // ── 从 BuildContext 安全读取（带默认值兜底） ──────────────────────────────
   static AppGradientTheme of(BuildContext context) {
     return Theme.of(context).extension<AppGradientTheme>() ??
         AppGradientTheme.fromPreset(0);
+  }
+
+  /// 从 BuildContext 读取是否为打印模式
+  static bool isPrint(BuildContext context) {
+    return Theme.of(context).extension<AppGradientTheme>()?.isPrintMode ?? false;
   }
 
   // ── 生成 LinearGradient ───────────────────────────────────────────────────
@@ -99,10 +116,15 @@ class AppGradientTheme extends ThemeExtension<AppGradientTheme> {
 
   // ── ThemeExtension 必要重写 ───────────────────────────────────────────────
   @override
-  AppGradientTheme copyWith({Color? gradientStart, Color? gradientEnd}) {
+  AppGradientTheme copyWith({
+    Color? gradientStart,
+    Color? gradientEnd,
+    bool? isPrintMode,
+  }) {
     return AppGradientTheme(
       gradientStart: gradientStart ?? this.gradientStart,
       gradientEnd: gradientEnd ?? this.gradientEnd,
+      isPrintMode: isPrintMode ?? this.isPrintMode,
     );
   }
 
@@ -112,6 +134,7 @@ class AppGradientTheme extends ThemeExtension<AppGradientTheme> {
     return AppGradientTheme(
       gradientStart: Color.lerp(gradientStart, other.gradientStart, t)!,
       gradientEnd: Color.lerp(gradientEnd, other.gradientEnd, t)!,
+      isPrintMode: t < 0.5 ? isPrintMode : other.isPrintMode,
     );
   }
 }

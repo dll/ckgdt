@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_theme.dart';
 import '../../../services/agent/agent_registry.dart';
 import '../../../services/agent/agent_model.dart';
 import '../../../services/auth_service.dart';
@@ -99,15 +100,19 @@ class _AgentDirectoryPageState extends State<AgentDirectoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isPrint = AppGradientTheme.isPrint(context);
     return Scaffold(
-      backgroundColor: NoirTokens.ink,
+      backgroundColor: isPrint ? Colors.white : NoirTokens.ink,
       appBar: AppBar(
-        backgroundColor: NoirTokens.ink,
+        backgroundColor: isPrint ? Colors.white : NoirTokens.ink,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: NoirTokens.paper),
-        title: const Text('智能体广场',
-            style: TextStyle(color: NoirTokens.paper)),
+        iconTheme: isPrint
+            ? const IconThemeData(color: Colors.black87)
+            : const IconThemeData(color: NoirTokens.paper),
+        title: Text('智能体广场',
+            style: TextStyle(
+                color: isPrint ? Colors.black : NoirTokens.paper)),
       ),
       body: Column(
         children: [

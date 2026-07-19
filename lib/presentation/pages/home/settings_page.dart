@@ -32,6 +32,7 @@ class _SettingsPageState extends State<SettingsPage>
   late final TabController _tabController;
   ThemeMode _themeMode = ThemeMode.system;
   int _colorIndex = 0;
+  bool _isPrintMode = false;
   bool _notificationsEnabled = true;
   bool _quickLoginEnabled = false;
   bool _feedbackEnabled = true;
@@ -55,6 +56,7 @@ class _SettingsPageState extends State<SettingsPage>
   Future<void> _loadSettings() async {
     final mode = await SettingsService.getThemeMode();
     final index = await SettingsService.getColorIndex();
+    final printMode = await SettingsService.getPrintMode();
     final notifEnabled = await SettingsService.isNotificationEnabled();
     final quickLogin = await SettingsService.isQuickLoginEnabled();
     final feedbackEnabled = await SettingsService.isFeedbackEnabled();
@@ -68,6 +70,7 @@ class _SettingsPageState extends State<SettingsPage>
       setState(() {
         _themeMode = mode;
         _colorIndex = index;
+        _isPrintMode = printMode;
         _notificationsEnabled = notifEnabled;
         _quickLoginEnabled = quickLogin;
         _feedbackEnabled = feedbackEnabled;
@@ -406,34 +409,59 @@ class _SettingsPageState extends State<SettingsPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SegmentedButton<ThemeMode>(
+              SegmentedButton<int>(
                 segments: const [
                   ButtonSegment(
-                    value: ThemeMode.system,
+                    value: 0,
                     label: Text('跟随系统'),
                     icon: Icon(Icons.brightness_auto),
                   ),
                   ButtonSegment(
-                    value: ThemeMode.light,
+                    value: 1,
                     label: Text('浅色'),
                     icon: Icon(Icons.wb_sunny_outlined),
                   ),
                   ButtonSegment(
-                    value: ThemeMode.dark,
+                    value: 2,
                     label: Text('深色'),
                     icon: Icon(Icons.nightlight_round),
                   ),
+                  ButtonSegment(
+                    value: 3,
+                    label: Text('打印'),
+                    icon: Icon(Icons.print),
+                  ),
                 ],
-                selected: {_themeMode},
-                onSelectionChanged: (Set<ThemeMode> selected) async {
-                  final mode = selected.first;
-                  await SettingsService.setThemeMode(mode);
-                  setState(() => _themeMode = mode);
+                selected: {_isPrintMode ? 3 : _themeMode == ThemeMode.system ? 0 : _themeMode == ThemeMode.light ? 1 : 2},
+                onSelectionChanged: (Set<int> selected) async {
+                  final v = selected.first;
+                  if (v == 3) {
+                    await SettingsService.setPrintMode(true);
+                    setState(() => _isPrintMode = true);
+                  } else {
+                    await SettingsService.setPrintMode(false);
+                    final mode = v == 0 ? ThemeMode.system : v == 1 ? ThemeMode.light : ThemeMode.dark;
+                    await SettingsService.setThemeMode(mode);
+                    setState(() {
+                      _isPrintMode = false;
+                      _themeMode = mode;
+                    });
+                  }
                   MyApp.refreshTheme();
                 },
               ),
               const SizedBox(height: 8),
               Builder(builder: (ctx) {
+                if (_isPrintMode) {
+                  return const Text(
+                    '当前实际：打印（白底黑字）',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.black54,
+                      letterSpacing: 0.8,
+                    ),
+                  );
+                }
                 final brightness = MediaQuery.platformBrightnessOf(ctx);
                 final actual = _themeMode == ThemeMode.system
                     ? '当前实际：${brightness == Brightness.dark ? '深色（系统）' : '浅色（系统）'}'

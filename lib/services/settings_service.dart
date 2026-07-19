@@ -78,6 +78,21 @@ class SettingsService {
     await prefs.setInt(_themeModeKey, _themeModeToIndex(mode));
   }
 
+  // ═════════════════════════════════════════════════════════════════════════
+  // 打印模式（白底黑字，适合截图打印输出）
+  // ═════════════════════════════════════════════════════════════════════════
+  static const String _printModeKey = 'print_mode';
+
+  static Future<bool> getPrintMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_printModeKey) ?? false;
+  }
+
+  static Future<void> setPrintMode(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_printModeKey, value);
+  }
+
   // ─── 向下兼容旧接口（部分页面仍使用）────────────────────────────────────
   static Future<bool> isDarkMode() async {
     final mode = await getThemeMode();

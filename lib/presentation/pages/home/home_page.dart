@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_theme.dart';
 import '../../../core/design/noir_tokens.dart';
 import '../../../core/design/noir_components.dart';
 import '../../../core/error_handler.dart';
@@ -481,19 +482,23 @@ class _HomePageState extends State<HomePage> {
     _tabIndexByLabel = tabMapping;
     NavigationService.instance.registerTabMapping(tabMapping);
 
+    final isPrint = AppGradientTheme.isPrint(context);
     return Scaffold(
-      backgroundColor: NoirTokens.ink,
+      backgroundColor: isPrint ? Colors.white : Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: NoirTokens.ink,
+        backgroundColor: isPrint ? Colors.white : NoirTokens.ink,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        iconTheme: const IconThemeData(color: NoirTokens.paper),
+        iconTheme: isPrint
+            ? const IconThemeData(color: Colors.black87)
+            : const IconThemeData(color: NoirTokens.paper),
         title: Text(_platformTitle,
-            style: const TextStyle(color: NoirTokens.paper)),
+            style: TextStyle(
+                color: isPrint ? Colors.black : NoirTokens.paper)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search, color: NoirTokens.paper),
+            icon: const Icon(Icons.search),
             onPressed: () {
               Navigator.push(
                 context,
@@ -513,8 +518,7 @@ class _HomePageState extends State<HomePage> {
                     unread > 99 ? '99+' : '$unread',
                     style: const TextStyle(fontSize: 10),
                   ),
-                  child: const Icon(Icons.notifications_outlined,
-                      color: NoirTokens.paper),
+                  child: const Icon(Icons.notifications_outlined),
                 ),
                 tooltip: '通知',
                 onPressed: () async {
@@ -529,7 +533,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           PopupMenuButton<String>(
-            icon: const Icon(Icons.person, color: NoirTokens.paper),
+            icon: const Icon(Icons.person),
             tooltip: '显示菜单',
             onSelected: (value) async {
               if (value == 'logout') {

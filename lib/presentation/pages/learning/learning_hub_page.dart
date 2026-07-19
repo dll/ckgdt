@@ -541,16 +541,20 @@ class _LearningHubPageState extends State<LearningHubPage>
 
   @override
   Widget build(BuildContext context) {
+    final isPrint = AppGradientTheme.isPrint(context);
     return Scaffold(
-      backgroundColor: NoirTokens.ink,
+      backgroundColor: isPrint ? Colors.white : NoirTokens.ink,
       appBar: AppBar(
-        backgroundColor: NoirTokens.ink,
+        backgroundColor: isPrint ? Colors.white : NoirTokens.ink,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        iconTheme: const IconThemeData(color: NoirTokens.paper),
+        iconTheme: isPrint
+            ? const IconThemeData(color: Colors.black87)
+            : const IconThemeData(color: NoirTokens.paper),
         title: Text(_isTeacherOrAdmin ? '教学资源管理' : '学习',
-            style: const TextStyle(color: NoirTokens.paper)),
+            style: TextStyle(
+                color: isPrint ? Colors.black : NoirTokens.paper)),
         actions: [
           if (_isTeacherOrAdmin) ...[
             // 一键生成全部资源按钮

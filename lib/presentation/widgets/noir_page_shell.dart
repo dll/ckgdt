@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import '../../core/constants/app_theme.dart';
 import '../../core/design/noir_tokens.dart';
 import '../../core/design/noir_components.dart';
 import '../pages/login/knowledge_graph_backdrop.dart';
@@ -36,6 +37,9 @@ class NoirBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPrint = AppGradientTheme.isPrint(context);
+    if (isPrint) return child;
+
     return Stack(
       children: [
         // ── 第 1 层：径向深色渐变（顶部微亮，底部深） ──
@@ -109,8 +113,9 @@ class NoirPageShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPrint = AppGradientTheme.isPrint(context);
     return Scaffold(
-      backgroundColor: NoirTokens.ink,
+      backgroundColor: isPrint ? Colors.white : NoirTokens.ink,
       resizeToAvoidBottomInset: resizeToAvoidBottomInset,
       appBar: _buildAppBar(),
       bottomNavigationBar: bottomNavigationBar,
