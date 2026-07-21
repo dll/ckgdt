@@ -1,9 +1,14 @@
 ---
 name: build-ohos
-description: 构建 HarmonyOS HAP 包 + 签名 + 安装。处理 OpenHarmony 调试签名、模拟器 ABI 死坑、Flutter ohos 工具链特殊命令。触发：用户说"构建鸿蒙"/"打 HAP"/"鸿蒙签名"/"安装到鸿蒙"。
+description: [已废弃 v3.1.0+] 构建 HarmonyOS HAP 包 + 签名 + 安装。仅作历史参考，不再构建和分发。
 ---
 
-# 构建 HarmonyOS HAP
+# ~~构建 HarmonyOS HAP (已废弃)~~
+
+> **v3.1.0 起停止构建 OHOS/HarmonyOS**。原因：flutter_ohos 工具链需独立维护、模拟器 ABI 不兼容需真机测试、构建流程需额外 patch 降级 API 和依赖，维护成本大于实际使用需求。
+> `ohos/` 目录保留历史构建凭证，不再纳入构建和发布流程。
+
+
 
 ## ⚠ 不可再犯的天坑（按踩过的次数排）
 

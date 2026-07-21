@@ -1,6 +1,6 @@
 ---
 name: release-all
-description: 一键升版 + 多端构建 + dist 打包 + gh-pages + Gitee Release。统一调度 build-windows / build-android / build-web / build-ohos 子技能。触发：用户说"重新构建三端"/"四端齐发"/"全端发布"/"出新版"/"升版发布"。
+description: 一键升版 + 多端构建 + dist 打包 + gh-pages + Gitee Release。统一调度 build-windows / build-android / build-web 子技能。触发：用户说"重新构建三端"/"全端发布"/"出新版"/"升版发布"。注意：v3.1.0 起停止构建 OHOS/HarmonyOS。
 ---
 
 # 一键发布（升版 + 多端 + 打包 + 部署）
@@ -9,13 +9,14 @@ description: 一键升版 + 多端构建 + dist 打包 + gh-pages + Gitee Releas
 - [build-windows](../build-windows/SKILL.md)
 - [build-android](../build-android/SKILL.md)
 - [build-web](../build-web/SKILL.md)
-- [build-ohos](../build-ohos/SKILL.md)
 - [build-ios](../build-ios/SKILL.md)（macOS 限定，常态跳过）
 - [build-wxmp](../build-wxmp/SKILL.md)（需备案域名，常态跳过）
 
+> **OHOS 已停止构建**：v3.1.0 起不再构建和分发 HarmonyOS HAP。`ohos/` 目录保留历史构建凭证，不再纳入发布流程。[build-ohos](../build-ohos/SKILL.md) 保留仅供查阅历史逻辑。
+
 ## 默认行为
 
-用户说"重新构建三端" / "四端齐发"时，默认只跑 **Windows + Android + Web + HarmonyOS** 4 端。iOS 和 wxmp 不在常规流程里，需用户单独说才跑。
+用户说"重新构建三端" / "出新版"时，默认只跑 **Windows + Android + Web** 3 端。HarmonyOS 已停止构建（v3.1.0+），iOS 和 wxmp 不在常规流程里，需用户单独说才跑。
 
 ---
 
@@ -35,7 +36,7 @@ description: 一键升版 + 多端构建 + dist 打包 + gh-pages + Gitee Releas
 | Windows | `windows/runner/Runner.rc` | **4 处**：FileDescription / OriginalFilename / ProductName 带版本号；InternalName 不带 |
 | Web | `web/index.html` | `<title>` / `apple-mobile-web-app-title` / `application-name` |
 | Web | `web/manifest.json` | `"name"`（带版本）|
-| HarmonyOS | `ohos/AppScope/app.json5` | `versionName` "0.14.0" + `versionCode` 14（**只增不减**）|
+| ~~HarmonyOS~~ | ~~`ohos/AppScope/app.json5`~~ | ~~v3.1.0 起已停止构建~~ |
 
 **不要改**：
 - `pubspec.yaml` 顶部 `name: knowledge_graph_app`（包标识符）
@@ -51,21 +52,20 @@ grep -E "version:|app_name|BINARY_OUTPUT_NAME|window\.Create|FileDescription|Int
   android/app/src/main/res/values/strings.xml \
   windows/CMakeLists.txt windows/runner/main.cpp windows/runner/Runner.rc \
   web/index.html web/manifest.json \
-  ohos/AppScope/app.json5
+  # ohos/AppScope/app.json5 (v3.1.0 起已停止构建)
 ```
 
 每条结果应该都包含新版本号（除 `name:` / `BINARY_NAME` / `short_name` / `description` / `bundleName` / `bundleIdentifier`）。
 
-### Step 3：四端并行构建
+### Step 3：三端并行构建
 
 > 本节及 Step 4-6 沿用"升 0.13 → 0.14"的示例版本号，实际跑时把所有 `0.14.0` 替换为目标版本。
 
 ```bash
-# 4 端可并行（用 background task）
+# 3 端可并行（用 background task）
 flutter build apk --release &
 flutter build windows --release &
 MSYS_NO_PATHCONV=1 flutter build web --release --base-href "/mad-kgdt/" &
-./build_ohos.bat &
 wait
 ```
 
@@ -77,7 +77,7 @@ wait
 | Windows | `build/windows/x64/runner/Release/移动图谱与数字孪生v0.14.0.exe` + 全部 dll |
 | Android | `build/app/outputs/flutter-apk/app-release.apk` |
 | Web | `build/web/`（base=`/mad-kgdt/`）|
-| HarmonyOS | `ohos/entry/build/default/outputs/default/entry-default-signed.hap`（已签名）|
+| ~HarmonyOS~ | ~已停止构建 v3.1.0+~ |
 
 ### Step 4：Web 部署 GitHub Pages
 
@@ -140,16 +140,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pack_dist_zip.ps1 \
 rm -rf dist/_web_pkg
 ```
 
-#### HarmonyOS
-```bash
-mkdir -p dist/_ohos_pkg
-cp ohos/entry/build/default/outputs/default/entry-default-signed.hap dist/_ohos_pkg/移动图谱与数字孪生-v0.14.0.hap
-# 写 安装说明.txt（参考 build-ohos — 必含模拟器不兼容 + 真机指南）
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pack_dist_zip.ps1 \
-  -SourceDir "dist/_ohos_pkg" \
-  -ZipPath   "dist/移动图谱与数字孪生+harmonyos+v0.14.0.zip"
-rm -rf dist/_ohos_pkg
-```
+#### ~~HarmonyOS~~
+~~v3.1.0 起已停止构建。`ohos/` 目录保留历史凭证和脚本，仅作参考。删除打包步骤。~~
 
 ### Step 6：commit 升版 + push
 
@@ -164,7 +156,7 @@ git add pubspec.yaml lib/main.dart \
 git commit -m "chore: 升版 v0.14.0
 
 - pubspec / main.dart 主标题 + 9 文件 16 处字段同步
-- 4 端构建产物已打包到 dist/
+- 3 端构建产物已打包到 dist/（OHOS 已停止构建 v3.1.0+）
 - Web 已 force-push 到 gh-pages
 
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
@@ -182,11 +174,11 @@ git push origin master
 - [ ] 9 个文件 16 处版本号字段都改对（按 Step 1 表格逐项核）
 - [ ] `flutter analyze lib` 0 error
 - [ ] `flutter test test/core test/models test/services test/data` 全过
-- [ ] 4 端构建 SUCCESS（看构建日志最后是否有 ✓ Built）
-- [ ] dist/ 出 4 个 zip
+- [ ] 3 端构建 SUCCESS（看构建日志最后是否有 ✓ Built）
+- [ ] dist/ 出 3 个 zip
 - [ ] gh-pages 推送成功
 - [ ] 访问 `https://dll.github.io/mad-kgdt/` 看到新版（等 5-10 分钟）
-- [ ] 鸿蒙 HAP 用真机装一次确认能跑
+- [ ] ~~鸿蒙 HAP~~（v3.1.0 起已停止构建）
 
 ---
 
@@ -212,6 +204,7 @@ git push origin master
 |------|------|------|
 | 2026-05-23 | v0.12.0 | 第一次走通 Web/Android/Windows 三端 + gh-pages |
 | 2026-05-24 | v0.13.0 | 加鸿蒙 + 签名 + 4 端 zip 打包；模拟器 ABI 死局 |
+| 2026-07-22 | v3.1.0 | 停止鸿蒙构建；只发 Android + Windows + Web 三端 |
 
 下次升版可参考这两次的 commit 历史。
 
@@ -225,3 +218,4 @@ git push origin master
 ❌ **不要**忘了 gh-pages 部署后等 5-10 分钟再访问（CDN 延迟）
 ❌ **不要**在升版时同时 push master + gh-pages —— 分两步，先 master，再 gh-pages
 ❌ **不要**指望 iOS / wxmp 走自动流程（macOS / 备案要求把它俩排除在常规外）
+❌ **不要**再构建 OHOS/HarmonyOS（v3.1.0 起已停止，`ohos/` 目录作历史留存）

@@ -10,7 +10,8 @@
 - **Flutter SDK**：`>=3.0.0 <4.0.0`
 - **主题色**：`#667eea`（紫蓝渐变 `[0xFF667eea, 0xFF764ba2]`）
 - **用户角色**：学生 / 教师 / 管理员
-- **目标平台**：Android、Windows、Web、HarmonyOS（OHOS）
+- **目标平台**：Android、Windows、Web（**v3.1.0 起停止构建 OHOS/HarmonyOS**，见下方说明）
+- **OHOS/HarmonyOS 决定**：v3.1.0 起不再构建和分发 HarmonyOS HAP。原因：flutter_ohos 工具链需独立维护、模拟器 ABI 不兼容需真机测试、构建流程需额外 patch 降级 API 和依赖，维护成本大于实际使用需求。`ohos/` 目录保留历史构建凭证，不再纳入构建和发布流程。
 
 ---
 
@@ -720,29 +721,16 @@ CKGDT+<端名小写>+v<版本号>.zip
 - `CKGDT+windows+v0.13.0.zip`
 - `CKGDT+android+v0.13.0.zip`
 - `CKGDT+web+v0.13.0.zip`
-- `CKGDT+harmonyos+v0.13.0.zip`
 
 ### 各端打包内容
 
 | 端 | 源路径 | 包内容 |
 |----|--------|--------|
 | Windows | `build/windows/x64/runner/Release/` 整个目录 | `*.exe` + 全部 dll + `data/`，**解压双击 EXE 直接运行** |
-| Android | `build/app/outputs/flutter-apk/app-release.apk` | apk 文件 + `安装说明.txt`，包大小 ~76M |
-| Web | `build/web/` 整个目录 | 静态资源 + `启动说明.txt`（教用户用 python http.server / serve 启动），包大小 ~39M |
-| HarmonyOS | `ohos/entry/build/default/outputs/default/entry-default-signed.hap` | **已 OpenHarmony 调试签名** HAP（arm64-v8a 真机专用，模拟器不兼容）+ `安装说明.txt`，~39M |
+| Android | `build/app/outputs/flutter-apk/app-release.apk` | apk 文件 + `安装说明.txt`，包大小 ~86M |
+| Web | `build/web/` 整个目录 | 静态资源 + `启动说明.txt`（教用户用 python http.server / serve 启动），包大小 ~41M |
 
-> **⚠ 鸿蒙模拟器限制（重要）**：flutter_ohos 工具链目前**只产 arm64-v8a 引擎**（`flutter/bin/cache/artifacts/engine/` 仅有 ohos-arm64-release，无 x86 变体）。华为官方手机模拟器（Pura 90 等）使用 **x86_64 镜像**（`abi: x86`），装 HAP 报：
-> ```
-> code:9568347 install parse native so failed.
-> the Abi type supported by the device does not match the Abi type configured in the C++ project
-> ```
-> **只能装到鸿蒙真机**（任何商用 NEXT 设备都是 arm64）。演示时必须用真机。
-
-### 鸿蒙签名（已就位，无需重签）
-
-凭证已存到 `ohos/signature/{debug.cer, debug.p7b, debug.p12, material/}`，
-`ohos/build-profile.json5` 用相对路径 `./signature/*` 引用，team clone 后直接构建即可。
-本套是 OpenHarmony 调试签名，仅可装开发者模式设备；商用发布需向华为申请正式证书替换 `ohos/signature/` 内文件。
+> **HarmonyOS/OHOS**：v3.1.0 起不再构建和分发，见项目概述。
 
 ### 命名规则要点
 
@@ -754,11 +742,10 @@ CKGDT+<端名小写>+v<版本号>.zip
 ### 一键打包脚本
 
 ```bash
-# 1. 先确认 4 端构建产物齐全
+# 1. 先确认 3 端构建产物齐全
 ls build/windows/x64/runner/Release/*.exe
 ls build/app/outputs/flutter-apk/app-release.apk
 ls build/web/index.html
-ls ohos/entry/build/default/outputs/default/*.hap
 
 # 2. 创建 dist 目录
 mkdir -p dist
@@ -768,13 +755,13 @@ cd build/windows/x64/runner/Release && \
   powershell -NoProfile -Command "Compress-Archive -Path '*' -DestinationPath 'D:\FlutterProjects\knowledge_graph_app\dist\CKGDT+windows+vX.Y.Z.zip' -Force"
 cd /d/FlutterProjects/knowledge_graph_app
 
-# 4. Android / Web / HarmonyOS：mkdtemp + cp + 写 README + 打 zip
+# 4. Android / Web：mkdtemp + cp + 写 README + 打 zip
 # （详见 dist/ 历史 zip 的内部结构）
 ```
 
 ### 何时打包
 
-每次完成"升版三件套"+ 4 端构建 + gh-pages 部署后，最后一步打 4 个 zip 入 `dist/` 供分发。
+每次完成"升版三件套"+ 3 端构建（Android + Windows + Web）+ gh-pages 部署后，最后一步打 3 个 zip 入 `dist/` 供分发。
 
 > **注意**：`dist/` 目录已 gitignore（产物大不入库）；如需正式发版，把 zip 上传到 Gitee Release / GitHub Release。
 
@@ -857,7 +844,7 @@ python scripts/gitee_upload_assets.py
 ### 发布前检查清单（每次都过一遍）
 
 - [ ] `BuildInfo.appVersion` 已升 → 跑一遍上文"升版后一致性 grep"，全部对齐
-- [ ] 4 端构建产物齐全（windows exe + android apk + web index.html + ohos hap）
+- [ ] 3 端构建产物齐全（windows exe + android apk + web index.html）
 - [ ] 4 个 zip 用 `scripts/pack_dist_zip.ps1` 打包（**不要用 PowerShell `Compress-Archive`**，它在 PS 5.1 用 GBK 编码 ZIP entry 名，中文文件名解压会乱码）
 - [ ] Windows zip 同时生成 ASCII 别名（`MAD-windows-vX.Y.Z.zip`），避开 Windows 260 字符路径限制
 - [ ] 当前 master 已 commit + push 到 origin
