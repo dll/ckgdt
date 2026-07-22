@@ -141,9 +141,12 @@ class LectureAgent extends BaseAgent {
 
   @override
   double matchScore(String userMessage, AgentSession session) {
-    final score = _keywordScore(userMessage);
     if (session.activeAgentId == config.id) return 0.8;
-    if (userMessage.contains('说课') || userMessage.contains('授课')) return 0.7;
-    return score.clamp(0.0, 1.0);
+    final msg = userMessage.toLowerCase();
+    if (msg.contains('说课') || msg.contains('授课') || msg.contains('教学') && msg.contains('设计')) return 0.7;
+    for (final kw in config.keywords) {
+      if (msg.contains(kw)) return 0.6;
+    }
+    return 0.0;
   }
 }
