@@ -4117,11 +4117,15 @@ class DatabaseHelper {
         title TEXT NOT NULL,
         content TEXT NOT NULL,
         video_urls TEXT DEFAULT '[]',
+        script TEXT DEFAULT '',
         updated_at TEXT
       )
     ''');
     try {
       await db.execute("ALTER TABLE lecture_notes ADD COLUMN video_urls TEXT DEFAULT '[]'");
+    } catch (_) {}
+    try {
+      await db.execute("ALTER TABLE lecture_notes ADD COLUMN script TEXT DEFAULT ''");
     } catch (_) {}
     // 插入默认说课记录
     final count = Sqflite.firstIntValue(await db.rawQuery(
