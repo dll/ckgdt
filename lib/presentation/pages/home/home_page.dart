@@ -359,49 +359,9 @@ class _HomePageState extends State<HomePage> {
     ));
     bodyMap[0] = () => _buildHome();
 
-    // 1: 图谱（所有角色）
-    destinations.add(const NavigationDestination(
-      icon: Icon(Icons.account_tree_outlined),
-      selectedIcon: Icon(Icons.account_tree),
-      label: '图谱',
-    ));
-    bodyMap[1] = () => widget.graphPageOverride ?? const KnowledgeGraphPage();
-
     if (isTeacherOrAdmin) {
       // ── 教师/管理员导航 ─────────────────────────────────────────
-      // 2: 案例
-      destinations.add(const NavigationDestination(
-        icon: Icon(Icons.folder_outlined),
-        selectedIcon: Icon(Icons.folder),
-        label: '案例',
-      ));
-      bodyMap[destinations.length - 1] = () => const CasesPage();
-
-      // 3: 教学中心（教学 + 课堂聚合）
-      destinations.add(const NavigationDestination(
-        icon: Icon(Icons.menu_book_outlined),
-        selectedIcon: Icon(Icons.menu_book),
-        label: '教学',
-      ));
-      bodyMap[destinations.length - 1] = () => const TeachingHubPage();
-
-      // 3: 评价中心（实验 + 考核 + 作品聚合）
-      destinations.add(const NavigationDestination(
-        icon: Icon(Icons.rate_review_outlined),
-        selectedIcon: Icon(Icons.rate_review),
-        label: '评价',
-      ));
-      bodyMap[destinations.length - 1] = () => const EvaluationHubPage();
-
-      // 4: 达成
-      destinations.add(const NavigationDestination(
-        icon: Icon(Icons.emoji_events_outlined),
-        selectedIcon: Icon(Icons.emoji_events),
-        label: '达成',
-      ));
-      bodyMap[destinations.length - 1] = () => const AchievementPage();
-
-      // 5: 说课（教师/管理员）
+      // 1: 说课（首页和图谱之间）
       destinations.add(const NavigationDestination(
         icon: Icon(Icons.chat_outlined),
         selectedIcon: Icon(Icons.chat),
@@ -409,7 +369,47 @@ class _HomePageState extends State<HomePage> {
       ));
       bodyMap[destinations.length - 1] = () => const LecturePage();
 
-      // 6: 归档（教师/管理员通用）
+      // 2: 图谱
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.account_tree_outlined),
+        selectedIcon: Icon(Icons.account_tree),
+        label: '图谱',
+      ));
+      bodyMap[destinations.length - 1] = () => widget.graphPageOverride ?? const KnowledgeGraphPage();
+
+      // 3: 案例
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.folder_outlined),
+        selectedIcon: Icon(Icons.folder),
+        label: '案例',
+      ));
+      bodyMap[destinations.length - 1] = () => const CasesPage();
+
+      // 4: 教学中心（教学 + 课堂聚合）
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.menu_book_outlined),
+        selectedIcon: Icon(Icons.menu_book),
+        label: '教学',
+      ));
+      bodyMap[destinations.length - 1] = () => const TeachingHubPage();
+
+      // 5: 评价中心（实验 + 考核 + 作品聚合）
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.rate_review_outlined),
+        selectedIcon: Icon(Icons.rate_review),
+        label: '评价',
+      ));
+      bodyMap[destinations.length - 1] = () => const EvaluationHubPage();
+
+      // 6: 达成
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.emoji_events_outlined),
+        selectedIcon: Icon(Icons.emoji_events),
+        label: '达成',
+      ));
+      bodyMap[destinations.length - 1] = () => const AchievementPage();
+
+      // 7: 归档（教师/管理员通用）
       destinations.add(const NavigationDestination(
         icon: Icon(Icons.school_outlined),
         selectedIcon: Icon(Icons.school),
@@ -417,7 +417,7 @@ class _HomePageState extends State<HomePage> {
       ));
       bodyMap[destinations.length - 1] = () => const ArchivePage();
 
-      // 6: 管理（仅管理员）
+      // 8: 管理（仅管理员）
       if (isAdmin) {
         final adminManageLabel = _terms?.manageLabel ?? '实验管理';
         destinations.add(const NavigationDestination(
@@ -430,6 +430,14 @@ class _HomePageState extends State<HomePage> {
     } else {
       final practiceLabel = _terms?.practiceLabel ?? '实验';
       // ── 学生导航 ────────────────────────────────────────────────
+      // 1: 图谱
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.account_tree_outlined),
+        selectedIcon: Icon(Icons.account_tree),
+        label: '图谱',
+      ));
+      bodyMap[1] = () => widget.graphPageOverride ?? const KnowledgeGraphPage();
+
       // 2: 案例
       destinations.add(const NavigationDestination(
         icon: Icon(Icons.folder_outlined),
