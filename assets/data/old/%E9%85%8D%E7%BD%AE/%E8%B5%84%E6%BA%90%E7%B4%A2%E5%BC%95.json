@@ -1,0 +1,42 @@
+{
+  "_note": "resource_base 中的 owner/repo 应从 CourseResourceService 动态读取，不要硬编码。",
+  "_note2": "chapters 列表应从 CourseContextService 获取当前课程的章节，不要硬编码。",
+  "_note3": "此文件仅作为结构模板，实际资源路径由课程配置决定。",
+  "version": "2.0.0",
+  "description": "课件资源索引 — 指定各类教学资源的远程存储位置",
+  "updated_at": "2026-07-05",
+  "notes": "所有课件（PDF/PPT/视频）推送到 Gitee 仓库，应用可远程下载",
+  "resource_base": {
+    "pdf": {
+      "type": "gitee_raw",
+      "owner": "",
+      "repo": "",
+      "branch": "master",
+      "base_path": "课件/pdf",
+      "extension": ".pdf",
+      "status": "available",
+      "description": "PDF文档，应用可远程下载"
+    },
+    "ppt": {
+      "type": "gitee_raw",
+      "owner": "",
+      "repo": "",
+      "branch": "master",
+      "base_path": "课件/ppt",
+      "extension": ".pptx",
+      "status": "available",
+      "description": "PPT课件，应用可远程下载"
+    },
+    "video": {
+      "type": "gitee_raw",
+      "owner": "",
+      "repo": "",
+      "branch": "master",
+      "base_path": "视频",
+      "extension": ".mp4",
+      "status": "available",
+      "description": "教学视频，应用可远程下载"
+    }
+  },
+  "chapters": []
+}

@@ -1,0 +1,21 @@
+{
+  "_note": "平台就绪度文件。由 CourseSubgraphService.evaluateReadiness() 生成。",
+  "_note2": "一键生课时自动生成此文件，存入 data/{courseId}/配置/platform_readiness.json。",
+  "passed": false,
+  "score": 0,
+  "issues": ["尚未生成课程资源包"],
+  "checks": {
+    "chapters_ready": false,
+    "lab_tasks_ready": false,
+    "assessment_ready": false,
+    "knowledge_graph_ready": false,
+    "scoring_dimensions_ready": false,
+    "report_templates_ready": false
+  },
+  "missing_resources": [
+    "course_profile.json",
+    "chapters.json",
+    "lab_tasks.json",
+    "assessment.json"
+  ]
+}

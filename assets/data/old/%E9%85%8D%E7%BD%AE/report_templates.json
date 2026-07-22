@@ -1,0 +1,47 @@
+[
+  {
+    "_note": "报告模板应根据课程类型提供变体。此文件为通用模板。",
+    "id": 1,
+    "name": "实践报告模板",
+    "category": "实践报告",
+    "is_default": true,
+    "description": "适用于各章节实践任务的标准报告模板",
+    "sections": [
+      {"title": "实践目的", "hint": "描述本次实践的目标和学习要求", "required": true},
+      {"title": "实践环境", "hint": "列出所需工具、材料、环境等", "required": true},
+      {"title": "实践步骤", "hint": "详细描述实践的操作步骤", "required": true},
+      {"title": "实践结果", "hint": "展示实践成果、数据、截图等", "required": true},
+      {"title": "问题与解决", "hint": "记录遇到的问题及解决方法", "required": false},
+      {"title": "实践总结", "hint": "总结本次实践的收获和体会", "required": true}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "项目报告模板",
+    "category": "项目文档",
+    "is_default": false,
+    "description": "适用于综合项目的完整报告模板",
+    "sections": [
+      {"title": "项目概述", "hint": "项目名称、目标、核心内容", "required": true},
+      {"title": "需求分析", "hint": "任务需求、目标要求", "required": true},
+      {"title": "方案设计", "hint": "实施方案、技术路线", "required": true},
+      {"title": "实施过程", "hint": "关键步骤、核心内容说明", "required": true},
+      {"title": "成果展示", "hint": "项目成果、数据统计", "required": true},
+      {"title": "总结与展望", "hint": "项目成果、不足之处、改进方向", "required": true}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "答辩报告模板",
+    "category": "答辩材料",
+    "is_default": false,
+    "description": "适用于项目答辩准备的报告模板",
+    "sections": [
+      {"title": "项目介绍", "hint": "项目名称、团队成员、分工", "required": true},
+      {"title": "需求与设计", "hint": "问题背景、解决方案", "required": true},
+      {"title": "成果演示", "hint": "核心成果展示", "required": true},
+      {"title": "技术亮点", "hint": "创新点、难点及解决方案", "required": true},
+      {"title": "项目总结", "hint": "成果展示、反思", "required": true}
+    ]
+  }
+]

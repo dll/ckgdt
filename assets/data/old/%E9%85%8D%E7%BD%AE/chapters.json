@@ -1,0 +1,73 @@
+[
+  {
+    "_note": "以下是 CKGDT（课程知识图谱与数字孪生）平台的默认课程章节。",
+    "_note2": "新课程应通过'一键生课'功能生成自己的章节配置，存入 data/{courseId}/配置/chapters.json。",
+    "_note3": "代码应从 CourseContextService 获取当前课程的章节列表，不要硬编码读取此文件。"
+  },
+  {
+    "id": 1,
+    "number": "第1章",
+    "title": "课程知识图谱基础",
+    "sub_chapters": [
+      "知识图谱概念与结构",
+      "课程知识建模方法"
+    ],
+    "color": "#1677FF",
+    "icon": "account_tree"
+  },
+  {
+    "id": 2,
+    "number": "第2章",
+    "title": "课程数据建模与资源治理",
+    "sub_chapters": [
+      "数据建模基础",
+      "教学资源管理"
+    ],
+    "color": "#00B42A",
+    "icon": "storage"
+  },
+  {
+    "id": 3,
+    "number": "第3章",
+    "title": "数字孪生教学场景设计",
+    "sub_chapters": [
+      "数字孪生概念",
+      "教学场景建模"
+    ],
+    "color": "#722ED1",
+    "icon": "view_in_ar"
+  },
+  {
+    "id": 4,
+    "number": "第4章",
+    "title": "智能学习路径与学习分析",
+    "sub_chapters": [
+      "学习路径规划",
+      "学习行为分析"
+    ],
+    "color": "#07C160",
+    "icon": "route"
+  },
+  {
+    "id": 5,
+    "number": "第5章",
+    "title": "实验实践与作品评价",
+    "sub_chapters": [
+      "实验任务设计",
+      "作品评价体系"
+    ],
+    "color": "#FF6A00",
+    "icon": "science"
+  },
+  {
+    "id": 6,
+    "number": "第6章",
+    "title": "课程持续改进与平台应用",
+    "sub_chapters": [
+      "达成度评价",
+      "持续改进策略"
+    ],
+    "color": "#F5222D",
+    "icon": "trending_up"
+  }
+]

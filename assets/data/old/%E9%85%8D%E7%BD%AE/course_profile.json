@@ -1,0 +1,19 @@
+{
+  "_note": "课程画像文件。由 CourseSubgraphService.inferProfile() 生成。",
+  "_note2": "一键生课时自动生成此文件，存入 data/{courseId}/配置/course_profile.json。",
+  "course_id": "",
+  "course_name": "",
+  "course_type": "general",
+  "discipline": "通用",
+  "course_mode": "理论实践型",
+  "practice_label": "实践任务",
+  "chapter_count": 0,
+  "lab_count": 0,
+  "assessment_type": "exam",
+  "scoring_dimensions": [],
+  "graph_categories": ["课程图谱", "实践活动图谱", "学习资源图谱", "评价达成图谱"],
+  "evidence_types": ["作业", "实践报告", "测验", "作品", "课堂表现"],
+  "rubric_dimensions": ["知识理解", "实践应用", "问题分析", "表达呈现", "持续改进"],
+  "technology_stack": [],
+  "subgraph_types": []
+}
