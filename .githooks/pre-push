@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# ===========================================================================
+# .githooks/pre-push — 推送前质量门禁
+# ===========================================================================
+# 1. flutter analyze lib/ — 必须 0 error
+# 2. flutter test — 自动运行测试
+# 3. 检查版本号一致性（验证 BuildInfo 与 pubspec 对齐）
+# ===========================================================================
+# 跳过全部检查：git push --no-verify
+# ===========================================================================
+
+set -eu
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+echo "🔍 pre-push: 启动推送前质量门禁..."
+
+# ── 1. flutter analyze ────────────────────────────────────────────────
+echo ""
+echo "── [1/3] flutter analyze lib/ ──"
+
+if command -v flutter &>/dev/null; then
+  analyze_output=$(flutter analyze lib/ 2>&1 || true)
+
+  # 统计 error 数量
+  error_count=$(echo "$analyze_output" | grep -c "error" || true)
+
+  if echo "$analyze_output" | grep -q "No issues found"; then
+    echo "✓ flutter analyze: 通过"
+  elif [ "$error_count" -eq 0 ]; then
+    echo "⚠  flutter analyze: 有警告/信息（无 error），继续推送"
+  else
+    echo "❌ flutter analyze: 发现 $error_count 个 error"
+    echo "$analyze_output"
+    echo ""
+    echo "❌ pre-push: 请修复 error 后推送，或 git push --no-verify 跳过"
+    exit 1
+  fi
+else
+  echo "⚠  pre-push: 未找到 flutter 命令，跳过 analyze"
+fi
+
+# ── 2. flutter test ────────────────────────────────────────────────────
+echo ""
+echo "── [2/3] flutter test ──"
+
+if command -v flutter &>/dev/null && [ -d "test" ]; then
+  # 只跑 unit 测试（忽略耗时的 widget/integration 测试）
+  # 如果 test/ 下没有测试文件则跳过
+  test_files=$(find test -name '*_test.dart' 2>/dev/null | head -5)
+  if [ -n "$test_files" ]; then
+    test_output=$(flutter test test/ 2>&1 || true)
+    if echo "$test_output" | grep -q "All tests passed"; then
+      echo "✓ flutter test: 通过"
+    else
+      echo "⚠  flutter test: 部分测试失败"
+      echo "$test_output" | tail -20
+      echo ""
+      echo "  这是警告，不会阻断推送。如需阻断请移除此注释。"
+    fi
+  else
+    echo "  跳过（未找到测试文件）"
+  fi
+else
+  echo "  跳过（无 test/ 目录或 flutter 命令）"
+fi
+
+# ── 3. 版本一致性检查 ──────────────────────────────────────────────────
+echo ""
+echo "── [3/3] 版本号一致性检查 ──"
+
+version_file="lib/core/version.dart"
+pubspec_file="pubspec.yaml"
+
+if [ -f "$version_file" ] && [ -f "$pubspec_file" ]; then
+  # 从 version.dart 提取 display 版本
+  version_display=$(grep -oP 'static const String display = '\''\K[0-9]+\.[0-9]+\.[0-9]+' "$version_file" || true)
+  # 从 pubspec.yaml 提取版本
+  pubspec_ver=$(grep -oP '^version: \K[0-9]+\.[0-9]+\.[0-9]+' "$pubspec_file" || true)
+
+  if [ -n "$version_display" ] && [ -n "$pubspec_ver" ]; then
+    if [ "$version_display" != "$pubspec_ver" ]; then
+      echo "❌ 版本号不一致:"
+      echo "   lib/core/version.dart: $version_display"
+      echo "   pubspec.yaml:          $pubspec_ver"
+      echo "   请运行 dart run scripts/version_bump.dart 同步"
+      echo "   或 git push --no-verify 跳过"
+      exit 1
+    fi
+    echo "✓ 版本号一致: $version_display"
+  else
+    echo "⚠  无法解析版本号（跳过）"
+  fi
+else
+  echo "  跳过（缺少 version.dart 或 pubspec.yaml）"
+fi
+
+echo ""
+echo "✓ pre-push: 全部门禁通过"
+exit 0

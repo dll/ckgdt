@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# ===========================================================================
+# .githooks/post-checkout — 切换分支后自动 flutter pub get
+# ===========================================================================
+# git checkout <branch> 后检测 pubspec.yaml 是否与之前不同，
+# 如果变了则自动执行 flutter pub get。
+# ===========================================================================
+#
+# 参数: $1 = 之前的 HEAD, $2 = 新的 HEAD, $3 = checkout 类型
+# 1 = 普通分支切换, 0 = 文件检出
+
+set -eu
+
+# 只在分支切换时运行（$3 = 1），跳过文件检出（$3 = 0）
+if [ "$3" != "1" ]; then
+  exit 0
+fi
+
+prev_head=$1
+new_head=$2
+
+# 检查两个 HEAD 之间 pubspec.yaml 是否不同
+if ! git diff --quiet "$prev_head" "$new_head" -- pubspec.yaml 2>/dev/null; then
+  echo "📦 post-checkout: pubspec.yaml 已变化，执行 flutter pub get..."
+
+  if command -v flutter &>/dev/null; then
+    flutter pub get
+    echo "✓ post-checkout: flutter pub get 完成"
+  else
+    echo "⚠  post-checkout: 未找到 flutter 命令，请手动运行 flutter pub get"
+  fi
+fi

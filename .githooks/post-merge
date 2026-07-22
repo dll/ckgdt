@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# ===========================================================================
+# .githooks/post-merge — 合并后自动 flutter pub get
+# ===========================================================================
+# git pull / git merge 后检测 pubspec.yaml 是否变化，
+# 如果变了则自动执行 flutter pub get（增量安装，不走完整 resolve）。
+# ===========================================================================
+
+set -eu
+
+# ORIG_HEAD 是合并前的 HEAD，如果合并后 pubspec 变了，说明依赖可能有变化
+if git diff --name-only ORIG_HEAD HEAD 2>/dev/null | grep -q 'pubspec.yaml'; then
+  echo "📦 post-merge: pubspec.yaml 已变化，执行 flutter pub get..."
+
+  if command -v flutter &>/dev/null; then
+    flutter pub get
+    echo "✓ post-merge: flutter pub get 完成"
+  else
+    echo "⚠  post-merge: 未找到 flutter 命令，请手动运行 flutter pub get"
+  fi
+fi

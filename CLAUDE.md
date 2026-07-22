@@ -921,6 +921,42 @@ flutter build windows --release
 
 ---
 
+## Git Hooks 与缓存自动化（v3.1.4+）
+
+### 自动化钩子
+
+项目使用 `.githooks/` 目录（版本受控）通过 `core.hooksPath` 自动启用：
+
+| 钩子 | 时机 | 自动执行 |
+|------|------|----------|
+| `pre-commit` | `git commit` | OHOS 残留检查 + 大文件(>10MB)拦截 + staged Dart 语法检查 |
+| `post-merge` | `git pull` / `merge` | pubspec.yaml 变化时自动 `flutter pub get` |
+| `post-checkout` | `git checkout` | 切换分支后 pubspec 变化时自动 `flutter pub get` |
+| `pre-push` | `git push` | `flutter analyze` + `flutter test` + 版本号一致性检查 |
+
+**安装**（每位 dev 克隆后跑一次）：`.\scripts\install_hooks.ps1`
+
+**跳过单次**：`git commit --no-verify` / `git push --no-verify`
+
+### 构建缓存复用
+
+| 缓存 | 位置 | 大小 |
+|------|------|------|
+| Dart 包 (PUB_CACHE) | `D:\PUB` | ~483 MB |
+| Gradle (GRADLE_USER_HOME) | `D:\development\cache\gradle` | ~500 MB |
+| Android SDK | `D:\development\Android` | ~10 GB |
+| ANGLE.7z (Windows) | `build/windows/x64/ANGLE.7z` | ~10 MB |
+
+**构建前验证**：`.\scripts\verify_build_cache.ps1` 检查 8 项缓存完整性。
+
+> **为什么**：`GRADLE_USER_HOME` 此前未设置 → Gradle 默认用 `C:\Users\ldl\.gradle`，每次 resolve 依赖时若有缓存缺失会重新下载。2026-07-22 已通过 `android/gradle.properties` → `gradle.user.home` 固定到 `D:\development\cache\gradle`。
+> 
+> **sqlite3.dll**：每次 `flutter pub get` 后 PUB_CACHE 中的 dll 被覆盖（小尺寸 1.5MB → 需要 patch 替换为大尺寸 3.2MB），Windows 构建前需跑 `.\scripts\patch_sqlite3.ps1`。
+
+**详细文档**：`docs/git-hooks-and-cache.md`
+
+---
+
 ## Git 工作流
 
 | 分支 | 用途 |
