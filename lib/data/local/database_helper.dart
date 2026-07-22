@@ -4116,9 +4116,13 @@ class DatabaseHelper {
         course_id TEXT NOT NULL DEFAULT 'default',
         title TEXT NOT NULL,
         content TEXT NOT NULL,
+        video_urls TEXT DEFAULT '[]',
         updated_at TEXT
       )
     ''');
+    try {
+      await db.execute("ALTER TABLE lecture_notes ADD COLUMN video_urls TEXT DEFAULT '[]'");
+    } catch (_) {}
     // 插入默认说课记录
     final count = Sqflite.firstIntValue(await db.rawQuery(
       'SELECT COUNT(*) FROM lecture_notes WHERE course_id = ?',
