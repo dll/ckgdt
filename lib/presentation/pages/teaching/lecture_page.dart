@@ -41,6 +41,14 @@ class _LecturePageState extends State<LecturePage> {
 
   Future<void> _loadContent() async {
     try {
+      await _loadFromFileSystem();
+      if (_content.isNotEmpty) {
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+    } catch (_) {}
+
+    try {
       final db = await DatabaseHelper.instance.database;
       final rows = await db.query(
         'lecture_notes',
@@ -71,6 +79,21 @@ class _LecturePageState extends State<LecturePage> {
     }
     _editCtrl.text = _content;
     if (mounted) setState(() => _isLoading = false);
+  }
+
+  Future<void> _loadFromFileSystem() async {
+    final candidates = [
+      'data/课程知识图谱与数字孪生/说课/说课.md',
+    ];
+    for (final relative in candidates) {
+      final file = File(relative);
+      if (await file.exists()) {
+        _content = await file.readAsString();
+        _videoUrls = [];
+        return;
+      }
+    }
+    throw Exception('说课文件未找到');
   }
 
   List<String> _parseVideoUrls(dynamic value) {
