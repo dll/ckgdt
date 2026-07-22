@@ -169,3 +169,9 @@ pubspec.lock.std
 /flutter_*.log
 /windows_build.log
 /logs/
+
+# 说课导出产物
+data/*/说课/*.pdf
+data/*/说课/*.mp4
+data/*/说课/*.srt
+data/*/说课/audio/

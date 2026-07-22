@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:excel/excel.dart' as xl;
+import 'package:path/path.dart' as p;
 import '../../../core/constants/app_theme.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/clipboard_helper.dart';
@@ -11,6 +13,7 @@ import '../../../services/tts_flutter_service.dart';
 import '../../../services/tts_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/course_context_service.dart';
+import '../../../services/output_path_service.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../data/local/teaching_dao.dart';
 import '../../../services/archive/native_pdf_service.dart';
@@ -45,6 +48,7 @@ class _LecturePageState extends State<LecturePage> {
   List<Map<String, dynamic>> _progress = [];
   int _totalStudents = 0;
   String _courseName = '';
+  String _majorInfo = '';
 
   @override
   void initState() {
@@ -63,6 +67,13 @@ class _LecturePageState extends State<LecturePage> {
   }
 
   String get _dataDir => 'data/$_courseName';
+
+  Future<String> _getLectureOutDir() async {
+    final outRoot = await OutputPathService.getOutputDirectory();
+    final dir = Directory(p.join(outRoot.path, '说课'));
+    if (!dir.existsSync()) await dir.create(recursive: true);
+    return dir.path;
+  }
 
   Future<void> _loadContent() async {
     _courseName = CourseContextService.defaultCourseName;
@@ -163,7 +174,66 @@ class _LecturePageState extends State<LecturePage> {
         _syllabus = await teachingDao.getAllSyllabusItems();
         _progress = await teachingDao.getAllTeachingProgress();
       } catch (_) {}
+      try {
+        await _loadClassesFromExcel();
+      } catch (_) {}
     } catch (_) {}
+  }
+
+  Future<void> _loadClassesFromExcel() async {
+    final xlsxPath = p.join('data', _courseName, '用户', '学生名单.xlsx');
+    const altPath = 'data/课程知识图谱与数字孪生/用户/学生名单.xlsx';
+    String? found;
+    if (await File(xlsxPath).exists()) { found = xlsxPath; }
+    else if (await File(altPath).exists()) { found = altPath; }
+    if (found == null) return;
+
+    final bytes = await File(found).readAsBytes();
+    final excel = xl.Excel.decodeBytes(bytes);
+    final sheet = excel.tables[excel.tables.keys.first];
+    if (sheet == null || sheet.rows.length < 2) return;
+
+    final headerRow = sheet.row(0);
+    final headers = headerRow.map((c) => c?.value?.toString() ?? '').toList();
+    int classCol = headers.indexWhere((h) => h.contains('班级'));
+    int majorCol = headers.indexWhere((h) => h.contains('专业'));
+    int deptCol = headers.indexWhere((h) => h.contains('院系'));
+    if (classCol < 0) return;
+
+    final Map<String, int> classCount = {};
+    final Set<String> majors = {};
+    for (var i = 1; i < sheet.rows.length; i++) {
+      final row = sheet.row(i);
+      final cls = row.length > classCol ? (row[classCol]?.value?.toString() ?? '').trim() : '';
+      if (cls.isEmpty) continue;
+      classCount[cls] = (classCount[cls] ?? 0) + 1;
+      if (majorCol >= 0 && row.length > majorCol) {
+        final m = row[majorCol]?.value?.toString() ?? '';
+        if (m.isNotEmpty) majors.add(m);
+      }
+      if (deptCol >= 0 && _majorInfo.isEmpty && row.length > deptCol) {
+        final d = row[deptCol]?.value?.toString() ?? '';
+        if (d.isNotEmpty && !_majorInfo.contains(d)) {
+          _majorInfo += '${_majorInfo.isEmpty ? '' : '·'}$d';
+        }
+      }
+    }
+
+    if (_majorInfo.isEmpty && majors.isNotEmpty) {
+      _majorInfo = majors.join('·');
+    }
+
+    final newClasses = <Map<String, dynamic>>[];
+    int total = 0;
+    for (final entry in classCount.entries) {
+      newClasses.add({'name': entry.key, 'student_count': entry.value, 'major': majors.isNotEmpty ? majors.join('、') : ''});
+      total += entry.value;
+    }
+
+    if (newClasses.isNotEmpty) {
+      _classes = newClasses;
+      _totalStudents = total;
+    }
   }
 
   Future<String> _buildCompleteLecture() async {
@@ -173,11 +243,16 @@ class _LecturePageState extends State<LecturePage> {
     if (_teacherName.isNotEmpty) { buf.writeln('**说课教师**：$_teacherName'); buf.writeln(); }
     if (_classes.isNotEmpty) {
       buf.writeln('## 授课班级'); buf.writeln();
-      buf.writeln('| 班级 | 人数 |'); buf.writeln('|------|:---:|');
+      buf.writeln('| 班级 | 人数 | 专业 |'); buf.writeln('|------|:---:|------|');
       for (final c in _classes) {
-        buf.writeln('| ${c['name']} | ${c['student_count'] ?? 0} |');
+        final major = c['major'] as String? ?? _majorInfo;
+        buf.writeln('| ${c['name']} | ${c['student_count'] ?? 0} | $major |');
       }
-      buf.writeln('| **合计** | **$_totalStudents** |'); buf.writeln();
+      buf.writeln('| **合计** | **$_totalStudents** | |'); buf.writeln();
+      if (_majorInfo.isNotEmpty) {
+        buf.writeln('**涉及专业**：$_majorInfo');
+        buf.writeln();
+      }
     }
     if (_syllabus.isNotEmpty) {
       buf.writeln('## 教学大纲'); buf.writeln();
@@ -216,7 +291,8 @@ class _LecturePageState extends State<LecturePage> {
     if (_classes.isNotEmpty) {
       sb.writeln('本学期授课班级共${_classes.length}个班级，合计 $_totalStudents 名学生。');
       for (final c in _classes) {
-        sb.writeln('${c['name']}班，${c['student_count'] ?? 0}人。');
+        final major = c['major'] as String? ?? _majorInfo;
+        sb.writeln('${c['name']}班，${c['student_count'] ?? 0}人，专业$major。');
       }
       sb.writeln();
     }
@@ -331,8 +407,8 @@ class _LecturePageState extends State<LecturePage> {
   Future<void> _exportPdf() async {
     try {
       final pdfBytes = await NativePdfService.instance.markdownToPdf(_content);
-      final outDir = await _ensureExportDir();
-      final path = '$outDir说课_$_courseName.pdf';
+      final outDir = await _getLectureOutDir();
+      final path = p.join(outDir, '说课_$_courseName.pdf');
       await File(path).writeAsBytes(pdfBytes);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('PDF 已导出: $path'), backgroundColor: Colors.green));
     } catch (e) {
@@ -340,13 +416,77 @@ class _LecturePageState extends State<LecturePage> {
     }
   }
 
-  Future<String> _ensureExportDir() async {
-    final dirs = ['$_dataDir/说课/', '$_dataDir/视频/'];
-    for (final d in dirs) {
-      final dir = Directory(d);
-      if (!dir.existsSync()) await dir.create(recursive: true);
+  String _classifyParagraph(String text) {
+    if (text.contains('评委老师') || text.contains('我说课的主题')) return 'intro';
+    if (text.contains('共48学时') || text.contains('考核方式') || text.contains('核心理念')) return 'overview';
+    if (text.contains('第一章') || text.contains('第二章') || text.contains('第三章')) return 'chapter1';
+    if (text.contains('第四章') || text.contains('第五章') || text.contains('第六章')) return 'chapter2';
+    if (text.contains('实验项目') || text.contains('实验一') || text.contains('实验二') || text.contains('实验三') || text.contains('实验四') || text.contains('实验五')) return 'lab';
+    if (text.contains('班级') || text.contains('名学生') || text.contains('人') && text.contains('班')) return 'classes';
+    if (text.contains('平台特色') || text.contains('知识图谱可视化') || text.contains('数字孪生教学') || text.contains('多智能体') || text.contains('全流程考核') || text.contains('学习分析')) return 'feature';
+    if (text.contains('教学改革') || text.contains('二零二四') || text.contains('二零二五') || text.contains('二零二六')) return 'reform';
+    if (text.contains('以上就是') || text.contains('批评指正')) return 'closing';
+    return 'default';
+  }
+
+  String _pickScreenshot(String category, List<String> allScreenshots) {
+    if (allScreenshots.isEmpty) return '';
+    final Map<String, List<String>> mapping = {
+      'intro': ['01达成度概览'],
+      'overview': ['02成绩管理'],
+      'chapter1': ['03计算过程', '04平时达成'],
+      'chapter2': ['05实验达成', '06考核达成'],
+      'lab': ['05实验达成'],
+      'classes': ['02成绩管理-导下载模板'],
+      'feature': ['08生成报告', '08生成报告-md格式预览'],
+      'reform': ['07持续改进'],
+      'closing': ['01达成度概览-上传大纲'],
+    };
+    final candidates = mapping[category] ?? ['08生成报告'];
+    for (final keyword in candidates) {
+      for (final s in allScreenshots) {
+        if (p.basenameWithoutExtension(s).contains(keyword)) return s;
+      }
     }
-    return dirs[0];
+    return allScreenshots[0];
+  }
+
+  Future<void> _generateSrt(List<String> audioPaths, List<String> subtitles, String srtPath) async {
+    final buf = StringBuffer();
+    var totalMs = 0;
+    for (var i = 0; i < audioPaths.length && i < subtitles.length; i++) {
+      final audioFile = File(audioPaths[i]);
+      double durationSec = 3.0;
+      if (await audioFile.exists()) {
+        try {
+          final process = await Process.run('ffprobe', [
+            '-v', 'quiet', '-show_entries', 'format=duration',
+            '-of', 'default=noprint_wrappers=1:nokey=1', audioPaths[i],
+          ]);
+          if (process.exitCode == 0) {
+            final d = double.tryParse(process.stdout.toString().trim());
+            if (d != null && d > 0) durationSec = d;
+          }
+        } catch (_) {}
+      }
+      final startMs = totalMs;
+      final endMs = totalMs + (durationSec * 1000).round();
+      totalMs = endMs;
+
+      String fmt(int ms) {
+        final h = (ms ~/ 3600000);
+        final m = (ms % 3600000) ~/ 60000;
+        final s = (ms % 60000) ~/ 1000;
+        final mill = ms % 1000;
+        return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')},${mill.toString().padLeft(3, '0')}';
+      }
+
+      buf.writeln('${i + 1}');
+      buf.writeln('${fmt(startMs)} --> ${fmt(endMs)}');
+      buf.writeln(subtitles[i]);
+      buf.writeln();
+    }
+    await File(srtPath).writeAsString(buf.toString());
   }
 
   Future<void> _generateLectureVideo() async {
@@ -355,45 +495,49 @@ class _LecturePageState extends State<LecturePage> {
     try {
       final script = _script.isNotEmpty ? _script : _stripMarkdown(_content);
       final paragraphs = script.split('\n').where((l) => l.trim().isNotEmpty).toList();
-      final outDir = '$_dataDir说课/';
-      Directory(outDir).createSync(recursive: true);
+      final lectureOutDir = await _getLectureOutDir();
+      final audioDir = p.join(lectureOutDir, 'audio');
+      Directory(audioDir).createSync(recursive: true);
 
       setState(() => _genStatus = '正在生成语音...');
       final ttsService = TtsService();
-      final audioDir = '${outDir}audio/';
-      Directory(audioDir).createSync(recursive: true);
-      final audios = <String>[];
-      final narrations = <Map<String, String>>[];
-
-      for (var i = 0; i < paragraphs.length; i++) {
-        narrations.add({'narration': paragraphs[i], 'voice': 'zh-CN-XiaoxiaoNeural', 'rate': '+0%'});
-      }
+      final narrations = paragraphs.map((p) => {'narration': p, 'voice': 'zh-CN-XiaoxiaoNeural', 'rate': '+0%'}).toList();
 
       await ttsService.generateBatchAudio(scripts: narrations, outputDir: audioDir, onProgress: (current, total) {
         setState(() => _genStatus = '正在生成语音... $current/$total');
       });
 
+      final audios = <String>[];
+      final subtitles = <String>[];
       for (var i = 0; i < paragraphs.length; i++) {
-        final audioPath = '${audioDir}slide_${i.toString().padLeft(3, '0')}.mp3';
-        if (await File(audioPath).exists()) audios.add(audioPath);
+        final audioPath = p.join(audioDir, 'slide_${i.toString().padLeft(3, '0')}.mp3');
+        if (await File(audioPath).exists()) {
+          audios.add(audioPath);
+          subtitles.add(paragraphs[i]);
+        }
+      }
+
+      if (audios.isEmpty) {
+        setState(() { _generating = false; _genStatus = '语音生成失败'; });
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('语音生成失败，请检查 edge-tts 是否可用'), backgroundColor: Colors.red));
+        return;
       }
 
       setState(() => _genStatus = '正在生成视频...');
       final videoService = VideoService();
-      final screenshots = Directory('assets/help/archievement').existsSync()
-          ? Directory('assets/help/archievement').listSync().whereType<File>().map((f) => f.path).where((p) => p.endsWith('.png')).take(audios.length).toList()
+      final screenshotDir = Directory('assets/help/archievement');
+      final allScreenshots = screenshotDir.existsSync()
+          ? screenshotDir.listSync().whereType<File>().map((f) => f.path).where((p) => p.endsWith('.png')).toList()
           : <String>[];
 
       final slides = <String>[];
-      if (screenshots.isNotEmpty) {
-        for (var i = 0; i < audios.length; i++) {
-          slides.add(screenshots[i % screenshots.length]);
-        }
-      } else {
-        slides.addAll(List.filled(audios.length, ''));
+      for (var i = 0; i < audios.length; i++) {
+        final category = _classifyParagraph(paragraphs[i]);
+        final picked = _pickScreenshot(category, allScreenshots);
+        slides.add(picked.isNotEmpty ? picked : (allScreenshots.isNotEmpty ? allScreenshots[i % allScreenshots.length] : ''));
       }
 
-      final videoPath = '$outDir说课演示_$_courseName.mp4';
+      final videoPath = p.join(lectureOutDir, '说课演示_$_courseName.mp4');
       final success = await videoService.generateVideo(
         slides: slides,
         audios: audios,
@@ -402,6 +546,9 @@ class _LecturePageState extends State<LecturePage> {
       );
 
       if (success && await File(videoPath).exists()) {
+        final srtPath = p.join(lectureOutDir, '说课演示_$_courseName.srt');
+        await _generateSrt(audios, subtitles, srtPath);
+
         setState(() { _videoUrls.add(videoPath); _generating = false; _genStatus = ''; });
         _saveVideoUrls();
         if (mounted) {
