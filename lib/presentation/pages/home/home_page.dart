@@ -68,6 +68,8 @@ import '../skill/skill_manage_page.dart';
 import '../sync/data_sync_page.dart';
 import 'teaching_hub_page.dart';
 import 'evaluation_hub_page.dart';
+import '../teaching/lecture_page.dart';
+import '../feedback/feedback_manage_page.dart';
 import '../feedback/feedback_manage_page.dart';
 import '../practice/deep_practice_page.dart';
 import '../practice/growth_curve_page.dart';
@@ -398,6 +400,14 @@ class _HomePageState extends State<HomePage> {
         label: '达成',
       ));
       bodyMap[destinations.length - 1] = () => const AchievementPage();
+
+      // 5: 说课（教师/管理员）
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.chat_outlined),
+        selectedIcon: Icon(Icons.chat),
+        label: '说课',
+      ));
+      bodyMap[destinations.length - 1] = () => const LecturePage();
 
       // 6: 归档（教师/管理员通用）
       destinations.add(const NavigationDestination(

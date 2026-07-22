@@ -1665,6 +1665,7 @@ class DatabaseHelper {
     await _ensureCourseObjectivesColumns(db);
     await _ensureAchievementGenericColumns(db);
     await _ensureTeachingWorkloadTable(db);
+    await _ensureLectureNotesTable(db);
   }
 
   /// 工作量管理表
@@ -4105,6 +4106,31 @@ class DatabaseHelper {
       }
     } catch (e, st) {
       swallowDebug(e, tag: 'db', stack: st);
+    }
+  }
+
+  Future<void> _ensureLectureNotesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS lecture_notes(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT NOT NULL DEFAULT 'default',
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        updated_at TEXT
+      )
+    ''');
+    // 插入默认说课记录
+    final count = Sqflite.firstIntValue(await db.rawQuery(
+      'SELECT COUNT(*) FROM lecture_notes WHERE course_id = ?',
+      ['default'],
+    ));
+    if (count == 0) {
+      await db.insert('lecture_notes', {
+        'course_id': 'default',
+        'title': '说课',
+        'content': '',
+        'updated_at': DateTime.now().toIso8601String(),
+      });
     }
   }
 

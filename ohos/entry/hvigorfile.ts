@@ -4,6 +4,6 @@ export default {
     system: hapTasks,
     plugins: [],
     overrides: {
-        artifactName: 'CKGDTv2.5.19'
+        artifactName: 'CKGDTv3.1.0'
     }
 }

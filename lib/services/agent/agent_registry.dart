@@ -24,6 +24,7 @@ import 'agents/grading_agent.dart';
 import 'agents/digital_twin_agent.dart';
 import 'agents/case_demo_agent.dart';
 import 'agents/courseware_workshop_agent.dart';
+import 'agents/lecture_agent.dart';
 
 /// 智能体注册表 + Director 编排
 ///
@@ -76,6 +77,8 @@ class AgentRegistry {
     _register(CaseDemoAgent());
     // 课件工坊智能体
     _register(CoursewareWorkshopAgent());
+    // 说课智能体（教师/管理员专用）
+    _register(LectureAgent());
     _register(AssistantAgent()); // 兜底，最后注册
 
     _initialized = true;

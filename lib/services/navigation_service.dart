@@ -6,6 +6,7 @@ import '../core/init_logger.dart';
 
 import '../presentation/pages/quiz/quiz_page.dart';
 import '../presentation/pages/archive/archive_page.dart';
+import '../presentation/pages/teaching/lecture_page.dart';
 import '../presentation/pages/quiz/wrong_answers_page.dart';
 import '../presentation/pages/class_qa/class_qa_page.dart';
 import '../presentation/pages/learning/learning_hub_page.dart';
@@ -400,6 +401,9 @@ class NavigationService {
     // ── 归档 ──
     '归档': 'archive', '存档': 'archive', '教学材料': 'archive',
     '期初': 'archive', '期中': 'archive', '期末': 'archive',
+
+    // ── 说课 ──
+    '说课': 'lecture', '说课管理': 'lecture', '教学说课': 'lecture',
   };
 
   /// 尝试通过关键词匹配子页面并导航
@@ -554,6 +558,8 @@ class NavigationService {
         return const CasesPage();
       case 'archive':
         return const ArchivePage();
+      case 'lecture':
+        return const LecturePage();
       default:
         return null;
     }
