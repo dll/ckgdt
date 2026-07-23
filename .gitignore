@@ -49,25 +49,7 @@ scripts/achievement_video/work/
 # ── data/ 目录（课程数据已迁移至 mad-data 仓库） ──
 # 仅保留 assets/ 下的 Flutter 资源（如 assets/learning_data.db）
 # 所有 data/ 子目录都不追踪，避免仓库膨胀
-data/视频/
-data/课件/
-data/理论/
-data/考核/
-data/图谱/
-data/项目/
-data/用户/
-data/归档/
-data/达成/
-data/图像/
-data/配置/
-data/输出/
-data/MAD/
-data/CKGDT/
-data/SEB/
-data/*.md
-data/*.py
-data/*.docx
-data/*.xlsx
+data/
 video_output/
 docs/video/generated/
 docs/video/v3/
@@ -170,8 +152,7 @@ pubspec.lock.std
 /windows_build.log
 /logs/
 
-# 说课导出产物
-data/*/说课/*.pdf
-data/*/说课/*.mp4
-data/*/说课/*.srt
-data/*/说课/audio/
+# 说课导出产物（已由 data/ 覆盖，保留作为显式说明）
+data/*/说课/*.png
+data/*/说课/*.wav
+data/*/说课/*.mp3

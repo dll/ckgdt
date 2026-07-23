@@ -6,6 +6,9 @@ import 'package:knowledge_graph_app/core/error_handler.dart';
 /// 视频合成服务
 /// 使用 FFmpeg 将幻灯片图片 + 音频合成为 MP4 教学视频
 class VideoService {
+  String ffmpegCommand = 'ffmpeg';
+  String ffprobeCommand = 'ffprobe';
+
   // ── 环境检查 ──────────────────────────────────────────────────────────────
 
   /// 检查 FFmpeg 是否可用
@@ -13,7 +16,8 @@ class VideoService {
     if (kIsWeb) return false;
     try {
       final result = await Process.run(
-        'ffmpeg', ['-version'],
+        ffmpegCommand,
+        ['-version'],
         runInShell: true,
       );
       return result.exitCode == 0;
@@ -50,7 +54,7 @@ class VideoService {
       final safeAudioPath = audioPath.replaceAll('\\', '/');
       final safeOutputPath = outputPath.replaceAll('\\', '/');
       final result = await Process.run(
-        'ffmpeg',
+        ffmpegCommand,
         [
           '-y', // 覆盖输出
           '-loop', '1', // 循环图片
@@ -64,7 +68,8 @@ class VideoService {
           '-b:v', '3000k',
           '-t', totalDuration.toStringAsFixed(2),
           '-shortest',
-          '-vf', 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2',
+          '-vf',
+          'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2',
           safeOutputPath,
         ],
         runInShell: true,
@@ -89,30 +94,38 @@ class VideoService {
       // 创建 FFmpeg concat 文件（Windows 路径需要正斜杠）
       final dir = await getTemporaryDirectory();
       final listFile = File('${dir.path}/concat_list.txt');
-      final content = clipPaths
-          .map((p) {
-            final safePath = p.replaceAll('\\', '/');
-            return "file '$safePath'";
-          })
-          .join('\n');
+      final content = clipPaths.map((p) {
+        final safePath = p.replaceAll('\\', '/');
+        return "file '$safePath'";
+      }).join('\n');
       await listFile.writeAsString(content);
 
       final safeListPath = listFile.path.replaceAll('\\', '/');
       final safeOutput = outputPath.replaceAll('\\', '/');
       final result = await Process.run(
-        'ffmpeg',
+        ffmpegCommand,
         [
           '-y',
-          '-f', 'concat',
-          '-safe', '0',
-          '-i', safeListPath,
-          '-c:v', 'libx264',
-          '-preset', 'medium',
-          '-crf', '23',
-          '-c:a', 'aac',
-          '-b:a', '192k',
-          '-b:v', '5000k',
-          '-movflags', '+faststart',
+          '-f',
+          'concat',
+          '-safe',
+          '0',
+          '-i',
+          safeListPath,
+          '-c:v',
+          'libx264',
+          '-preset',
+          'medium',
+          '-crf',
+          '23',
+          '-c:a',
+          'aac',
+          '-b:a',
+          '192k',
+          '-b:v',
+          '5000k',
+          '-movflags',
+          '+faststart',
           safeOutput,
         ],
         runInShell: true,
@@ -167,7 +180,8 @@ class VideoService {
     // Step 1: 为每张幻灯片生成视频片段
     for (var i = 0; i < slides.length; i++) {
       final slidePath = slides[i];
-      final clipPath = '${clipDir.path}/clip_${(i + 1).toString().padLeft(3, '0')}.mp4';
+      final clipPath =
+          '${clipDir.path}/clip_${(i + 1).toString().padLeft(3, '0')}.mp4';
 
       onProgress?.call(i + 1, total, '正在合成片段 ${i + 1}/${slides.length}');
 
@@ -204,7 +218,8 @@ class VideoService {
       }
     }
 
-    debugPrint('VideoService: ${clipPaths.length}/${slides.length} clips created');
+    debugPrint(
+        'VideoService: ${clipPaths.length}/${slides.length} clips created');
 
     if (clipPaths.isEmpty) return false;
 
@@ -218,7 +233,9 @@ class VideoService {
     // 清理临时片段
     try {
       if (clipDir.existsSync()) clipDir.deleteSync(recursive: true);
-    } catch (e) { swallowDebug(e, tag: 'video_service'); }
+    } catch (e) {
+      swallowDebug(e, tag: 'video_service');
+    }
 
     return success;
   }
@@ -268,7 +285,8 @@ except ImportError:
       await scriptFile.writeAsString(script);
 
       final result = await Process.run(
-        'python', [scriptFile.path],
+        'python',
+        [scriptFile.path],
         runInShell: true,
       ).timeout(const Duration(seconds: 120));
 
@@ -279,13 +297,14 @@ except ImportError:
             .toString()
             .trim()
             .split('\n')
-            .map((l) => l.trim())  // 去除 \r（Windows 换行符）
+            .map((l) => l.trim()) // 去除 \r（Windows 换行符）
             .where((l) => l.isNotEmpty && l.endsWith('.png'))
             .toList();
         debugPrint('VideoService: pdfToImages got ${paths.length} images');
         return paths;
       }
-      debugPrint('VideoService: pdfToImages exitCode=${result.exitCode}, stderr=${result.stderr}');
+      debugPrint(
+          'VideoService: pdfToImages exitCode=${result.exitCode}, stderr=${result.stderr}');
       return [];
     } catch (e) {
       debugPrint('VideoService: pdfToImages error: $e');
@@ -299,11 +318,14 @@ except ImportError:
     try {
       final safePath = audioPath.replaceAll('\\', '/');
       final result = await Process.run(
-        'ffprobe',
+        ffprobeCommand,
         [
-          '-v', 'error',
-          '-show_entries', 'format=duration',
-          '-of', 'default=noprint_wrappers=1:nokey=1',
+          '-v',
+          'error',
+          '-show_entries',
+          'format=duration',
+          '-of',
+          'default=noprint_wrappers=1:nokey=1',
           safePath,
         ],
         runInShell: true,
@@ -311,7 +333,9 @@ except ImportError:
       if (result.exitCode == 0) {
         return double.tryParse(result.stdout.toString().trim());
       }
-    } catch (e) { swallowDebug(e, tag: 'video_service'); }
+    } catch (e) {
+      swallowDebug(e, tag: 'video_service');
+    }
     return null;
   }
 
@@ -325,22 +349,34 @@ except ImportError:
       final safeImage = imagePath.replaceAll('\\', '/');
       final safeOutput = outputPath.replaceAll('\\', '/');
       final result = await Process.run(
-        'ffmpeg',
+        ffmpegCommand,
         [
           '-y',
-          '-loop', '1',
-          '-i', safeImage,
-          '-f', 'lavfi',
-          '-i', 'anullsrc=r=44100:cl=stereo',
-          '-c:v', 'libx264',
-          '-tune', 'stillimage',
-          '-c:a', 'aac',
-          '-b:a', '192k',
-          '-b:v', '3000k',
-          '-pix_fmt', 'yuv420p',
-          '-t', duration.toStringAsFixed(2),
+          '-loop',
+          '1',
+          '-i',
+          safeImage,
+          '-f',
+          'lavfi',
+          '-i',
+          'anullsrc=r=44100:cl=stereo',
+          '-c:v',
+          'libx264',
+          '-tune',
+          'stillimage',
+          '-c:a',
+          'aac',
+          '-b:a',
+          '192k',
+          '-b:v',
+          '3000k',
+          '-pix_fmt',
+          'yuv420p',
+          '-t',
+          duration.toStringAsFixed(2),
           '-shortest',
-          '-vf', 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2',
+          '-vf',
+          'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2',
           safeOutput,
         ],
         runInShell: true,
@@ -398,7 +434,8 @@ except ImportError:
           final segEnd = startTime + (j + 1) * segDuration;
 
           buf.writeln('${i * 10 + j + 1}');
-          buf.writeln('${_formatSrtTime(segStart)} --> ${_formatSrtTime(segEnd)}');
+          buf.writeln(
+              '${_formatSrtTime(segStart)} --> ${_formatSrtTime(segEnd)}');
           buf.writeln(segments[j]);
           buf.writeln();
         }
@@ -418,7 +455,8 @@ except ImportError:
   /// 将旁白文本按句号/分号/句号分割，每段不超过 maxLen 字
   List<String> _splitNarration(String text, int maxLen) {
     // 先按句号、分号、问号分割
-    final sentences = text.split(RegExp(r'[。；！？]'))
+    final sentences = text
+        .split(RegExp(r'[。；！？]'))
         .map((s) => s.trim())
         .where((s) => s.isNotEmpty)
         .toList();
@@ -468,16 +506,23 @@ except ImportError:
 
       // 使用 subtitles filter 烧录字幕
       final result = await Process.run(
-        'ffmpeg',
+        ffmpegCommand,
         [
           '-y',
-          '-i', safeVideo,
-          '-vf', "subtitles='$safeSrt':force_style='FontName=Microsoft YaHei,FontSize=22,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,Outline=2,Shadow=1,MarginV=30'",
-          '-c:v', 'libx264',
-          '-preset', 'medium',
-          '-crf', '23',
-          '-c:a', 'copy',
-          '-movflags', '+faststart',
+          '-i',
+          safeVideo,
+          '-vf',
+          "subtitles='$safeSrt':force_style='FontName=Microsoft YaHei,FontSize=22,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,Outline=2,Shadow=1,MarginV=30'",
+          '-c:v',
+          'libx264',
+          '-preset',
+          'medium',
+          '-crf',
+          '23',
+          '-c:a',
+          'copy',
+          '-movflags',
+          '+faststart',
           safeOutput,
         ],
         runInShell: true,

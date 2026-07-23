@@ -14,6 +14,8 @@ class TtsFlutterService {
   FlutterTts? _tts;
   bool _initialized = false;
   bool _isSpeaking = false;
+  int _session = 0;
+  bool _stopRequested = false;
   bool _enabled = true; // TTS 开关
   bool _available = true; // TTS 引擎是否可用
 
@@ -49,7 +51,8 @@ class TtsFlutterService {
       if (defaultTargetPlatform == TargetPlatform.windows) {
         try {
           final languages = await _tts!.getLanguages;
-          final langList = languages is List ? languages.cast<String>() : <String>[];
+          final langList =
+              languages is List ? languages.cast<String>() : <String>[];
           debugPrint('TtsFlutterService: 可用语言: $langList');
 
           if (langList.isEmpty) {
@@ -62,10 +65,11 @@ class TtsFlutterService {
           }
 
           // 优先中文，降级到英文，再降级到任意可用语言
-          final hasChinese = langList.any(
-              (l) => l.toLowerCase().contains('zh') || l.toLowerCase().contains('chinese'));
-          final hasEnglish = langList.any(
-              (l) => l.toLowerCase().contains('en'));
+          final hasChinese = langList.any((l) =>
+              l.toLowerCase().contains('zh') ||
+              l.toLowerCase().contains('chinese'));
+          final hasEnglish =
+              langList.any((l) => l.toLowerCase().contains('en'));
 
           if (hasChinese) {
             await _tts!.setLanguage('zh-CN');
@@ -96,6 +100,11 @@ class TtsFlutterService {
       await _tts!.setSpeechRate(0.5); // 语速（0.0-1.0）
       await _tts!.setVolume(1.0);
       await _tts!.setPitch(1.0);
+      try {
+        await _tts!.awaitSpeakCompletion(true);
+      } catch (e, st) {
+        swallowDebug(e, tag: 'TtsFlutterService.awaitCompletion', stack: st);
+      }
 
       // 监听状态
       _tts!.setStartHandler(() {
@@ -133,11 +142,16 @@ class TtsFlutterService {
     if (!_available || _tts == null) return;
 
     try {
+      final currentSession = ++_session;
+      _stopRequested = false;
       // 如果正在朗读，先停止
       if (_isSpeaking) {
         await _tts!.stop();
       }
+      if (_stopRequested || currentSession != _session) return;
+      _isSpeaking = true;
       await _tts!.speak(text);
+      if (currentSession == _session) _isSpeaking = false;
     } catch (e) {
       debugPrint('TTS speak error: $e');
       // 标记为不可用，避免后续重复失败
@@ -148,8 +162,13 @@ class TtsFlutterService {
 
   /// 停止朗读
   Future<void> stop() async {
+    _stopRequested = true;
+    _session++;
+    _isSpeaking = false;
     if (_tts == null) return;
     try {
+      await _tts!.stop();
+      await Future.delayed(const Duration(milliseconds: 80));
       await _tts!.stop();
       _isSpeaking = false;
     } catch (e) {
