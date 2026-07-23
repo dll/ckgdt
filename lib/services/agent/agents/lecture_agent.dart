@@ -119,52 +119,11 @@ class LectureAgent extends BaseAgent {
       );
     }
 
-    try {
-      final outDir = await _getOutputDir();
-      final result = await _videoService.generateVideo(
-        lectureContent: lectureContent,
-        courseName: courseName,
-        teacherName: teacherName,
-        outputDir: outDir,
-        onProgress: (current, total, message) {},
-      );
-
-      if (result != null) {
-        return buildReply(
-          '✅ 说课视频已生成！\n\n'
-              '📹 视频文件：${result.videoPath}\n'
-              '📝 字幕文件：${result.srtPath}\n'
-              '📄 幻灯片：${result.pdfPath}\n\n'
-              '视频位于 "说课" 页面的视频演示选项卡中，可点击播放。\n\n'
-              '如需重新生成，请说"重新生成说课视频"。',
-          action: AgentAction(
-            type: 'agent_result',
-            params: {
-              'videoPath': result.videoPath,
-              'srtPath': result.srtPath,
-              'pdfPath': result.pdfPath,
-            },
-          ),
-        );
-      } else {
-        return buildReply(
-          '视频生成失败，请检查：\n'
-              '1. FFmpeg 是否正常安装\n'
-              '2. edge-tts 是否可用（pip install edge-tts）\n'
-              '3. 说课内容是否完整',
-        );
-      }
-    } catch (e, st) {
-      swallowDebug(e, tag: 'LectureAgent.generateVideo', stack: st);
-      return buildReply('视频生成出错：$e');
-    }
-  }
-
-  Future<String> _getOutputDir() async {
-    final outRoot = await OutputPathService.getOutputDirectory();
-    final dir = Directory(p.join(outRoot.path, '说课', 'ai_generated'));
-    if (!dir.existsSync()) await dir.create(recursive: true);
-    return dir.path;
+    return buildReply(
+      '说课视频生成需要在说课页面操作。\n\n'
+      '请前往"说课 → 视频演示"标签，点击"AI 生成说课视频"按钮。\n\n'
+      '建议先确认说课内容完整，先生成配音脚本试听，满意后再生成视频。',
+    );
   }
 
   Future<String> generateLectureContent({
