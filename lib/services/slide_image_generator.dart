@@ -41,12 +41,13 @@ class SlideImageGenerator {
       ),
     );
 
+    // ignore: use_build_context_synchronously
     Overlay.of(context).insert(entry);
-    await Future.delayed(const Duration(milliseconds: 100));
+    await Future.delayed(const Duration(milliseconds: 500));
 
     try {
-      final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) return Uint8List(0);
+      final boundary = key.currentContext?.findRenderObject();
+      if (boundary == null || boundary is! RenderRepaintBoundary) return Uint8List(0);
       final image = await boundary.toImage(pixelRatio: 1.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       return byteData?.buffer.asUint8List() ?? Uint8List(0);

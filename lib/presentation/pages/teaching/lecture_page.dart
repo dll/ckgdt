@@ -294,16 +294,28 @@ class _LecturePageState extends State<LecturePage> with TickerProviderStateMixin
       );
       if (mounted) {
         setState(() => _generating = false);
-        if (result != null) {
-          _scanVideoDirs();
+        _scanVideoDirs();
+        if (result != null && result.segments.isNotEmpty) {
+          _script = result.segments.map((s) => s.narration).join('\n\n');
+          _scriptCtrl.text = _script;
+          await _contentService.saveScript(_courseName, _script);
+        }
+        if (result != null && result.videoPath.isNotEmpty && File(result.videoPath).existsSync()) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('说课视频已生成'),
+            content: const Text('✓ 说课视频已生成'),
             backgroundColor: Colors.green,
             action: SnackBarAction(label: '查看', onPressed: () => _tabCtrl.animateTo(2)),
           ));
+        } else if (result != null && result.segments.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('✓ 脚本和语音已生成。$_genDetail'),
+            backgroundColor: Colors.blue,
+            duration: const Duration(seconds: 10),
+            action: SnackBarAction(label: '查看脚本', onPressed: () => _tabCtrl.animateTo(1)),
+          ));
         } else {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('视频生成未完成，$_genDetail'),
+            content: Text('$_genDetail'),
             backgroundColor: Colors.orange,
             duration: const Duration(seconds: 8),
           ));
