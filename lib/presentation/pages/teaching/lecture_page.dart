@@ -571,10 +571,7 @@ $_content
       children: [
         Container(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          child: Row(
             children: [
               const Icon(Icons.record_voice_over, size: 20),
               const SizedBox(width: 4),
@@ -643,7 +640,7 @@ $_content
   }
 
   Widget _buildVideoTab(bool isPrint) {
-    final videoFiles = _videos.where((v) => {
+    final videoFiles = _videos.where((v) {
       final path = v['path'] ?? '';
       final ext = path.split('.').last.toLowerCase();
       return ['mp4', 'avi', 'mkv', 'mov'].contains(ext) && File(path).existsSync();

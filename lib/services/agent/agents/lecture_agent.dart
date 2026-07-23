@@ -139,7 +139,7 @@ class LectureAgent extends BaseAgent {
               '如需重新生成，请说"重新生成说课视频"。',
           action: AgentAction(
             type: 'agent_result',
-            data: {
+            params: {
               'videoPath': result.videoPath,
               'srtPath': result.srtPath,
               'pdfPath': result.pdfPath,

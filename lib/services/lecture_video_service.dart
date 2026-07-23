@@ -250,7 +250,7 @@ class LectureVideoService {
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 40, vertical: 16),
               decoration: pw.BoxDecoration(
-                color: PdfColors.white.withOpacity(0.15),
+                color: PdfColor.fromInt(0x26FFFFFF),
                 borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
               ),
               child: pw.Text(seg.narration, style: pw.TextStyle(font: _font, fontSize: 18, color: PdfColors.white), textAlign: pw.TextAlign.center),
@@ -340,7 +340,7 @@ class LectureVideoService {
               padding: const pw.EdgeInsets.all(32),
               margin: const pw.EdgeInsets.symmetric(horizontal: 80),
               decoration: pw.BoxDecoration(
-                color: PdfColors.white.withOpacity(0.15),
+                color: PdfColor.fromInt(0x26FFFFFF),
                 borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
               ),
               child: pw.Text(seg.narration, style: pw.TextStyle(font: _font, fontSize: 20, color: PdfColors.white), textAlign: pw.TextAlign.center),
