@@ -671,6 +671,23 @@ class _LecturePageState extends State<LecturePage>
     setState(() => _videos.removeAt(index));
   }
 
+  Future<void> _openGeneratedFile(String path) async {
+    try {
+      if (!File(path).existsSync()) return;
+      if (Platform.isWindows) {
+        await Process.start('cmd', ['/c', 'start', '', path], runInShell: true);
+      } else {
+        await Process.start('open', [path]);
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LecturePage.openGeneratedFile', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('打开失败: $path')));
+      }
+    }
+  }
+
   // ── UI ────────────────────────────────────────────────────────────────────
 
   String _stripMarkdown(String md) {
@@ -1038,13 +1055,20 @@ class _LecturePageState extends State<LecturePage>
     }).toList();
 
     var generatedSlides = <String>[];
+    var generatedPptx = <String>[];
     if (_lastWorkDir.isNotEmpty && Directory(_lastWorkDir).existsSync()) {
       generatedSlides = Directory(_lastWorkDir)
-          .listSync()
+          .listSync(recursive: true)
           .where((f) => f is File && f.path.endsWith('.png'))
           .map((f) => f.path)
           .toList();
       generatedSlides.sort();
+      generatedPptx = Directory(_lastWorkDir)
+          .listSync(recursive: true)
+          .where((f) => f is File && f.path.toLowerCase().endsWith('.pptx'))
+          .map((f) => f.path)
+          .toList();
+      generatedPptx.sort();
     }
     var generatedAudios = <String>[];
     final audioDir = Directory(p.join(_lastWorkDir, 'audio'));
@@ -1115,7 +1139,9 @@ class _LecturePageState extends State<LecturePage>
         ),
         Expanded(
           flex: 2,
-          child: (videoFiles.isEmpty && generatedSlides.isEmpty)
+          child: (videoFiles.isEmpty &&
+                  generatedSlides.isEmpty &&
+                  generatedPptx.isEmpty)
               ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -1140,10 +1166,30 @@ class _LecturePageState extends State<LecturePage>
                   ),
                 )
               : ListView.builder(
-                  itemCount:
-                      videoFiles.length + (generatedSlides.isNotEmpty ? 1 : 0),
+                  itemCount: videoFiles.length +
+                      (generatedSlides.isNotEmpty ? 1 : 0) +
+                      (generatedPptx.isNotEmpty ? 1 : 0),
                   itemBuilder: (ctx, i) {
-                    if (generatedSlides.isNotEmpty && i == 0) {
+                    if (generatedPptx.isNotEmpty && i == 0) {
+                      return ListTile(
+                        leading:
+                            const Icon(Icons.slideshow, color: Colors.blue),
+                        title: const Text('专业说课 PPTX',
+                            style: TextStyle(fontSize: 14)),
+                        subtitle: Text(p.basename(generatedPptx.first),
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey.shade500)),
+                        trailing: IconButton(
+                          icon:
+                              const Icon(Icons.open_in_new, color: Colors.blue),
+                          onPressed: () =>
+                              _openGeneratedFile(generatedPptx.first),
+                        ),
+                        onTap: () => _openGeneratedFile(generatedPptx.first),
+                      );
+                    }
+                    final slideIndex = generatedPptx.isNotEmpty ? i - 1 : i;
+                    if (generatedSlides.isNotEmpty && slideIndex == 0) {
                       return ListTile(
                         leading:
                             const Icon(Icons.slideshow, color: Colors.green),
@@ -1163,7 +1209,9 @@ class _LecturePageState extends State<LecturePage>
                             _openSlideshow(generatedSlides, generatedAudios),
                       );
                     }
-                    final vi = generatedSlides.isNotEmpty ? i - 1 : i;
+                    final vi = i -
+                        (generatedPptx.isNotEmpty ? 1 : 0) -
+                        (generatedSlides.isNotEmpty ? 1 : 0);
                     if (vi >= videoFiles.length) return const SizedBox.shrink();
                     final v = videoFiles[vi];
                     return ListTile(

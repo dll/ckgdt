@@ -5,6 +5,8 @@ import 'package:archive/archive_io.dart';
 import 'package:path/path.dart' as p;
 import '../core/error_handler.dart';
 import 'ai_service.dart';
+import 'lecture_deck_service.dart';
+import 'ppt_export_service.dart';
 import 'video_service.dart';
 import 'slide_image_generator.dart';
 
@@ -54,6 +56,7 @@ class LectureVideoService {
   final AiService _ai = AiService();
   final VideoService _video = VideoService();
   final SlideImageGenerator _slideGen = SlideImageGenerator();
+  final LectureDeckService _deck = LectureDeckService();
 
   Future<List<LectureVideoSegment>> generateScript({
     required String lectureContent,
@@ -262,37 +265,65 @@ $lectureContent
         onProgress('✗ AI 脚本生成失败');
         return null;
       }
-      onProgress('✓ 脚本已生成（${valid.length} 段），第 2 步：正在制作幻灯片...');
+      onProgress('✓ 脚本已生成（${valid.length} 段），第 2 步：正在生成专业 PPTX...');
 
-      final slideList = <SlideData>[
-        SlideData(
-          title: '说课',
-          narration: valid.first.narration,
-          courseName: courseName,
-          teacherName: teacherName,
-          isTitle: true,
-          bullets: _slideBulletsFor(valid.first, lectureContent),
-        ),
-        ...valid.skip(1).take(valid.length - 2).map((s) => SlideData(
-              title: s.title,
-              narration: s.narration,
-              courseName: courseName,
-              teacherName: teacherName,
-              index: valid.indexOf(s) + 1,
-              total: valid.length,
-              bullets: _slideBulletsFor(s, lectureContent),
-            )),
-        if (valid.length > 1)
+      final deck = await _deck.generateDeck(
+        courseName: courseName,
+        teacherName: teacherName,
+        lectureContent: lectureContent,
+        segments: valid.map((s) => s.toJson()).toList(),
+        outputDir: workDir,
+      );
+
+      List<String> slideImages = [];
+      if (deck != null) {
+        onProgress('✓ 专业 PPTX 已生成，正在通过 PowerPoint/WPS 导出高清页图...');
+        final exported = await PptExportService.exportSlides(deck.pptxPath);
+        if (exported != null && exported.isNotEmpty) {
+          final slideDir = Directory(p.join(workDir, 'pptx_slides'))
+            ..createSync(recursive: true);
+          for (var i = 0; i < exported.length; i++) {
+            final target = File(p.join(
+                slideDir.path, 'slide_${i.toString().padLeft(3, '0')}.png'));
+            await exported[i].copy(target.path);
+            slideImages.add(target.path);
+          }
+        }
+      }
+
+      if (slideImages.isEmpty) {
+        onProgress(deck == null
+            ? '⚠ 专业 PPTX 生成失败，回退到应用内幻灯片...'
+            : '⚠ PPTX 已生成但 Office 导出失败，回退到应用内幻灯片...');
+        final slideList = <SlideData>[
           SlideData(
-            title: '感谢聆听',
-            narration: valid.last.narration,
+            title: '说课',
+            narration: valid.first.narration,
             courseName: courseName,
-            isClosing: true,
+            teacherName: teacherName,
+            isTitle: true,
+            bullets: _slideBulletsFor(valid.first, lectureContent),
           ),
-      ].where((s) => s.title.isNotEmpty).toList();
-
-      final slideImages = await _slideGen.generateSlides(
-          context: context, slides: slideList, outputDir: workDir);
+          ...valid.skip(1).take(valid.length - 2).map((s) => SlideData(
+                title: s.title,
+                narration: s.narration,
+                courseName: courseName,
+                teacherName: teacherName,
+                index: valid.indexOf(s) + 1,
+                total: valid.length,
+                bullets: _slideBulletsFor(s, lectureContent),
+              )),
+          if (valid.length > 1)
+            SlideData(
+              title: '感谢聆听',
+              narration: valid.last.narration,
+              courseName: courseName,
+              isClosing: true,
+            ),
+        ].where((s) => s.title.isNotEmpty).toList();
+        slideImages = await _slideGen.generateSlides(
+            context: context, slides: slideList, outputDir: workDir);
+      }
       if (slideImages.isNotEmpty) {
         onProgress('✓ 幻灯片已生成（${slideImages.length} 张），第 3 步：正在生成语音...');
       } else {
@@ -331,7 +362,11 @@ $lectureContent
       if (matched.isEmpty) {
         onProgress('✗ 语音生成失败：Windows 语音合成不可用，请检查系统语音功能');
         return LectureVideoResult(
-            videoPath: '', srtPath: '', segments: valid, workDir: workDir);
+            videoPath: '',
+            srtPath: '',
+            segments: valid,
+            workDir: workDir,
+            pptxPath: deck?.pptxPath ?? '');
       }
       onProgress('✓ 语音已生成（${matched.length}/${valid.length} 段）');
 
@@ -378,13 +413,18 @@ $lectureContent
             videoPath: videoPath,
             srtPath: srtPath,
             segments: valid,
-            workDir: workDir);
+            workDir: workDir,
+            pptxPath: deck?.pptxPath ?? '');
       } else {
         onProgress(hasFfmpeg
             ? '✗ 视频合成失败，已保留幻灯片和语音素材：$workDir'
             : '✗ 未能取得 FFmpeg，无法生成 MP4 视频。已保留素材：$workDir');
         return LectureVideoResult(
-            videoPath: '', srtPath: '', segments: valid, workDir: workDir);
+            videoPath: '',
+            srtPath: '',
+            segments: valid,
+            workDir: workDir,
+            pptxPath: deck?.pptxPath ?? '');
       }
     } catch (e, st) {
       swallowDebug(e, tag: 'LectureVideoService', stack: st);
@@ -524,11 +564,13 @@ class LectureVideoResult {
   final String srtPath;
   final List<LectureVideoSegment> segments;
   final String workDir;
+  final String pptxPath;
 
   const LectureVideoResult({
     required this.videoPath,
     required this.srtPath,
     required this.segments,
     required this.workDir,
+    this.pptxPath = '',
   });
 }
